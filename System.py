@@ -457,12 +457,17 @@ def show_inventory():
     refresh_button.pack(side="right", padx=(0, 50), pady=(12, 3))  # Position it on the right side with padding on the left
 
 
-    #Door Logs Tab
-    tab2 = tk.Frame(notebook, bg='gray')
+    #----------------------------------------------Door Logs Tab-------------------------------------------
+    tab2 = tk.Frame(notebook, bg='#42a7f5')
     notebook.add(tab2, text='Door Logs')
 
     header_frame_logs = tk.Frame(tab2, bg='#42a7f5')
     header_frame_logs.pack(fill="x", padx=10, pady=10)
+
+    def activate_button_logs(clicked_button):
+        for btn in buttons:
+            btn.config(bg="#42a7f5", fg="white")
+        clicked_button.config(bg="gray", fg="white")
 
     def search_treeview_logs():
         global search_term_logs
@@ -504,18 +509,18 @@ def show_inventory():
 
         # Filter data in Python based on the search term
         filtered_logs = []
-        search_term_lower = search_term_logs.lower()
+        search_term_lower_logs = search_term_logs.lower()
 
         for log in logs:
             username, accountType, position, date, time, action_taken = log
             # Check if the search term matches any of the fields
             if (
-                search_term_lower in username.lower() or
-                search_term_lower in accountType.lower() or
-                search_term_lower in position.lower() or
-                search_term_lower in date.lower() or
-                search_term_lower in time.lower() or
-                search_term_lower in action_taken.lower()
+                search_term_lower_logs in username.lower() or
+                search_term_lower_logs in accountType.lower() or
+                search_term_lower_logs in position.lower() or
+                search_term_lower_logs in date.lower() or
+                search_term_lower_logs in time.lower() or
+                search_term_lower_logs in action_taken.lower()
             ):
                 filtered_logs.append(log)
 
@@ -527,7 +532,7 @@ def show_inventory():
 
     def sort_treeview_logs(column, clicked_button):
         global active_column_logs, sort_order_logs
-        activate_button(clicked_button)
+        activate_button_logs(clicked_button)
 
         # Set the active column and toggle sort order
         if active_column_logs == column:
@@ -810,7 +815,7 @@ def show_account_setting():
     if account_setting_button:
         account_setting_button.config(bg=active_bg_color)
         account_setting_button.config(fg=active_fg_color)
-    tk.Label(content_frame, text="Account Setting Content", bg="#42a7f5", fg="white", font=('Arial', 25)).pack(fill='x', pady=20, padx=(20,20))
+    tk.Label(content_frame, text="Account Settings Content", bg="#42a7f5", fg="white", font=('Arial', 25), height=2).pack(fill='x')
 
     # Create a frame for the treeview
     tree_frame = tk.Frame(content_frame)
