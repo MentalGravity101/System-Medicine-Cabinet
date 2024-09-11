@@ -48,8 +48,9 @@ def authenticate_user(username, password):
 def create_login_frame(container):
     global login_frame
     login_frame = tk.Frame(container, bg="#42a7f5")
-    box_frame = tk.Frame(login_frame, bg='#ffffff', bd=2, relief="groove", padx=50, pady=30)
+    box_frame = tk.Frame(login_frame, bg='#ffffff', bd=5, relief="ridge", padx=50, pady=30)
     box_frame.place(relx=0.5, rely=0.5, anchor='center')
+    tk.Label(box_frame, text='ELECTRONIC \n MEDICINE CABINET', font=('Arial', 23, 'bold'), bg='white').pack()
     logo_path = os.path.join(os.path.dirname(__file__), 'images', 'SanMateoLogo.png')
     original_logo_img = Image.open(logo_path)
     desired_width = 200
@@ -62,14 +63,14 @@ def create_login_frame(container):
     username_label = tk.Label(box_frame, text="Username", font=("Arial", 18), bg='#ffffff')
     username_label.pack(pady=10)
     global username_entry
-    username_entry = tk.Entry(box_frame, font=("Arial", 16))
+    username_entry = tk.Entry(box_frame, font=("Arial", 16), relief='sunken', bd=3, width=25)
     username_entry.pack(pady=5)
     password_label = tk.Label(box_frame, text="Password", font=("Arial", 18), bg='#ffffff')
     password_label.pack(pady=10)
     password_frame = tk.Frame(box_frame, bg='#ffffff')
     password_frame.pack(pady=5, fill='x')
     global password_entry
-    password_entry = tk.Entry(password_frame, show="*", font=("Arial", 16))
+    password_entry = tk.Entry(password_frame, show="*", font=("Arial", 16), relief='sunken', bd=3, width=20)
     password_entry.pack(side='left', fill='x', expand=True)
     eye_open_image = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'eye_open.png')).resize((20, 20), Image.LANCZOS))
     eye_closed_image = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'eye_close.png')).resize((20, 20), Image.LANCZOS))
