@@ -14,9 +14,11 @@ inactivity_timer = None #initialization of idle timer
 root = None  # Global variable for root window
 login_frame = None
 
-# Define the active and default background colors
+motif_color = '#42a7f5'
+
+# Define the active and default background colors for Sidebar
 active_bg_color = "#fff"  # Active background color
-default_bg_color = "#42a7f5"  # Default background color
+default_bg_color = motif_color  # Default background color
 active_fg_color ='#000000' # Active foreground color
 default_fg_color="#fff" # Default foreground color
 
@@ -47,7 +49,7 @@ def authenticate_user(username, password):
 #function to create the UI of login frame
 def create_login_frame(container):
     global login_frame
-    login_frame = tk.Frame(container, bg="#42a7f5")
+    login_frame = tk.Frame(container, bg=motif_color)
     box_frame = tk.Frame(login_frame, bg='#ffffff', bd=5, relief="ridge", padx=50, pady=30)
     box_frame.place(relx=0.5, rely=0.5, anchor='center')
     tk.Label(box_frame, text='ELECTRONIC \n MEDICINE CABINET', font=('Arial', 23, 'bold'), bg='white').pack()
@@ -96,38 +98,38 @@ def create_login_frame(container):
 #functin to create the UI of Main UI Frame, including the sidebar navigation
 def create_main_ui_frame(container): 
     global main_ui_frame
-    main_ui_frame = tk.Frame(container, bg='#42a7f5')
+    main_ui_frame = tk.Frame(container, bg=motif_color)
     global content_frame, inventory_img, cabinet_img, notification_img, account_setting_img
     global sidebar_frame
-    sidebar_frame = tk.Frame(main_ui_frame, bg="#42a7f5", height=768)
-    sidebar_frame.pack(expand=False, fill='both', side='left', anchor='nw')
+    sidebar_frame = tk.Frame(main_ui_frame, bg=motif_color, height=768, relief='raised', borderwidth=3)
+    sidebar_frame.pack(expand=False, fill='both', side='left', anchor='ne')
     sidebar_frame.grid_columnconfigure(1, weight=1)
     logo_path = os.path.join(os.path.dirname(__file__), 'images', 'SanMateoLogo.png')
     original_logo_img = Image.open(logo_path)
     desired_width = 100
     desired_height = 100
-    title_frame = tk.Frame(sidebar_frame, bg='#42a7f5', relief='raised', bd=5)
+    title_frame = tk.Frame(sidebar_frame, bg=motif_color, relief='raised', bd=5)
     title_frame.grid(row=0, column=0, columnspan=2, sticky='new')
     resized_logo_img = original_logo_img.resize((desired_width, desired_height), Image.LANCZOS)
     logo_img = ImageTk.PhotoImage(resized_logo_img)
-    logo_label = tk.Label(title_frame, image=logo_img, bg="#42a7f5")
+    logo_label = tk.Label(title_frame, image=logo_img, bg=motif_color)
     logo_label.image = logo_img
     logo_label.grid(row=0, column=0, pady=5, padx=10, sticky="w")
-    app_name_label = tk.Label(title_frame, text="Barangay San Mateo \nHealth Center\nMedicine Cabinet", font=("Arial", 18), fg="white", bg="#42a7f5", justify="left")
+    app_name_label = tk.Label(title_frame, text="Barangay San Mateo \nHealth Center\nMedicine Cabinet", font=("Arial", 18), fg="white", bg=motif_color, justify="left")
     app_name_label.grid(row=0, column=1, pady=10, padx=0, sticky="w", columnspan=1)
     inventory_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'inventory_Icon.png')).resize((40, 40), Image.LANCZOS))
     global inventory_button
-    inventory_button = tk.Button(sidebar_frame, height=100, width=350, text="   Inventory", command=show_inventory, font=("Arial", 16), bg="#42a7f5", fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=inventory_img)
+    inventory_button = tk.Button(sidebar_frame, height=100, width=350, text="   Inventory", command=show_inventory, font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=inventory_img)
     inventory_button.image = inventory_img
     inventory_button.grid(row=1, column=0, sticky="we", columnspan=2)
     cabinet_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cabinet_Icon.png')).resize((40, 40), Image.LANCZOS))
     global cabinet_button
-    cabinet_button = tk.Button(sidebar_frame, height=100, width=350, text="   Cabinet", command=show_cabinet, font=("Arial", 16), bg="#42a7f5", fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=cabinet_img)
+    cabinet_button = tk.Button(sidebar_frame, height=100, width=350, text="   Cabinet", command=show_cabinet, font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=cabinet_img)
     cabinet_button.image = cabinet_img
     cabinet_button.grid(row=2, column=0, sticky="we", columnspan=2)
     notification_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'notification_Icon.png')).resize((40, 40), Image.LANCZOS))
     global notification_button
-    notification_button = tk.Button(sidebar_frame, height=100, width=350, text="   Notification", command=show_notification, font=("Arial", 16), bg="#42a7f5", fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=notification_img, justify="left")
+    notification_button = tk.Button(sidebar_frame, height=100, width=350, text="   Notification", command=show_notification, font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=notification_img, justify="left")
     notification_button.image = notification_img
     notification_button.grid(row=3, column=0, sticky="we", columnspan=2)
     
@@ -136,7 +138,7 @@ def create_main_ui_frame(container):
     account_setting_button = None
     
     logout_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'logout_icon.png')).resize((40, 40), Image.LANCZOS))
-    logout_button = tk.Button(sidebar_frame, height=100, width=350, text="   Log Out", command=lambda: logout('manual logout'), font=("Arial", 16), bg="#42a7f5", fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=logout_img)
+    logout_button = tk.Button(sidebar_frame, height=100, width=350, text="   Log Out", command=lambda: logout('manual logout'), font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=logout_img)
     logout_button.image = logout_img
     logout_button.grid(row=5, column=0, sticky="we", columnspan=2)
     content_frame = tk.Frame(main_ui_frame, bg='#ecf0f1')
@@ -162,7 +164,7 @@ def configure_sidebar(user_role):
     global account_setting_button
     if user_role == "Admin":     #if the user is 'Admin' then the account setting button will be present in the sidebar
         if account_setting_button is None:
-            account_setting_button = tk.Button(sidebar_frame, height=100, width=350, text="   Account Settings", command=show_account_setting, font=("Arial", 16), bg="#42a7f5", fg="white", bd=1, relief="groove", compound=tk.LEFT, image=account_setting_img)
+            account_setting_button = tk.Button(sidebar_frame, height=100, width=350, text="   Account Settings", command=show_account_setting, font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="groove", compound=tk.LEFT, image=account_setting_img)
             account_setting_button.image = account_setting_img
         account_setting_button.grid(row=4, column=0, sticky="we", columnspan=2)
     else:
@@ -242,20 +244,20 @@ def show_inventory():
     style = ttk.Style()
     style.configure("TNotebook.Tab", font=("Arial", 14), padding=[20, 10])
     style.configure("TNotebook.Tab", background="white", foreground="black", borderwidth=1)
-    style.map("TNotebook.Tab", background=[("selected", "#42a7f5")], foreground=[("selected", "black")], borderwidth=[("selected", 1)])
+    style.map("TNotebook.Tab", background=[("selected", motif_color)], foreground=[("selected", "black")], borderwidth=[("selected", 1)])
 
     notebook = ttk.Notebook(content_frame, style="TNotebook")
     notebook.pack(expand=True, fill='both')
 
-    tab1 = tk.Frame(notebook, bg='#42a7f5')
+    tab1 = tk.Frame(notebook, bg=motif_color)
     notebook.add(tab1, text='Medicine Inventory')
 
-    header_frame = tk.Frame(tab1, bg='#42a7f5')
+    header_frame = tk.Frame(tab1, bg=motif_color)
     header_frame.pack(fill="x", padx=10, pady=10)
 
     def activate_button(clicked_button):
         for btn in buttons:
-            btn.config(bg="#42a7f5", fg="white")
+            btn.config(bg=motif_color, fg="white")
         clicked_button.config(bg="white", fg="black")
 
     def search_treeview():
@@ -368,27 +370,27 @@ def show_inventory():
     search_icon_label.pack(side=tk.RIGHT, padx=(0, 5))
     buttons = []
 
-    sort_button_1 = tk.Button(header_frame, text="Sort by Name", bg="#42a7f5", fg="white", padx=10, pady=5,
+    sort_button_1 = tk.Button(header_frame, text="Sort by Name", bg=motif_color, fg="white", padx=10, pady=5,
                               command=lambda: sort_treeview("name", sort_button_1), relief="raised", bd=4)
     sort_button_1.grid(row=0, column=2, padx=(110, 0), pady=10, sticky="e")
     buttons.append(sort_button_1)
 
-    sort_button_2 = tk.Button(header_frame, text="Sort by Type", bg="#42a7f5", fg="white", padx=10, pady=5,
+    sort_button_2 = tk.Button(header_frame, text="Sort by Type", bg=motif_color, fg="white", padx=10, pady=5,
                               command=lambda: sort_treeview("type", sort_button_2), relief="raised", bd=4)
     sort_button_2.grid(row=0, column=3, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_2)
 
-    sort_button_3 = tk.Button(header_frame, text="Sort by Unit", bg="#42a7f5", fg="white", padx=10, pady=5,
+    sort_button_3 = tk.Button(header_frame, text="Sort by Unit", bg=motif_color, fg="white", padx=10, pady=5,
                               command=lambda: sort_treeview("unit", sort_button_3), relief="raised", bd=4)
     sort_button_3.grid(row=0, column=4, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_3)
 
-    sort_button_4 = tk.Button(header_frame, text="Sort by Expiration Date", bg="#42a7f5", fg="white", padx=10, pady=5,
+    sort_button_4 = tk.Button(header_frame, text="Sort by Expiration Date", bg=motif_color, fg="white", padx=10, pady=5,
                               command=lambda: sort_treeview("expiration_date", sort_button_4), relief="raised", bd=4)
     sort_button_4.grid(row=0, column=5, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_4)
 
-    sort_button_5 = tk.Button(header_frame, text="Sort by Date Stored", bg="white", fg="#42a7f5", padx=10, pady=5,
+    sort_button_5 = tk.Button(header_frame, text="Sort by Date Stored", bg="white", fg=motif_color, padx=10, pady=5,
                               command=lambda: sort_treeview("date_stored", sort_button_5), relief="raised", bd=4)
     sort_button_5.grid(row=0, column=6, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_5)
@@ -432,7 +434,7 @@ def show_inventory():
     # Custom tag styles
     tree.tag_configure('oddrow', background="white")
     tree.tag_configure('evenrow', background="#ebebeb")
-    style.map('Treeview', background=[('selected', '#42a7f5')])
+    style.map('Treeview', background=[('selected', motif_color)])
 
     for i, med in enumerate(medicine):
         name, type, quantity, unit, date_stored, expiration_date = med
@@ -448,18 +450,18 @@ def show_inventory():
     button_frame.pack(fill="x", anchor='e')  # Align to the right
 
     extract_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'extract_icon.png')).resize((25, 25), Image.LANCZOS))
-    extract_button = tk.Button(button_frame, text="Extract CSV", padx=20, pady=10, font=('Arial', 15), bg="#42a7f5", fg="white", relief="raised", bd=4, compound=tk.LEFT, image=extract_img)
+    extract_button = tk.Button(button_frame, text="Extract CSV", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=extract_img)
     extract_button.image = extract_img
     extract_button.pack(side="right", padx=(0, 50), pady=(12, 3))  # Position it on the right side with padding on the left
 
     refresh_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'refresh_icon.png')).resize((25, 25), Image.LANCZOS))
-    refresh_button = tk.Button(button_frame, text="Reload All", padx=20, pady=10, font=('Arial', 15), bg="#42a7f5", fg="white", relief="raised", bd=4, compound=tk.LEFT, image=refresh_img, command=clear_search)
+    refresh_button = tk.Button(button_frame, text="Reload All", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=refresh_img, command=clear_search)
     refresh_button.image = refresh_img
     refresh_button.pack(side="right", padx=(0, 50), pady=(12, 3))  # Position it on the right side with padding on the left
 
 
     #----------------------------------------------Door Logs Tab-------------------------------------------
-    tab2 = tk.Frame(notebook, bg='#42a7f5')
+    tab2 = tk.Frame(notebook, bg=motif_color)
     notebook.add(tab2, text='Door Logs')
 
 
@@ -553,7 +555,7 @@ def show_cabinet():
     deposit_tab.grid_columnconfigure(0, weight=1)
 
     # Title for Deposit Tab
-    deposit_label = tk.Label(deposit_frame, text="ADD MEDICINE HERE", font=("Arial", 24), fg='white', bg='#42a7f5')
+    deposit_label = tk.Label(deposit_frame, text="ADD MEDICINE HERE", font=("Arial", 24), fg='white', bg=motif_color)
     deposit_label.grid(row=0, column=0, columnspan=2, pady=20, sticky='we')
 
     # Input Frame for the form fields
@@ -608,10 +610,10 @@ def show_cabinet():
     except Exception as e:
         print(f"Error loading image: {e}")
 
-    clear_button=tk.Button(deposit_frame, text='CLEAR', fg='white', bg='#42a7f5', font=('Arial', 15), relief="raised", bd=3)
+    clear_button=tk.Button(deposit_frame, text='CLEAR', fg='white', bg=motif_color, font=('Arial', 15), relief="raised", bd=3)
     clear_button.grid(row=2, column=0, padx=(50,20), pady=15)
 
-    save_print_button=tk.Button(deposit_frame, text='INSERT/PRINT', fg='white', bg='#42a7f5', font=('Arial', 15), relief="raised", bd=3)
+    save_print_button=tk.Button(deposit_frame, text='INSERT/PRINT', fg='white', bg=motif_color, font=('Arial', 15), relief="raised", bd=3)
     save_print_button.grid(row=2, column=1, padx=(20,70), pady=15)
 
     # Ensure image_frame expands to fill the available space
@@ -627,7 +629,7 @@ def show_account_setting():
     if account_setting_button:
         account_setting_button.config(bg=active_bg_color)
         account_setting_button.config(fg=active_fg_color)
-    tk.Label(content_frame, text="ACCOUNT SETTINGS", bg="#42a7f5", fg="white", font=('Arial', 25, 'bold'), height=2).pack(fill='x')
+    tk.Label(content_frame, text="ACCOUNT SETTINGS", bg=motif_color, fg="white", font=('Arial', 25, 'bold'), height=2, relief='groove', bd=1).pack(fill='x')
 
     # Create a frame for the treeview
     tree_frame = tk.Frame(content_frame)
@@ -637,7 +639,7 @@ def show_account_setting():
     style = ttk.Style()
     style.configure("Treeview", rowheight=40, borderwidth=2, relief="solid")
     style.map('Treeview', 
-              background=[('selected', '#42a7f5')],
+              background=[('selected', motif_color)],
               foreground=[('selected', 'white')])
 
     # Define the treeview with a maximum height of 7 rows
@@ -679,14 +681,26 @@ def show_account_setting():
     button_frame.pack(side=tk.RIGHT, padx=10, pady=10, fill=tk.Y)
 
     # Add the buttons for "Add User", "Edit", and "Delete"
-    add_button = tk.Button(button_frame, text="Add User", font=("Arial", 14), command=add_user, bg='#42a7f5', fg='white', height=2, relief="raised", bd=3)
-    edit_button = tk.Button(button_frame, text="Edit User", font=("Arial", 14), command=lambda: on_tree_select(tree), bg='#42a7f5', fg='white', height=2, relief="raised", bd=3)
-    delete_button = tk.Button(button_frame, text="Delete User", font=("Arial", 14), command=lambda: delete_selected_user(tree), bg='#42a7f5', fg='white', height=2, relief="raised", bd=3)
-    
-    # Pack the buttons with some padding
-    add_button.pack(pady=5, fill=tk.X, padx=(0, 10))
-    edit_button.pack(pady=5, fill=tk.X, padx=(0, 10))
-    delete_button.pack(pady=5, fill=tk.X, padx=(0, 10))
+    # refresh_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'refresh_icon.png')).resize((25, 25), Image.LANCZOS))
+    # refresh_button = tk.Button(button_frame, text="Reload All", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=refresh_img, command=clear_search)
+    # refresh_button.image = refresh_img
+    # refresh_button.pack(side="right", padx=(0, 50), pady=(12, 3))
+
+    add_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'add_icon.png')).resize((25, 25), Image.LANCZOS))
+    add_button = tk.Button(button_frame, text="Add User", font=("Arial", 15), pady=20, padx=25, bg=motif_color, fg='white', height=25, relief="raised", bd=3, compound=tk.LEFT, image=add_img, command=add_user)
+    add_button.image = add_img
+    add_button.pack( padx = (2, 8), pady=10)
+
+    edit_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'edit_icon.png')).resize((25, 25), Image.LANCZOS))
+    edit_button = tk.Button(button_frame, text="Edit User", font=("Arial", 15), pady=20, padx=25, bg=motif_color, fg='white', height=25, relief="raised", bd=3, compound=tk.LEFT, image=edit_img, command=lambda: on_tree_select(tree))
+    edit_button.image = edit_img
+    edit_button.pack( padx = (2, 8), pady=10)
+
+    delete_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'delete_icon.png')).resize((25, 25), Image.LANCZOS))
+    delete_button = tk.Button(button_frame, text="Delete User", font=("Arial", 15), pady=20, padx=25, bg=motif_color, fg='white', height=25, relief="raised", bd=3, compound=tk.LEFT, image=delete_img, command=lambda: delete_selected_user(tree))
+    delete_button.image = delete_img
+    delete_button.pack( padx = (2, 8), pady=10)
+
 
 def delete_selected_user(tree):
     selected_item = tree.selection()  # Get selected item
@@ -698,7 +712,6 @@ def delete_selected_user(tree):
             cursor.execute("DELETE FROM users WHERE username = ?", (username,))
             conn.commit()
             conn.close()
-            messagebox.showinfo("Success", f"User '{username}' deleted successfully.")
             show_account_setting()
 
 def on_tree_select(tree):
@@ -764,8 +777,11 @@ def validate_user_info(action, username, password, confirm_password, new_positio
         return
     return True
 
+def toplevel_destroy(window):
+        window.destroy()
+
 def edit_user(username):
-    edit_window = tk.Toplevel()
+    edit_window = tk.Toplevel(relief='groove', bd=5)
     edit_window.overrideredirect(True)  # Remove the title bar
     edit_window.resizable(width=False, height=False)
 
@@ -798,8 +814,8 @@ def edit_user(username):
     conn.close()
 
     # Title label
-    title_label = tk.Label(edit_window, text="Edit User Information", font=("Arial", 18, "bold"), bg='#42a7f5', fg='white')
-    title_label.grid(row=0, column=0, columnspan=2, sticky='news')
+    title_label = tk.Label(edit_window, text="Edit User Information", font=("Arial", 18, "bold"), bg=motif_color, fg='white')
+    title_label.grid(row=0, column=0, columnspan=2, sticky='new', padx=(0, 10))
 
     # Display QR code if it exists
     qr_code_image_label = tk.Label(edit_window)
@@ -858,86 +874,86 @@ def edit_user(username):
             edit_window.destroy()
             show_account_setting()
 
-    def cancel_edit():
-        edit_window.destroy()
+    
 
-    button_frame = tk.Frame(edit_window, bg='#42a7f5')
-    button_frame.grid(row=7, column=0, columnspan=2, sticky="we")
+    button_frame = tk.Frame(edit_window, bg=motif_color)
 
     # Cancel button (now on the right side)
-    cancel_button = tk.Button(button_frame, text="Cancel", font=("Arial", 14), command=cancel_edit, width=13, relief="raised", bd=3)
+    cancel_button = tk.Button(button_frame, text="Cancel", font=("Arial", 14), command=lambda: toplevel_destroy(edit_window), width=13, relief="raised", bd=3)
     cancel_button.grid(row=0, column=0, pady=10, padx=80)
     
     # Save button (now on the left side)
     save_button = tk.Button(button_frame, text="Save", font=("Arial", 14), command=save_changes, width=13, relief="raised", bd=3)
-    save_button.grid(row=0, column=1, pady=10, padx=80)
+    save_button.grid(row=0, column=1, pady=10, padx=(60, 80))
 
+    button_frame.grid(row=7, column=0, columnspan=2, sticky="new", padx=(0,10), pady=(0, 50))
 
 
 def add_user():
-    add_window = tk.Toplevel()
-    add_window.title("Add User")
+    add_window = tk.Toplevel(relief='raised', bd=3)
+    add_window.overrideredirect(True)
+    add_window.resizable(width=False, height=False)
 
-    # Set the size of the Toplevel window
-    width = 500
-    height = 500
-
-    # Get the screen width and height
+    window_width = 600
+    window_height = 600
     screen_width = add_window.winfo_screenwidth()
     screen_height = add_window.winfo_screenheight()
+    position_x = int((screen_width / 2) - (window_width / 2))
+    position_y = int((screen_height / 2) - (window_height / 2))
+    add_window.geometry(f"{window_width}x{window_height}+{position_x}+{position_y}")
 
-    # Calculate the center position
-    x = int((screen_width / 2) - (width / 2))
-    y = int((screen_height / 2) - (height / 2))
+    Add_User_header = tk.Label(add_window, bg=motif_color, text='Add User', font=('Arial', 18, 'bold'), fg='white')
+    Add_User_header.grid(row=0, column=0, columnspan=2, sticky='new')
 
-    # Set the geometry of the Toplevel window to center it
-    add_window.geometry(f"{width}x{height}+{x}+{y}")
+    default_image_path = os.path.join(os.path.dirname(__file__), 'images', 'image_icon.png')
+    try:
+        default_photo = ImageTk.PhotoImage(Image.open(default_image_path).resize((220, 220), Image.LANCZOS))
+        image_label = tk.Label(add_window, image=default_photo)
+        image_label.image = default_photo
+        image_label.grid(row=1, column=0, columnspan=2, pady=10)
+    except Exception as e:
+        print(f"Error loading default image: {e}")
 
-    # Bind activity events to the add_window
-    add_window.bind("<Motion>", reset_timer)
-    add_window.bind("<KeyPress>", reset_timer)
-    add_window.bind("<ButtonPress>", reset_timer)
-
-    # Ensure the inactivity timer starts when the add_window is shown
-    start_timer()
-
-    tk.Label(add_window, text="Username", font=("Arial", 14)).grid(row=0, column=0, padx=10, pady=10)
+    tk.Label(add_window, text="Username", font=("Arial", 14)).grid(row=2, column=0, padx=10, pady=(29, 10))
     username_entry = tk.Entry(add_window, font=("Arial", 14))
-    username_entry.grid(row=0, column=1, padx=10, pady=10)
+    username_entry.grid(row=2, column=1, padx=10, pady=(29, 10))
 
-    tk.Label(add_window, text="Password", font=("Arial", 14)).grid(row=1, column=0, padx=10, pady=10)
+    tk.Label(add_window, text="Password", font=("Arial", 14)).grid(row=3, column=0, padx=10, pady=10)
     password_entry = tk.Entry(add_window, show="*", font=("Arial", 14))
-    password_entry.grid(row=1, column=1, padx=10, pady=10)
+    password_entry.grid(row=3, column=1, padx=10, pady=10)
 
-    tk.Label(add_window, text="Confirm Password", font=("Arial", 14)).grid(row=2, column=0, padx=10, pady=10)
+    tk.Label(add_window, text="Confirm Password", font=("Arial", 14)).grid(row=4, column=0, padx=10, pady=10)
     confirm_password_entry = tk.Entry(add_window, show="*", font=("Arial", 14))
-    confirm_password_entry.grid(row=2, column=1, padx=10, pady=10)
+    confirm_password_entry.grid(row=4, column=1, padx=10, pady=10)
 
-    tk.Label(add_window, text="Position", font=("Arial", 14)).grid(row=3, column=0, padx=10, pady=10)
-    position_combobox = ttk.Combobox(add_window, font=("Arial", 14), values=["Midwife", "BHW", "BNS"])  # Adjust values as needed
-    position_combobox.grid(row=3, column=1, padx=10, pady=10)
-    position_combobox.config(validate="key", validatecommand=(position_combobox.register(validate_combobox_input), '%d', '%S'))
+    tk.Label(add_window, text="Position", font=("Arial", 14)).grid(row=5, column=0, padx=10, pady=10)
+    position_combobox = ttk.Combobox(add_window, font=("Arial", 14), values=["Midwife", "BHW", "BNS"])
+    position_combobox.grid(row=5, column=1, padx=10, pady=10)
 
-    tk.Label(add_window, text="Account Type", font=("Arial", 14)).grid(row=4, column=0, padx=10, pady=10)
-    accountType_combobox = ttk.Combobox(add_window, font=("Arial", 14), values=["Admin", "Staff"])  # Adjust values as needed
-    accountType_combobox.grid(row=4, column=1, padx=10, pady=10)
-    accountType_combobox.config(validate="key", validatecommand=(accountType_combobox.register(validate_combobox_input), '%d', '%S'))
-
-    qr_code_image_label = tk.Label(add_window)
-    qr_code_image_label.grid(row=6, column=0, columnspan=2, pady=10)
+    tk.Label(add_window, text="Account Type", font=("Arial", 14)).grid(row=6, column=0, padx=10, pady=10)
+    accountType_combobox = ttk.Combobox(add_window, font=("Arial", 14), values=["Admin", "Staff"])
+    accountType_combobox.grid(row=6, column=1, padx=10, pady=10)
 
     def generate_qr_code():
-        new_username = username_entry.get()
-        if new_username:
+        new_username = username_entry.get().strip()
+        new_position = position_combobox.get().strip()
+        new_accountType = accountType_combobox.get().strip()
+
+        if new_username and new_position and new_accountType:
             qr = qrcode.make(new_username)
             qr_image = ImageTk.PhotoImage(qr)
-            qr_code_image_label.config(image=qr_image)
-            qr_code_image_label.image = qr_image
+            image_label.config(image=qr_image)
+            image_label.image = qr_image
         else:
-            messagebox.showerror("Error", "Username is required to generate QR code.")
+            image_label.config(image=default_photo)
+            image_label.image = default_photo
 
-    generate_qr_button = tk.Button(add_window, text="Generate QR Code", font=("Arial", 14), command=generate_qr_code, relief="raised", bd=3)
-    generate_qr_button.grid(row=5, column=0, columnspan=2, pady=20)
+    def on_field_update(event):
+        generate_qr_code()
+
+    username_entry.bind("<KeyRelease>", on_field_update)
+    position_combobox.bind("<<ComboboxSelected>>", on_field_update)
+    accountType_combobox.bind("<<ComboboxSelected>>", on_field_update)
 
     def add_new_user():
         new_username = username_entry.get()
@@ -949,7 +965,6 @@ def add_user():
 
         if validate_all_fields_filled(username_entry, password_entry, confirm_password_entry, position_combobox, accountType_combobox):
             if validate_user_info('add', new_username, new_password, confirm_password, new_position, new_accountType):
-                # Generate QR code
                 qr = qrcode.make(new_username)
                 qr_bytes = io.BytesIO()
                 qr.save(qr_bytes)
@@ -962,14 +977,22 @@ def add_user():
                 conn.commit()
                 conn.close()
 
-                messagebox.showinfo("Success", "User added successfully.")
                 add_window.destroy()
                 show_account_setting()
         else:
             messagebox.showerror("Error", "Please fill in all fields.")
 
-    add_button = tk.Button(add_window, text="Add", font=("Arial", 14), command=add_new_user, relief="raised", bd=3)
-    add_button.grid(row=7, column=0, columnspan=2, pady=10)
+    button_frame = tk.Frame(add_window, bg=motif_color)
+    button_frame.grid(row=7, column=0, columnspan=2, sticky='ew')
+
+    cancel_button = tk.Button(button_frame, text="Cancel", font=("Arial", 14), command=lambda: toplevel_destroy(add_window), width=12, relief="raised", bd=3)
+    cancel_button.grid(row=0, column=0, pady=10, padx=79)
+
+    add_button = tk.Button(button_frame, text="Add", font=("Arial", 14), command=add_new_user, width=12, relief="raised", bd=3)
+    add_button.grid(row=0, column=1, pady=10, padx=79)
+
+
+
 
 #-----------------------------------------------OTHER FUNCTIONS------------------------------------------------------
 def clear_frame():
