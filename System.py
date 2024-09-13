@@ -27,6 +27,61 @@ def clear_frame():
     for widget in content_frame.winfo_children():
         widget.destroy()
 
+#Top Level Warning if door is not locked
+def not_lock():
+    lockStatus_window = tk.Toplevel(relief='groove', bd=5)
+    lockStatus_window.overrideredirect(True)  # Remove the title bar
+    lockStatus_window.resizable(width=False, height=False)
+
+    # Get the window dimensions
+    lockStatus_window.update_idletasks()  # Ensure the window size is calculated
+    window_width = 620  # Adjust the width as needed
+    window_height = 385  # Adjust the height as needed
+
+    # Calculate the center position
+    screen_width = lockStatus_window.winfo_screenwidth()
+    screen_height = lockStatus_window.winfo_screenheight()
+    position_x = int((screen_width / 2) - (window_width / 2))
+    position_y = int((screen_height / 2) - (window_height / 2))
+
+    # Set the window position
+    lockStatus_window.geometry(f"{window_width}x{window_height}+{position_x}+{position_y}")
+
+    # Bind activity events to reset the inactivity timer
+    lockStatus_window.bind("<Motion>", reset_timer)
+    lockStatus_window.bind("<KeyPress>", reset_timer)
+    lockStatus_window.bind("<ButtonPress>", reset_timer)
+
+    # Start the inactivity timer
+    start_timer()
+
+    # Add the warning label with padding for better alignment
+    tk.Label(lockStatus_window, text='WARNING', font=('Arial', 25, 'bold'), bg=motif_color, fg='white', pady=12).pack(fill=tk.X)
+
+    # Load and display the status image with a message
+    status_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')).resize((150, 150), Image.LANCZOS))
+    logo_label = tk.Label(lockStatus_window, text='Please close both doors properly before locking.', image=status_img, compound=tk.TOP, font=('Arial', 18))
+    logo_label.image = status_img
+    logo_label.pack(pady=(10, 20))
+
+    button_frame = tk.Frame(lockStatus_window, bg=motif_color)
+    button_frame.pack(fill=tk.X)
+
+    # Centering the button inside the frame
+    button_frame.grid_columnconfigure(0, weight=1)  # Make the column stretch
+
+    # Load and display the 'Okay' button with an icon, modern styling, and padding
+    ok_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'okGrey_icon.png')).resize((35, 35), Image.LANCZOS))
+    ok_button = tk.Button(button_frame, text="Okay", font=("Arial", 20), bg='white', fg='black', relief="raised", bd=3, padx=20, pady=7, compound=tk.LEFT, image=ok_img, command=lambda: toplevel_destroy(lockStatus_window))
+    ok_button.image = ok_img  # Keep a reference to avoid garbage collection
+
+    # Add the button to the grid, center it with sticky and columnspan
+    ok_button.grid(row=0, column=0, padx=90, pady=18, sticky="ew")
+
+    # Configure the row and column to expand equally
+    button_frame.grid_rowconfigure(0, weight=1)
+    button_frame.grid_columnconfigure(0, weight=1)
+
 #----------------------------------------------------LOGIN WINDOW--------------------------------------------------------
 
 #function for authentication during the login frame
@@ -43,6 +98,7 @@ def authenticate_user(username, password):
         bind_activity_events()
         show_inventory()
         configure_sidebar(user_role)
+        not_lock()
     else:
         messagebox.showerror("Login Failed", "Invalid username or password.")
 
@@ -629,11 +685,12 @@ def show_account_setting():
     if account_setting_button:
         account_setting_button.config(bg=active_bg_color)
         account_setting_button.config(fg=active_fg_color)
+    
     tk.Label(content_frame, text="ACCOUNT SETTINGS", bg=motif_color, fg="white", font=('Arial', 25, 'bold'), height=2, relief='groove', bd=1).pack(fill='x')
 
     # Create a frame for the treeview
     tree_frame = tk.Frame(content_frame)
-    tree_frame.pack(side=tk.LEFT, padx=10, pady=10, fill=tk.BOTH, expand=True)
+    tree_frame.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
 
     # Add styling for the treeview
     style = ttk.Style()
@@ -674,32 +731,31 @@ def show_account_setting():
     tree.tag_configure('oddrow', background='white')
 
     # Pack the Treeview within the frame
-    tree.pack(padx=20, pady=10, fill=tk.BOTH)
+    tree.pack(padx=20, pady=10, fill=tk.BOTH, expand=True)
 
-    # Create a frame for the buttons on the right side of the Treeview
+    # Create a frame for the buttons below the Treeview
     button_frame = tk.Frame(content_frame)
-    button_frame.pack(side=tk.RIGHT, padx=10, pady=10, fill=tk.Y)
+    button_frame.pack(padx=50, pady=10, fill=tk.X)  # Ensure this frame is packed below
 
-    # Add the buttons for "Add User", "Edit", and "Delete"
-    # refresh_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'refresh_icon.png')).resize((25, 25), Image.LANCZOS))
-    # refresh_button = tk.Button(button_frame, text="Reload All", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=refresh_img, command=clear_search)
-    # refresh_button.image = refresh_img
-    # refresh_button.pack(side="right", padx=(0, 50), pady=(12, 3))
+    # Use grid layout for equally spaced buttons
+    button_frame.columnconfigure([0, 1, 2], weight=1)  # Equal weight to all columns
 
     add_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'add_icon.png')).resize((25, 25), Image.LANCZOS))
     add_button = tk.Button(button_frame, text="Add User", font=("Arial", 15), pady=20, padx=25, bg=motif_color, fg='white', height=25, relief="raised", bd=3, compound=tk.LEFT, image=add_img, command=add_user)
     add_button.image = add_img
-    add_button.pack( padx = (2, 8), pady=10)
+    add_button.grid(row=0, column=0, padx=30, pady=10, sticky="ew")
 
     edit_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'edit_icon.png')).resize((25, 25), Image.LANCZOS))
     edit_button = tk.Button(button_frame, text="Edit User", font=("Arial", 15), pady=20, padx=25, bg=motif_color, fg='white', height=25, relief="raised", bd=3, compound=tk.LEFT, image=edit_img, command=lambda: on_tree_select(tree))
     edit_button.image = edit_img
-    edit_button.pack( padx = (2, 8), pady=10)
+    edit_button.grid(row=0, column=1, padx=30, pady=10, sticky="ew")
 
     delete_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'delete_icon.png')).resize((25, 25), Image.LANCZOS))
     delete_button = tk.Button(button_frame, text="Delete User", font=("Arial", 15), pady=20, padx=25, bg=motif_color, fg='white', height=25, relief="raised", bd=3, compound=tk.LEFT, image=delete_img, command=lambda: delete_selected_user(tree))
     delete_button.image = delete_img
-    delete_button.pack( padx = (2, 8), pady=10)
+    delete_button.grid(row=0, column=2, padx=30, pady=10, sticky="ew")
+
+
 
 
 def delete_selected_user(tree):
@@ -874,19 +930,22 @@ def edit_user(username):
             edit_window.destroy()
             show_account_setting()
 
-    
-
     button_frame = tk.Frame(edit_window, bg=motif_color)
 
     # Cancel button (now on the right side)
-    cancel_button = tk.Button(button_frame, text="Cancel", font=("Arial", 14), command=lambda: toplevel_destroy(edit_window), width=13, relief="raised", bd=3)
+    
+    cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
+    cancel_button = tk.Button(button_frame, text="Cancel", font=("Arial", 14), command=lambda: toplevel_destroy(edit_window), width=118, padx=10, relief="raised", bd=3, compound=tk.LEFT, image=cancel_img)
+    cancel_button.image = cancel_img
     cancel_button.grid(row=0, column=0, pady=10, padx=80)
     
     # Save button (now on the left side)
-    save_button = tk.Button(button_frame, text="Save", font=("Arial", 14), command=save_changes, width=13, relief="raised", bd=3)
-    save_button.grid(row=0, column=1, pady=10, padx=(60, 80))
+    save_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'saveBlack_icon.png')).resize((25, 25), Image.LANCZOS))
+    save_button = tk.Button(button_frame, text="Save", font=("Arial", 14), command=save_changes, width=118, padx=10, relief="raised", bd=3, compound=tk.LEFT, image=save_img)
+    save_button.image = save_img
+    save_button.grid(row=0, column=1, pady=10, padx=80)
 
-    button_frame.grid(row=7, column=0, columnspan=2, sticky="new", padx=(0,10), pady=(0, 50))
+    button_frame.grid(row=7, column=0, columnspan=2, sticky="new", padx=(0,20), pady=(0, 50))
 
 
 def add_user():
@@ -941,10 +1000,16 @@ def add_user():
 
         if new_username and new_position and new_accountType:
             qr = qrcode.make(new_username)
+
+            # Resize the QR code to match the default image size (220x220)
+            qr = qr.resize((220, 220), Image.LANCZOS)
             qr_image = ImageTk.PhotoImage(qr)
+
+            # Update the image label with the resized QR code image
             image_label.config(image=qr_image)
             image_label.image = qr_image
         else:
+            # Reset to the default image if any field is empty
             image_label.config(image=default_photo)
             image_label.image = default_photo
 
@@ -985,11 +1050,15 @@ def add_user():
     button_frame = tk.Frame(add_window, bg=motif_color)
     button_frame.grid(row=7, column=0, columnspan=2, sticky='ew')
 
-    cancel_button = tk.Button(button_frame, text="Cancel", font=("Arial", 14), command=lambda: toplevel_destroy(add_window), width=12, relief="raised", bd=3)
+    cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
+    cancel_button = tk.Button(button_frame, text="Cancel", font=("Arial", 14), command=lambda: toplevel_destroy(add_window), width=118, padx=10, relief="raised", bd=3, compound=tk.LEFT, image=cancel_img)
+    cancel_button.image = cancel_img
     cancel_button.grid(row=0, column=0, pady=10, padx=79)
 
-    add_button = tk.Button(button_frame, text="Add", font=("Arial", 14), command=add_new_user, width=12, relief="raised", bd=3)
-    add_button.grid(row=0, column=1, pady=10, padx=79)
+    save_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'saveBlack_icon.png')).resize((25, 25), Image.LANCZOS))
+    save_button = tk.Button(button_frame, text="Save", font=("Arial", 14), command=add_new_user, width=118, padx=10, relief="raised", bd=3, compound=tk.LEFT, image=save_img)
+    save_button.image = save_img
+    save_button.grid(row=0, column=1, pady=10, padx=79)
 
 
 
