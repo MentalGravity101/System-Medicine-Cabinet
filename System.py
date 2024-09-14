@@ -22,65 +22,6 @@ default_bg_color = motif_color  # Default background color
 active_fg_color ='#000000' # Active foreground color
 default_fg_color="#fff" # Default foreground color
 
-#Function for switching of Frames
-def clear_frame():
-    for widget in content_frame.winfo_children():
-        widget.destroy()
-
-#Top Level Warning if door is not locked
-def not_lock():
-    lockStatus_window = tk.Toplevel(relief='groove', bd=5)
-    lockStatus_window.overrideredirect(True)  # Remove the title bar
-    lockStatus_window.resizable(width=False, height=False)
-
-    # Get the window dimensions
-    lockStatus_window.update_idletasks()  # Ensure the window size is calculated
-    window_width = 620  # Adjust the width as needed
-    window_height = 385  # Adjust the height as needed
-
-    # Calculate the center position
-    screen_width = lockStatus_window.winfo_screenwidth()
-    screen_height = lockStatus_window.winfo_screenheight()
-    position_x = int((screen_width / 2) - (window_width / 2))
-    position_y = int((screen_height / 2) - (window_height / 2))
-
-    # Set the window position
-    lockStatus_window.geometry(f"{window_width}x{window_height}+{position_x}+{position_y}")
-
-    # Bind activity events to reset the inactivity timer
-    lockStatus_window.bind("<Motion>", reset_timer)
-    lockStatus_window.bind("<KeyPress>", reset_timer)
-    lockStatus_window.bind("<ButtonPress>", reset_timer)
-
-    # Start the inactivity timer
-    start_timer()
-
-    # Add the warning label with padding for better alignment
-    tk.Label(lockStatus_window, text='WARNING', font=('Arial', 25, 'bold'), bg=motif_color, fg='white', pady=12).pack(fill=tk.X)
-
-    # Load and display the status image with a message
-    status_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')).resize((150, 150), Image.LANCZOS))
-    logo_label = tk.Label(lockStatus_window, text='Please close both doors properly before locking.', image=status_img, compound=tk.TOP, font=('Arial', 18))
-    logo_label.image = status_img
-    logo_label.pack(pady=(10, 20))
-
-    button_frame = tk.Frame(lockStatus_window, bg=motif_color)
-    button_frame.pack(fill=tk.X)
-
-    # Centering the button inside the frame
-    button_frame.grid_columnconfigure(0, weight=1)  # Make the column stretch
-
-    # Load and display the 'Okay' button with an icon, modern styling, and padding
-    ok_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'okGrey_icon.png')).resize((35, 35), Image.LANCZOS))
-    ok_button = tk.Button(button_frame, text="Okay", font=("Arial", 20), bg='white', fg='black', relief="raised", bd=3, padx=20, pady=7, compound=tk.LEFT, image=ok_img, command=lambda: toplevel_destroy(lockStatus_window))
-    ok_button.image = ok_img  # Keep a reference to avoid garbage collection
-
-    # Add the button to the grid, center it with sticky and columnspan
-    ok_button.grid(row=0, column=0, padx=90, pady=18, sticky="ew")
-
-    # Configure the row and column to expand equally
-    button_frame.grid_rowconfigure(0, weight=1)
-    button_frame.grid_columnconfigure(0, weight=1)
 
 #----------------------------------------------------LOGIN WINDOW--------------------------------------------------------
 
@@ -96,7 +37,7 @@ def authenticate_user(username, password):
         main_ui_frame.tkraise()
         reset_timer()
         bind_activity_events()
-        show_inventory()
+        show_medicine_supply()
         configure_sidebar(user_role)
         not_lock()
     else:
@@ -173,34 +114,34 @@ def create_main_ui_frame(container):
     logo_label.grid(row=0, column=0, pady=5, padx=10, sticky="w")
     app_name_label = tk.Label(title_frame, text="Barangay San Mateo \nHealth Center\nMedicine Cabinet", font=("Arial", 18), fg="white", bg=motif_color, justify="left")
     app_name_label.grid(row=0, column=1, pady=10, padx=0, sticky="w", columnspan=1)
-    inventory_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'inventory_Icon.png')).resize((40, 40), Image.LANCZOS))
+    inventory_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'inventory_icon.png')).resize((40, 40), Image.LANCZOS))
     global inventory_button
-    inventory_button = tk.Button(sidebar_frame, height=100, width=350, text="   Inventory", command=show_inventory, font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=inventory_img)
+    inventory_button = tk.Button(sidebar_frame, height=100, width=350, text="Medicine Inventory", command=show_medicine_supply, font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=inventory_img, padx=10)
     inventory_button.image = inventory_img
-    inventory_button.grid(row=1, column=0, sticky="we", columnspan=2)
-    cabinet_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cabinet_Icon.png')).resize((40, 40), Image.LANCZOS))
-    global cabinet_button
-    cabinet_button = tk.Button(sidebar_frame, height=100, width=350, text="   Cabinet", command=show_cabinet, font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=cabinet_img)
-    cabinet_button.image = cabinet_img
-    cabinet_button.grid(row=2, column=0, sticky="we", columnspan=2)
+    inventory_button.grid(row=1, column=0, sticky="w", columnspan=2)
+    doorLogs_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cabinet_Icon.png')).resize((40, 40), Image.LANCZOS))
+    global doorLogs_button
+    doorLogs_button = tk.Button(sidebar_frame, height=100, width=350, text="Door Functions", command=show_doorLog, font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=doorLogs_img, padx=10)
+    doorLogs_button.image = doorLogs_img
+    doorLogs_button.grid(row=2, column=0, sticky="we", columnspan=2)
     notification_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'notification_Icon.png')).resize((40, 40), Image.LANCZOS))
     global notification_button
-    notification_button = tk.Button(sidebar_frame, height=100, width=350, text="   Notification", command=show_notification, font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=notification_img, justify="left")
+    notification_button = tk.Button(sidebar_frame, height=100, width=350, text="Notification", command=show_notification, font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=notification_img, justify="left", padx=10)
     notification_button.image = notification_img
-    notification_button.grid(row=3, column=0, sticky="we", columnspan=2)
+    notification_button.grid(row=4, column=0, sticky="we", columnspan=2)
     
     account_setting_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'accountSetting_Icon.png')).resize((40, 40), Image.LANCZOS))
     global account_setting_button
     account_setting_button = None
     
     logout_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'logout_icon.png')).resize((40, 40), Image.LANCZOS))
-    logout_button = tk.Button(sidebar_frame, height=100, width=350, text="   Log Out", command=lambda: logout('manual logout'), font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=logout_img)
+    logout_button = tk.Button(sidebar_frame, height=100, width=350, text="Log Out", command=lambda: logout('manual logout'), font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=logout_img, padx=10)
     logout_button.image = logout_img
-    logout_button.grid(row=5, column=0, sticky="we", columnspan=2)
+    logout_button.grid(row=6, column=0, sticky="we", columnspan=2)
     content_frame = tk.Frame(main_ui_frame, bg='#ecf0f1')
     content_frame.pack(expand=True, fill='both', side='right')
     main_ui_frame.grid(row=0, column=0, sticky='nsew')
-    show_inventory()
+    show_medicine_supply()
     return main_ui_frame
 
 #Function to handle the background colors of sidebar buttons
@@ -209,20 +150,20 @@ def reset_button_colors():
     inventory_button.config(fg=default_fg_color)
     notification_button.config(bg=default_bg_color)
     notification_button.config(fg=default_fg_color)
-    cabinet_button.config(bg=default_bg_color)
-    cabinet_button.config(fg=default_fg_color)
+    doorLogs_button.config(bg=default_bg_color)
+    doorLogs_button.config(fg=default_fg_color)
     if account_setting_button:
         account_setting_button.config(bg=default_bg_color)
         account_setting_button.config(fg=default_fg_color)
 
-#Function that checks if the user is an 'Admin' or 'Staff',
+#Function that checks if the user is an 'Admin' or 'Staff' to configure the sidebar,
 def configure_sidebar(user_role):
     global account_setting_button
     if user_role == "Admin":     #if the user is 'Admin' then the account setting button will be present in the sidebar
         if account_setting_button is None:
-            account_setting_button = tk.Button(sidebar_frame, height=100, width=350, text="   Account Settings", command=show_account_setting, font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="groove", compound=tk.LEFT, image=account_setting_img)
+            account_setting_button = tk.Button(sidebar_frame, height=100, width=350, text="   Account Settings", command=show_account_setting, font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="groove", compound=tk.LEFT, image=account_setting_img, padx=10)
             account_setting_button.image = account_setting_img
-        account_setting_button.grid(row=4, column=0, sticky="we", columnspan=2)
+        account_setting_button.grid(row=5, column=0, sticky="we", columnspan=2)
     else:
         if account_setting_button:
             account_setting_button.grid_remove()
@@ -279,8 +220,91 @@ def unbind_activity_events():
         root.unbind(event)
 
         
-#--------------------------------------------------------------INVENTORY & DOOR LOGS---------------------------------------------------------------------    
-def show_inventory():
+#--------------------------------------------------------------MEDICINE INVENTORY---------------------------------------------------------------------    
+
+#Function that creates a pop-up window (toplevel) for depositing medicine
+def deposit_window():
+    deposit_toplevel = tk.Toplevel(relief='groove', bd=5)
+    deposit_toplevel.overrideredirect(True)  # Remove the title bar
+    deposit_toplevel.resizable(width=False, height=False)
+
+    # Get the window dimensions
+    deposit_toplevel.update_idletasks()  # Ensure the window size is calculated
+    window_width = 620  # Adjust the width as needed
+    window_height = 580  # Adjust the height as needed
+
+    # Calculate the center position
+    screen_width = deposit_toplevel.winfo_screenwidth()
+    screen_height = deposit_toplevel.winfo_screenheight()
+    position_x = int((screen_width / 2) - (window_width / 2))
+    position_y = int((screen_height / 2) - (window_height / 2))
+
+    # Set the window position
+    deposit_toplevel.geometry(f"{window_width}x{window_height}+{position_x}+{position_y}")
+
+    # Bind activity events to the edit_window to reset the inactivity timer
+    deposit_toplevel.bind("<Motion>", reset_timer)
+    deposit_toplevel.bind("<KeyPress>", reset_timer)
+    deposit_toplevel.bind("<ButtonPress>", reset_timer)
+
+    # Ensure the inactivity timer starts when the edit_window is shown
+    start_timer()
+
+    title_label = tk.Label(deposit_toplevel, text="Deposit Medicine", font=("Arial", 18, "bold"), bg=motif_color, fg='white')
+    title_label.grid(row=0, column=0, columnspan=2, sticky='new')
+
+    # Display QR code if it exists
+    qr_image = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'image_icon.png')).resize((200, 200), Image.LANCZOS))
+    qr_code_image_label = tk.Label(deposit_toplevel, image=qr_image)
+    qr_code_image_label.image = qr_image
+    qr_code_image_label.grid(row=1, column=0, columnspan=2, pady=10)
+
+    input_frame = tk.Frame(deposit_toplevel)
+    input_frame.grid(row=2, column=0, sticky='new')
+
+    # Ensure the input_frame expands to fill the available space
+    input_frame.grid_rowconfigure(1, weight=1)
+    input_frame.grid_columnconfigure(0, weight=1)
+
+    # Labels and AutocompleteComboboxes for the form
+    tk.Label(input_frame, text="Name of Medicine", font=("Arial", 16)).grid(row=0, column=0, padx=10, pady=10)
+    name_combobox = AutocompleteCombobox(input_frame, font=("Arial", 16), width=20)
+    name_combobox.set_completion_list(["Biogesic", "Alaxan", "Mefenamic", "Paracetamol"])
+    name_combobox.grid(row=0, column=1, padx=10, pady=10)
+
+    tk.Label(input_frame, text="Type", font=("Arial", 16)).grid(row=1, column=0, padx=10, pady=10)
+    type_combobox = AutocompleteCombobox(input_frame, font=("Arial", 16), width=20)
+    type_combobox.set_completion_list(["Hypertension", "Fever", "Pain Reliever"])
+    type_combobox.grid(row=1, column=1, padx=10, pady=10)
+
+    tk.Label(input_frame, text="Quantity", font=("Arial", 16)).grid(row=2, column=0, padx=10, pady=10)
+    quantity_spinbox = tk.Spinbox(input_frame, from_=0, to=100, font=("Arial", 16), width=20)
+    quantity_spinbox.grid(row=2, column=1, padx=10, pady=10)
+
+    tk.Label(input_frame, text="Unit", font=("Arial", 16)).grid(row=3, column=0, padx=10, pady=10)
+    unit_combobox = AutocompleteCombobox(input_frame, font=("Arial", 16), width=20)
+    unit_combobox.set_completion_list(["Tablet", "Syrup", "Pieces", "Box"])
+    unit_combobox.grid(row=3, column=1, padx=10, pady=10)
+
+    tk.Label(input_frame, text="Expiration Date", font=("Arial", 16)).grid(row=4, column=0, padx=10, pady=10)
+    expiration_date_entry = DateEntry(input_frame, font=("Arial", 16), date_pattern='mm-dd-y', width=20)
+    expiration_date_entry.grid(row=4, column=1, padx=10, pady=10)
+    
+    button_frame = tk.Frame(deposit_toplevel, bg=motif_color, pady=10)
+    button_frame.grid(row=3, column=0, columnspan=2, sticky='ews')
+
+    cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
+    cancel_button = tk.Button(button_frame, text="Cancel", font=("Arial", 14), command=lambda: toplevel_destroy(deposit_toplevel), width=118, padx=10, relief="raised", bd=3, compound=tk.LEFT, image=cancel_img)
+    cancel_button.image = cancel_img
+    cancel_button.grid(row=0, column=0, padx=79)
+
+    save_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'saveBlack_icon.png')).resize((25, 25), Image.LANCZOS))
+    save_button = tk.Button(button_frame, text="Save", font=("Arial", 14), width=118, padx=10, relief="raised", bd=3, compound=tk.LEFT, image=save_img)
+    save_button.image = save_img
+    save_button.grid(row=0, column=1, padx=79)
+
+#Function that creates the UI for medicine inventory in the content_frame
+def show_medicine_supply():
     clear_frame()
     reset_button_colors()
 
@@ -302,14 +326,8 @@ def show_inventory():
     style.configure("TNotebook.Tab", background="white", foreground="black", borderwidth=1)
     style.map("TNotebook.Tab", background=[("selected", motif_color)], foreground=[("selected", "black")], borderwidth=[("selected", 1)])
 
-    notebook = ttk.Notebook(content_frame, style="TNotebook")
-    notebook.pack(expand=True, fill='both')
-
-    tab1 = tk.Frame(notebook, bg=motif_color)
-    notebook.add(tab1, text='Medicine Inventory')
-
-    header_frame = tk.Frame(tab1, bg=motif_color)
-    header_frame.pack(fill="x", padx=10, pady=10)
+    header_frame = tk.Frame(content_frame, bg=motif_color)
+    header_frame.pack(fill="x", pady=10)
 
     def activate_button(clicked_button):
         for btn in buttons:
@@ -426,6 +444,7 @@ def show_inventory():
     search_icon_label.pack(side=tk.RIGHT, padx=(0, 5))
     buttons = []
 
+    #Sorting buttons
     sort_button_1 = tk.Button(header_frame, text="Sort by Name", bg=motif_color, fg="white", padx=10, pady=5,
                               command=lambda: sort_treeview("name", sort_button_1), relief="raised", bd=4)
     sort_button_1.grid(row=0, column=2, padx=(110, 0), pady=10, sticky="e")
@@ -453,7 +472,7 @@ def show_inventory():
 
     activate_button(sort_button_5)
 
-    tree_frame = tk.Frame(tab1)
+    tree_frame = tk.Frame(content_frame)
     tree_frame.pack(fill="both", expand=True)
 
     tree_scroll = ttk.Scrollbar(tree_frame)
@@ -502,28 +521,61 @@ def show_inventory():
     tree.pack(fill="both", expand=True)
 
     # Create a frame for the buttons below the Treeview
-    button_frame = tk.Frame(tab1, bg='white')
+    button_frame = tk.Frame(content_frame, bg='white', padx=30)
     button_frame.pack(fill="x", anchor='e')  # Align to the right
 
+    # Configure the columns in button_frame to distribute buttons evenly
+    button_frame.columnconfigure(0, weight=1)
+    button_frame.columnconfigure(1, weight=1)
+    button_frame.columnconfigure(2, weight=1)
+    button_frame.columnconfigure(3, weight=1)
+
+    # Add the first new button (e.g., 'Button 1')
+    widthdraw_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'minus_icon.png')).resize((25, 25), Image.LANCZOS))
+    withdraw_button = tk.Button(button_frame, text="Withdraw", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=widthdraw_icon, command=unlocked)
+    withdraw_button.image = widthdraw_icon
+    withdraw_button.grid(row=0, column=0, padx=20, pady=(12, ), sticky='ew')
+
+    # Add the second new button (e.g., 'Button 2')
+    deposit_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'add_icon.png')).resize((25, 25), Image.LANCZOS))
+    deposit_button = tk.Button(button_frame, text="Deposit", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=deposit_icon,command=deposit_window)
+    deposit_button.image = deposit_icon
+    deposit_button.grid(row=0, column=1, padx=20, pady=(12, 7), sticky='ew')
+
+    # Extract CSV button
     extract_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'extract_icon.png')).resize((25, 25), Image.LANCZOS))
     extract_button = tk.Button(button_frame, text="Extract CSV", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=extract_img)
     extract_button.image = extract_img
-    extract_button.pack(side="right", padx=(0, 50), pady=(12, 3))  # Position it on the right side with padding on the left
+    extract_button.grid(row=0, column=2, padx=20, pady=(12, 7), sticky='ew')
 
+    # Reload All button
     refresh_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'refresh_icon.png')).resize((25, 25), Image.LANCZOS))
     refresh_button = tk.Button(button_frame, text="Reload All", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=refresh_img, command=clear_search)
     refresh_button.image = refresh_img
-    refresh_button.pack(side="right", padx=(0, 50), pady=(12, 3))  # Position it on the right side with padding on the left
+    refresh_button.grid(row=0, column=3, padx=20, pady=(12, 7), sticky='ew')
 
 
-    #----------------------------------------------Door Logs Tab-------------------------------------------
-    tab2 = tk.Frame(notebook, bg=motif_color)
-    notebook.add(tab2, text='Door Logs')
+
+
+
+#--------------------------------------------------------- DOOR FUNCTIONS -----------------------------------------------------------       
+
+#Function that creates the UI for door function in the content_frame
+def show_doorLog():
+    clear_frame()
+    reset_button_colors()
+    doorLogs_button.config(bg=active_bg_color)
+    doorLogs_button.config(fg=active_fg_color)
+    tk.Label(content_frame, text="Door Logs Content", bg="#121212", fg="white").pack()
+    doorLogs_label = tk.Label(content_frame, text="Door Logs Page", font=("Arial", 24))
+    doorLogs_label.pack()
+
 
 
 
 #--------------------------------------------------------- NOTIFICATION -----------------------------------------------------------       
 
+#Function that creates the UI for notification in the content_frame
 def show_notification():
     clear_frame()
     reset_button_colors()
@@ -534,147 +586,6 @@ def show_notification():
     notification_label.pack()
 
 
-#-----------------------------------------------CABINET (WITHDRAWAL & DEPOSIT/ LOCK & UNLOCK DOOR------------------------------------------------------  
-# Function that ensures users cannot type into the combobox  
-def validate_combobox_input(action, value_if_allowed):
-    return False
-
-# Class for Autocompletion of Combobox based on the values of the particular comboboxes
-class AutocompleteCombobox(ttk.Combobox):
-    def set_completion_list(self, completion_list):
-        self._completion_list = sorted(completion_list, key=str.lower)  # sort case insensitive
-        self._hits = []
-        self._hit_index = 0
-        self.position = 0
-        self.bind('<KeyRelease>', self.handle_keyrelease)
-        self['values'] = self._completion_list
-
-    def autocomplete(self, delta=0):
-        if delta:
-            self.delete(self.position, tk.END)
-        else:
-            self.position = len(self.get())
-        _hits = []
-        for item in self._completion_list:
-            if item.lower().startswith(self.get().lower()):
-                _hits.append(item)
-        if _hits != self._hits:
-            self._hit_index = 0
-            self._hits = _hits
-        else:
-            self._hit_index = (self._hit_index + delta) % len(self._hits)
-        if self._hits:
-            self.set_completion(self._hits[self._hit_index])
-
-    def set_completion(self, completion):
-        self.delete(0, tk.END)
-        self.insert(0, completion)
-        self.select_range(self.position, tk.END)
-
-    def handle_keyrelease(self, event):
-        if event.keysym in ['BackSpace', 'Left', 'Right', 'Up', 'Down', 'Shift']:
-            return
-        if event.keysym == 'Return':
-            self.set_completion(self._hits[self._hit_index])
-            return
-        if event.keysym == 'Escape':
-            self.delete(0, tk.END)
-            self['values'] = self._completion_list
-            return
-        self.autocomplete()
-
-
-
-#Function that creates the UI for Cabinet 
-def show_cabinet():
-    clear_frame()  # Function to clear the current frame; you need to implement this
-    reset_button_colors()  # Function to reset button colors; you need to implement this
-    cabinet_button.config(bg=active_bg_color, fg=active_fg_color)  # Setting active button colors
-
-    # Create a Notebook widget (tabs)
-    notebook = ttk.Notebook(content_frame)
-    notebook.pack(expand=True, fill='both')
-
-    # Tab 1 - Withdraw Tab
-    withdraw_tab = tk.Frame(notebook)
-    notebook.add(withdraw_tab, text='WITHDRAW')
-
-    # Tab 2 - Deposit Tab
-    deposit_tab = tk.Frame(notebook)
-    notebook.add(deposit_tab, text='DEPOSIT')
-
-    deposit_frame = tk.Frame(deposit_tab)
-    deposit_frame.grid(row=0, column=0, sticky='new')  # Use 'nsew' to ensure it expands
-
-    # Ensure the deposit_frame expands to fill the available space
-    deposit_tab.grid_rowconfigure(0, weight=1)
-    deposit_tab.grid_columnconfigure(0, weight=1)
-
-    # Title for Deposit Tab
-    deposit_label = tk.Label(deposit_frame, text="ADD MEDICINE HERE", font=("Arial", 24), fg='white', bg=motif_color)
-    deposit_label.grid(row=0, column=0, columnspan=2, pady=20, sticky='we')
-
-    # Input Frame for the form fields
-    input_frame = tk.Frame(deposit_frame)
-    input_frame.grid(row=1, column=0, sticky='new')
-
-    # Ensure the input_frame expands to fill the available space
-    deposit_frame.grid_rowconfigure(1, weight=1)
-    deposit_frame.grid_columnconfigure(0, weight=1)
-
-    # Labels and AutocompleteComboboxes for the form
-    tk.Label(input_frame, text="Name of Medicine", font=("Arial", 16)).grid(row=0, column=0, padx=10, pady=10)
-    name_combobox = AutocompleteCombobox(input_frame, font=("Arial", 16))
-    name_combobox.set_completion_list(["Biogesic", "Alaxan", "Mefenamic", "Paracetamol"])
-    name_combobox.grid(row=0, column=1, padx=10, pady=10)
-
-    tk.Label(input_frame, text="Type", font=("Arial", 16)).grid(row=1, column=0, padx=10, pady=10)
-    type_combobox = AutocompleteCombobox(input_frame, font=("Arial", 16))
-    type_combobox.set_completion_list(["Hypertension", "Fever", "Pain Reliever"])
-    type_combobox.grid(row=1, column=1, padx=10, pady=10)
-
-    tk.Label(input_frame, text="Unit", font=("Arial", 16)).grid(row=2, column=0, padx=10, pady=10)
-    unit_combobox = AutocompleteCombobox(input_frame, font=("Arial", 16))
-    unit_combobox.set_completion_list(["Tablet", "Syrup", "Pieces", "Box"])
-    unit_combobox.grid(row=2, column=1, padx=10, pady=10)
-
-    tk.Label(input_frame, text="Expiration Date", font=("Arial", 16)).grid(row=3, column=0, padx=10, pady=10)
-    expiration_date_entry = DateEntry(input_frame, font=("Arial", 16), date_pattern='y-mm-dd')
-    expiration_date_entry.grid(row=3, column=1, padx=10, pady=10)
-
-    tk.Label(input_frame, text="Date Stored", font=("Arial", 16)).grid(row=4, column=0, padx=10, pady=10)
-    date_stored_entry = DateEntry(input_frame, font=("Arial", 16), date_pattern='y-mm-dd')
-    date_stored_entry.grid(row=4, column=1, padx=10, pady=10)
-
-    # Frame for image or additional content
-    image_frame = tk.Frame(deposit_frame)
-    image_frame.grid(row=1, column=1, sticky='nw')
-
-    medicine_qrcode = tk.Label(image_frame, text='Medicine QR Code Image:', font=('Arial', 15))
-    medicine_qrcode.pack(pady=(0, 10))
-
-    # Load and display an image
-    try:
-        # Load the image file
-        photo = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'image_icon.png')).resize((220, 220), Image.LANCZOS))
-
-        # Create a Label widget to display the image
-        image_label = tk.Label(image_frame, image=photo)
-        image_label.image = photo  # Keep a reference to the image to prevent garbage collection
-        image_label.pack()
-
-    except Exception as e:
-        print(f"Error loading image: {e}")
-
-    clear_button=tk.Button(deposit_frame, text='CLEAR', fg='white', bg=motif_color, font=('Arial', 15), relief="raised", bd=3)
-    clear_button.grid(row=2, column=0, padx=(50,20), pady=15)
-
-    save_print_button=tk.Button(deposit_frame, text='INSERT/PRINT', fg='white', bg=motif_color, font=('Arial', 15), relief="raised", bd=3)
-    save_print_button.grid(row=2, column=1, padx=(20,70), pady=15)
-
-    # Ensure image_frame expands to fill the available space
-    deposit_frame.grid_rowconfigure(1, weight=1)
-    deposit_frame.grid_columnconfigure(1, weight=1)
 
 
 #------------------------------------------------------ACCOUNT SETTINGS FRAME----------------------------------------------------------------------
@@ -974,23 +885,23 @@ def add_user():
         print(f"Error loading default image: {e}")
 
     tk.Label(add_window, text="Username", font=("Arial", 14)).grid(row=2, column=0, padx=10, pady=(29, 10))
-    username_entry = tk.Entry(add_window, font=("Arial", 14))
+    username_entry = tk.Entry(add_window, font=("Arial", 14), width=20)
     username_entry.grid(row=2, column=1, padx=10, pady=(29, 10))
 
     tk.Label(add_window, text="Password", font=("Arial", 14)).grid(row=3, column=0, padx=10, pady=10)
-    password_entry = tk.Entry(add_window, show="*", font=("Arial", 14))
+    password_entry = tk.Entry(add_window, show="*", font=("Arial", 14), width=20)
     password_entry.grid(row=3, column=1, padx=10, pady=10)
 
     tk.Label(add_window, text="Confirm Password", font=("Arial", 14)).grid(row=4, column=0, padx=10, pady=10)
-    confirm_password_entry = tk.Entry(add_window, show="*", font=("Arial", 14))
+    confirm_password_entry = tk.Entry(add_window, show="*", font=("Arial", 14), width=20)
     confirm_password_entry.grid(row=4, column=1, padx=10, pady=10)
 
     tk.Label(add_window, text="Position", font=("Arial", 14)).grid(row=5, column=0, padx=10, pady=10)
-    position_combobox = ttk.Combobox(add_window, font=("Arial", 14), values=["Midwife", "BHW", "BNS"])
+    position_combobox = ttk.Combobox(add_window, font=("Arial", 14), values=["Midwife", "BHW", "BNS"], width=20)
     position_combobox.grid(row=5, column=1, padx=10, pady=10)
 
     tk.Label(add_window, text="Account Type", font=("Arial", 14)).grid(row=6, column=0, padx=10, pady=10)
-    accountType_combobox = ttk.Combobox(add_window, font=("Arial", 14), values=["Admin", "Staff"])
+    accountType_combobox = ttk.Combobox(add_window, font=("Arial", 14), values=["Admin", "Staff"], width=20)
     accountType_combobox.grid(row=6, column=1, padx=10, pady=10)
 
     def generate_qr_code():
@@ -1064,9 +975,226 @@ def add_user():
 
 
 #-----------------------------------------------OTHER FUNCTIONS------------------------------------------------------
+# Function that ensures users cannot type into the combobox  
+def validate_combobox_input(action, value_if_allowed):
+    return False
+# Class for Autocompletion of Combobox based on the values of the particular comboboxes
+class AutocompleteCombobox(ttk.Combobox):
+    def set_completion_list(self, completion_list):
+        self._completion_list = sorted(completion_list, key=str.lower)  # sort case insensitive
+        self._hits = []
+        self._hit_index = 0
+        self.position = 0
+        self.bind('<KeyRelease>', self.handle_keyrelease)
+        self['values'] = self._completion_list
+
+    def autocomplete(self, delta=0):
+        if delta:
+            self.delete(self.position, tk.END)
+        else:
+            self.position = len(self.get())
+        _hits = []
+        for item in self._completion_list:
+            if item.lower().startswith(self.get().lower()):
+                _hits.append(item)
+        if _hits != self._hits:
+            self._hit_index = 0
+            self._hits = _hits
+        else:
+            self._hit_index = (self._hit_index + delta) % len(self._hits)
+        if self._hits:
+            self.set_completion(self._hits[self._hit_index])
+
+    def set_completion(self, completion):
+        self.delete(0, tk.END)
+        self.insert(0, completion)
+        self.select_range(self.position, tk.END)
+
+    def handle_keyrelease(self, event):
+        if event.keysym in ['BackSpace', 'Left', 'Right', 'Up', 'Down', 'Shift']:
+            return
+        if event.keysym == 'Return':
+            self.set_completion(self._hits[self._hit_index])
+            return
+        if event.keysym == 'Escape':
+            self.delete(0, tk.END)
+            self['values'] = self._completion_list
+            return
+        self.autocomplete()
+
+#Function for switching of Frames
 def clear_frame():
     for widget in content_frame.winfo_children():
         widget.destroy()
+
+#Top Level Warning if door is not locked
+def not_lock():
+    lockStatus_window = tk.Toplevel(relief='groove', bd=5)
+    lockStatus_window.overrideredirect(True)  # Remove the title bar
+    lockStatus_window.resizable(width=False, height=False)
+
+    # Get the window dimensions
+    lockStatus_window.update_idletasks()  # Ensure the window size is calculated
+    window_width = 620  # Adjust the width as needed
+    window_height = 385  # Adjust the height as needed
+
+    # Calculate the center position
+    screen_width = lockStatus_window.winfo_screenwidth()
+    screen_height = lockStatus_window.winfo_screenheight()
+    position_x = int((screen_width / 2) - (window_width / 2))
+    position_y = int((screen_height / 2) - (window_height / 2))
+
+    # Set the window position
+    lockStatus_window.geometry(f"{window_width}x{window_height}+{position_x}+{position_y}")
+
+    # Bind activity events to reset the inactivity timer
+    lockStatus_window.bind("<Motion>", reset_timer)
+    lockStatus_window.bind("<KeyPress>", reset_timer)
+    lockStatus_window.bind("<ButtonPress>", reset_timer)
+
+    # Start the inactivity timer
+    start_timer()
+
+    # Add the warning label with padding for better alignment
+    tk.Label(lockStatus_window, text='WARNING', font=('Arial', 25, 'bold'), bg='red', fg='white', pady=12).pack(fill=tk.X)
+
+    # Load and display the status image with a message
+    status_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')).resize((150, 150), Image.LANCZOS))
+    logo_label = tk.Label(lockStatus_window, text='Please close both doors properly before locking.', image=status_img, compound=tk.TOP, font=('Arial', 18))
+    logo_label.image = status_img
+    logo_label.pack(pady=(10, 20))
+
+    button_frame = tk.Frame(lockStatus_window, bg='red')
+    button_frame.pack(fill=tk.X)
+
+    # Centering the button inside the frame
+    button_frame.grid_columnconfigure(0, weight=1)  # Make the column stretch
+
+    # Load and display the 'Okay' button with an icon, modern styling, and padding
+    ok_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'okGrey_icon.png')).resize((35, 35), Image.LANCZOS))
+    ok_button = tk.Button(button_frame, text="Okay", font=("Arial", 20), bg='white', fg='black', relief="raised", bd=3, padx=20, pady=7, compound=tk.LEFT, image=ok_img, command=lambda: toplevel_destroy(lockStatus_window))
+    ok_button.image = ok_img  # Keep a reference to avoid garbage collection
+
+    # Add the button to the grid, center it with sticky and columnspan
+    ok_button.grid(row=0, column=0, padx=90, pady=18, sticky="ew")
+
+    # Configure the row and column to expand equally
+    button_frame.grid_rowconfigure(0, weight=1)
+    button_frame.grid_columnconfigure(0, weight=1)
+
+def proceed_to_scan(window):
+    """Close current window and proceed to scanning window."""
+    toplevel_destroy(window)
+    scanning()
+
+def unlocked():
+    unlocked_window = tk.Toplevel(relief='groove', bd=5)
+    unlocked_window.overrideredirect(True)  # Remove the title bar
+    unlocked_window.resizable(width=False, height=False)
+
+    # Get the window dimensions
+    unlocked_window.update_idletasks()  # Ensure the window size is calculated
+    window_width = 620  # Adjust the width as needed
+    window_height = 400  # Adjust the height as needed
+
+    # Calculate the center position
+    screen_width = unlocked_window.winfo_screenwidth()
+    screen_height = unlocked_window.winfo_screenheight()
+    position_x = int((screen_width / 2) - (window_width / 2))
+    position_y = int((screen_height / 2) - (window_height / 2))
+
+    # Set the window position
+    unlocked_window.geometry(f"{window_width}x{window_height}+{position_x}+{position_y}")
+
+    # Bind activity events to reset the inactivity timer
+    unlocked_window.bind("<Motion>", reset_timer)
+    unlocked_window.bind("<KeyPress>", reset_timer)
+    unlocked_window.bind("<ButtonPress>", reset_timer)
+
+    # Start the inactivity timer
+    start_timer()
+
+    # Add the warning label with padding for better alignment
+    tk.Label(unlocked_window, text='NOTICE', font=('Arial', 25, 'bold'), bg=motif_color, fg='white', pady=12).pack(fill=tk.X)
+
+    # Load and display the status image with a message
+    unlock_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png')).resize((150, 170), Image.LANCZOS))
+    logo_label = tk.Label(unlocked_window, text='The door is finally unlocked, \nyou may now proceed to scan the QR code.', image=unlock_img, compound=tk.TOP, font=('Arial', 18), pady=7)
+    logo_label.image = unlock_img
+    logo_label.pack(pady=(10, 20))
+
+    button_frame = tk.Frame(unlocked_window, bg=motif_color)
+    button_frame.pack(fill=tk.X)
+
+    # Centering the button inside the frame
+    button_frame.grid_columnconfigure(0, weight=1)
+
+    # Load and display the 'Okay' button with an icon, modern styling, and padding
+    ok_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'okGrey_icon.png')).resize((30, 30), Image.LANCZOS))
+    ok_button = tk.Button(button_frame, text="Okay", font=("Arial", 20), bg='white', fg='black', relief="raised", bd=3, padx=20, pady=10, compound=tk.LEFT, image=ok_img, command=lambda: proceed_to_scan(unlocked_window))
+    ok_button.image = ok_img  # Keep a reference to avoid garbage collection
+
+    # Add the button to the grid, center it with sticky and columnspan
+    ok_button.grid(row=0, column=0, padx=90, pady=5, sticky="ew")
+
+    # Configure the row and column to expand equally
+    button_frame.grid_rowconfigure(0, weight=1)
+    button_frame.grid_columnconfigure(0, weight=1)
+
+def scanning():
+    scanning_window = tk.Toplevel(relief='groove', bd=5)
+    scanning_window.overrideredirect(True)  # Remove the title bar
+    scanning_window.resizable(width=False, height=False)
+
+    # Get the window dimensions
+    scanning_window.update_idletasks()  # Ensure the window size is calculated
+    window_width = 620  # Adjust the width as needed
+    window_height = 400  # Adjust the height as needed
+
+    # Calculate the center position
+    screen_width = scanning_window.winfo_screenwidth()
+    screen_height = scanning_window.winfo_screenheight()
+    position_x = int((screen_width / 2) - (window_width / 2))
+    position_y = int((screen_height / 2) - (window_height / 2))
+
+    # Set the window position
+    scanning_window.geometry(f"{window_width}x{window_height}+{position_x}+{position_y}")
+
+    # Bind activity events to reset the inactivity timer
+    scanning_window.bind("<Motion>", reset_timer)
+    scanning_window.bind("<KeyPress>", reset_timer)
+    scanning_window.bind("<ButtonPress>", reset_timer)
+
+    # Start the inactivity timer
+    start_timer()
+
+    # Add the warning label with padding for better alignment
+    tk.Label(scanning_window, text='NOTICE', font=('Arial', 25, 'bold'), bg=motif_color, fg='white', pady=12).pack(fill=tk.X)
+
+    # Load and display the status image with a message
+    scanner_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'scanning_icon.png')).resize((150, 170), Image.LANCZOS))
+    logo_label = tk.Label(scanning_window, text='Please scan the QR code of the desired medicine \n using the scanner at the right of the cabinet.', image=scanner_img, compound=tk.TOP, font=('Arial', 18))
+    logo_label.image = scanner_img
+    logo_label.pack(pady=(10, 20))
+
+    button_frame = tk.Frame(scanning_window, bg=motif_color)
+    button_frame.pack(fill=tk.X)
+
+    # Centering the button inside the frame
+    button_frame.grid_columnconfigure(0, weight=1)
+
+    # Load and display the 'Okay' button with an icon, modern styling, and padding
+    ok_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'okGrey_icon.png')).resize((35, 35), Image.LANCZOS))
+    ok_button = tk.Button(button_frame, text="Okay", font=("Arial", 20), bg='white', fg='black', relief="raised", bd=3, padx=20, pady=7, compound=tk.LEFT, image=ok_img, command=lambda: toplevel_destroy(scanning_window))
+    ok_button.image = ok_img  # Keep a reference to avoid garbage collection
+
+    # Add the button to the grid, center it with sticky and columnspan
+    ok_button.grid(row=0, column=0, padx=90, pady=5, sticky="ew")
+
+    # Configure the row and column to expand equally
+    button_frame.grid_rowconfigure(0, weight=1)
+    button_frame.grid_columnconfigure(0, weight=1)
+
 
 
 #-----------------------------------------------MAIN------------------------------------------------------
