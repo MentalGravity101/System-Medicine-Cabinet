@@ -8,6 +8,14 @@ from tkinter import messagebox
 import io
 from tkcalendar import DateEntry
 from datetime import datetime
+import mysql.connector
+
+conn = mysql.connector.connect(
+  host="localhost",
+  user="root",
+  password="",
+  database="db_medicine_cabinet"
+)
 
 INACTIVITY_PERIOD = 60000 #automatic logout timer in milliseconds
 inactivity_timer = None #initialization of idle timer
@@ -31,11 +39,11 @@ def clear_frame():
 
 #function for authentication during the login frame
 def authenticate_user(username, password):
-    conn = sqlite3.connect('Medicine Cabinet.db')
+    # conn = sqlite3.connect('Medicine Cabinet.db')
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))
+    cursor.execute("SELECT * FROM users WHERE username = %s AND password = %s", [username, password])
     user = cursor.fetchone()
-    conn.close()
+    # conn.close()
     if user:
         user_role = user[2] 
         main_ui_frame.tkraise()
@@ -45,6 +53,10 @@ def authenticate_user(username, password):
         configure_sidebar(user_role)
     else:
         messagebox.showerror("Login Failed", "Invalid username or password.")
+
+#function to open touch pad
+def callback(event):
+    os.system("C:\\PROGRA~1\\COMMON~1\\MICROS~1\\ink\\TabTip.exe")
 
 #function to create the UI of login frame
 def create_login_frame(container):
@@ -66,6 +78,7 @@ def create_login_frame(container):
     username_label.pack(pady=10)
     global username_entry
     username_entry = tk.Entry(box_frame, font=("Arial", 16), relief='sunken', bd=3, width=25)
+    username_entry.bind("<FocusIn>", callback)
     username_entry.pack(pady=5)
     password_label = tk.Label(box_frame, text="Password", font=("Arial", 18), bg='#ffffff')
     password_label.pack(pady=10)
@@ -73,6 +86,7 @@ def create_login_frame(container):
     password_frame.pack(pady=5, fill='x')
     global password_entry
     password_entry = tk.Entry(password_frame, show="*", font=("Arial", 16), relief='sunken', bd=3, width=20)
+    password_entry.bind("<FocusIn>", callback)
     password_entry.pack(side='left', fill='x', expand=True)
     eye_open_image = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'eye_open.png')).resize((20, 20), Image.LANCZOS))
     eye_closed_image = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'eye_close.png')).resize((20, 20), Image.LANCZOS))
@@ -291,12 +305,12 @@ def show_inventory():
             tree.delete(row)
 
         # Fetch all data from the database first
-        conn = sqlite3.connect('Medicine Cabinet.db')
+        # conn = sqlite3.connect('Medicine Cabinet.db')
         cursor = conn.cursor()
         query = f"SELECT name, type, quantity, unit, date_stored, expiration_date FROM medicine_inventory ORDER BY {order_by} {sort}"
         cursor.execute(query)
         medicine = cursor.fetchall()
-        conn.close()
+        # conn.close()
 
         # Filter data in Python based on the search term
         filtered_medicine = []
@@ -422,11 +436,11 @@ def show_inventory():
     tree.column("date stored", width=150)
     tree.column("expiration date", width=150)
 
-    conn = sqlite3.connect('Medicine Cabinet.db')
+    # conn = sqlite3.connect('Medicine Cabinet.db')
     cursor = conn.cursor()
     cursor.execute("SELECT name, type, quantity, unit, date_stored, expiration_date FROM medicine_inventory ORDER BY date_stored")
     medicine = cursor.fetchall()
-    conn.close()
+    # conn.close()
 
     style.configure("Treeview", rowheight=30, font=('Arial', 12))
     style.configure("Treeview.Heading", font=('Arial', 14, 'bold'), padding=[10, 5])
@@ -438,8 +452,8 @@ def show_inventory():
 
     for i, med in enumerate(medicine):
         name, type, quantity, unit, date_stored, expiration_date = med
-        date_stored = datetime.strptime(date_stored, "%Y-%m-%d").strftime("%b %d, %Y")
-        expiration_date = datetime.strptime(expiration_date, "%Y-%m-%d").strftime("%b %d, %Y")
+        date_stored = datetime.strptime(str(date_stored), "%Y-%m-%d").strftime("%b %d, %Y")
+        expiration_date = datetime.strptime(str(expiration_date), "%Y-%m-%d").strftime("%b %d, %Y")
         tag = 'evenrow' if i % 2 == 0 else 'oddrow'
         tree.insert("", "end", values=(name, type, quantity, unit, date_stored, expiration_date), tags=(tag,))
 
@@ -657,12 +671,12 @@ def show_account_setting():
     tree.column("accountType", width=150)
 
     # Insert data into the treeview with alternating row colors
-    conn = sqlite3.connect('Medicine Cabinet.db')
+    # conn = sqlite3.connect('Medicine Cabinet.db')
     cursor = conn.cursor()
     
     cursor.execute("SELECT username, position, accountType FROM users ORDER BY accountType ASC")
     users = cursor.fetchall()
-    conn.close()
+    # conn.close()
 
     for i, user in enumerate(users):
         username, position, accountType = user
@@ -707,11 +721,11 @@ def delete_selected_user(tree):
     if selected_item:
         username = tree.item(selected_item, "values")[0]
         if messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete the user '{username}'?"):
-            conn = sqlite3.connect('Medicine Cabinet.db')
+            # conn = sqlite3.connect('Medicine Cabinet.db')
             cursor = conn.cursor()
-            cursor.execute("DELETE FROM users WHERE username = ?", (username,))
+            cursor.execute("DELETE FROM users WHERE username = %s", [username])
             conn.commit()
-            conn.close()
+            # conn.close()
             show_account_setting()
 
 def on_tree_select(tree):
@@ -735,15 +749,15 @@ def validate_all_fields_filled(*widgets):
 
 def validate_user_info(action, username, password, confirm_password, new_position, new_accountType):
     # Validate username uniqueness
-    conn = sqlite3.connect('Medicine Cabinet.db')
+    # conn = sqlite3.connect('Medicine Cabinet.db')
     cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM users WHERE username = ?", (username,))
+    cursor.execute("SELECT COUNT(*) FROM users WHERE username = %s", [username])
     username_exists = cursor.fetchone()[0] > 0
     cursor.execute("SELECT COUNT(*) FROM users WHERE accountType = 'Admin'")
     admin_count = cursor.fetchone()[0]
     cursor.execute("SELECT COUNT(*) FROM users WHERE accountType = 'Staff'")
     staff_count = cursor.fetchone()[0]
-    conn.close()
+    # conn.close()
 
     if action == 'edit':
         if new_accountType == 'Admin' and admin_count >= 2:
@@ -807,11 +821,11 @@ def edit_user(username):
     # Ensure the inactivity timer starts when the edit_window is shown
     start_timer()
     
-    conn = sqlite3.connect('Medicine Cabinet.db')
+    # conn = sqlite3.connect('Medicine Cabinet.db')
     cursor = conn.cursor()
-    cursor.execute("SELECT position, accountType, password, qr_code FROM users WHERE username = ?", (username,))
+    cursor.execute("SELECT position, accountType, password, qr_code FROM users WHERE username = %s", [username])
     user = cursor.fetchone()
-    conn.close()
+    # conn.close()
 
     # Title label
     title_label = tk.Label(edit_window, text="Edit User Information", font=("Arial", 18, "bold"), bg=motif_color, fg='white')
@@ -860,13 +874,13 @@ def edit_user(username):
         new_accountType = accountType_combobox.get()
 
         if validate_user_info('edit', new_username, new_password, confirm_password, new_position, new_accountType):
-            conn = sqlite3.connect('Medicine Cabinet.db')
+            # conn = sqlite3.connect('Medicine Cabinet.db')
             cursor = conn.cursor()
             cursor.execute("""
                 UPDATE users
-                SET username = ?, password = ?, position = ?, accountType = ?
-                WHERE username = ?
-            """, (new_username, new_password, new_position, new_accountType, username))
+                SET username = %s, password = %s, position = %s, accountType = %s
+                WHERE username = %s
+            """, [new_username, new_password, new_position, new_accountType, username])
             conn.commit()
             conn.close()
             
