@@ -39,8 +39,8 @@ class OnScreenKeyboard:
         self.capslock_on = False
         
         # Load images for CapsLock button
-        self.capslock_image_on = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'capsOn_icon.png')).resize((30, 30), Image.LANCZOS))
-        self.capslock_image_off = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'capsOff_icon.png')).resize((30, 30), Image.LANCZOS))
+        self.capslock_image_on = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'capsOn_icon.png')).resize((50, 50), Image.LANCZOS))
+        self.capslock_image_off = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'capsOff_icon.png')).resize((50, 50), Image.LANCZOS))
 
     def create_keyboard(self):
         if self.keyboard_frame:
@@ -70,7 +70,7 @@ class OnScreenKeyboard:
                         image=self.capslock_image_off,
                         width=10,  # Wider width for CapsLock
                         height=3,  # Height consistent with other keys
-                        command=lambda: self.on_key_press(key),
+                        command=self.toggle_capslock,
                         borderwidth=0,
                         padx=5, pady=5, font=('Arial', 12),
                         relief='raised', bd=3
@@ -92,7 +92,7 @@ class OnScreenKeyboard:
                         width=10,  # Wider width for Backspace
                         height=3,  # Height consistent with other keys
                         font=('Arial', 12),
-                        command=lambda: self.on_key_press(key)
+                        command=self.handle_backspace
                     )
                 elif key == "Space":
                     button = tk.Button(
@@ -101,7 +101,7 @@ class OnScreenKeyboard:
                         width=35,  # Very wide width for Spacebar
                         height=3,  # Height consistent with other keys
                         font=('Arial', 12),
-                        command=lambda: self.on_key_press(key),
+                        command=lambda: self.on_key_press(" "),
                         relief='raised', bd=3
                     )
                 else:
@@ -122,41 +122,44 @@ class OnScreenKeyboard:
 
     def on_key_press(self, key):
         # Handle CapsLock toggle
-        if key == "CapsLock":
-            self.capslock_on = not self.capslock_on
-            self.update_capslock_button()
-            return
-
-        # Handle special keys
-        if key == "Space":
-            key = " "
-        elif key == "Enter":
-            self.hide_keyboard()
-            return
-        elif key == "Backspace":
-            focused_widget = self.parent_frame.focus_get()
-            if isinstance(focused_widget, tk.Entry):
-                # Delete a character if no selection, otherwise delete the selection
-                if focused_widget.selection_present():
-                    focused_widget.delete(tk.SEL_FIRST, tk.SEL_LAST)
-                else:
-                    focused_widget.delete(focused_widget.index(tk.END)-1)  # Delete the last character
-            return
-
-        # Toggle case if CapsLock is on
-        if self.capslock_on and key.isalpha():
-            key = key.upper() if key.islower() else key.lower()
+        if self.capslock_on:
+            key = key.upper()
 
         # Insert the key into the currently focused widget
         focused_widget = self.parent_frame.focus_get()
+        
         if isinstance(focused_widget, tk.Entry):
-            focused_widget.insert(tk.END, key)
+            focused_widget.insert(tk.INSERT, key)
+
+    def handle_backspace(self):
+        # Handle backspace functionality
+        focused_widget = self.parent_frame.focus_get()
+        if isinstance(focused_widget, tk.Entry):
+            cursor_pos = focused_widget.index(tk.INSERT)
+            if cursor_pos > 0:
+                focused_widget.delete(cursor_pos - 1, cursor_pos)
+        elif isinstance(focused_widget, tk.Text):
+            cursor_pos = focused_widget.index(tk.INSERT)
+            if focused_widget.tag_ranges(tk.SEL):
+                focused_widget.delete(tk.SEL_FIRST, tk.SEL_LAST)
+            else:
+                row, col = map(int, cursor_pos.split('.'))
+                if col > 0:
+                    focused_widget.delete(f"{row}.{col-1}")
+                else:
+                    if row > 1:
+                        prev_line_length = len(focused_widget.get(f"{row-1}.0", f"{row-1}.end"))
+                        focused_widget.delete(f"{row-1}.{prev_line_length}")
+
+    def toggle_capslock(self):
+        self.capslock_on = not self.capslock_on
+        self.update_capslock_button()
 
     def update_capslock_button(self):
         # Find the CapsLock button and update its image
         for row in self.keyboard_frame.winfo_children():
             for button in row.winfo_children():
-                if isinstance(button, tk.Button) and button.cget("image") != "":
+                if isinstance(button, tk.Button) and button.cget("image") != "":  # Check if it's the CapsLock button
                     if self.capslock_on:
                         button.config(image=self.capslock_image_on)
                     else:
@@ -176,6 +179,9 @@ class OnScreenKeyboard:
     def hide_keyboard(self):
         if self.keyboard_frame:
             self.keyboard_frame.pack_forget()
+
+
+
 
 
 #----------------------------------------------------LOGIN WINDOW--------------------------------------------------------
@@ -200,6 +206,7 @@ def authenticate_user(username, password):
 
 #Function that creates the UI for login frame
 def create_login_frame(container):
+
     global login_frame
     login_frame = tk.Frame(container, bg=motif_color)
     box_frame = tk.Frame(login_frame, bg='#ffffff', bd=5, relief="ridge", padx=50, pady=30)
@@ -407,86 +414,70 @@ def unbind_activity_events():
         
 #--------------------------------------------------------------MEDICINE INVENTORY---------------------------------------------------------------------    
 
-#Function that creates a pop-up window (toplevel) for depositing medicine
 def deposit_window():
-    deposit_toplevel = tk.Toplevel(relief='groove', bd=5)
-    deposit_toplevel.overrideredirect(True)  # Remove the title bar
-    deposit_toplevel.resizable(width=False, height=False)
+    clear_frame()
+    
+    # Ensure content_frame expands to fill the available width
+    content_frame.grid_columnconfigure(0, weight=1)
+    
+    title_label = tk.Label(content_frame, text="DEPOSIT MEDICINE", bg=motif_color, fg="white", font=('Arial', 25, 'bold'), height=2, relief='groove', bd=1)
+    title_label.pack(fill='both')
 
-    # Get the window dimensions
-    deposit_toplevel.update_idletasks()  # Ensure the window size is calculated
-    window_width = 620  # Adjust the width as needed
-    window_height = 580  # Adjust the height as needed
+    # Create input frame and ensure it expands horizontally
+    input_frame = tk.LabelFrame(content_frame, text='Fill out all the necessary information below', font=('Arial', 14), pady=20, padx=5, relief='raised', bd=5)
+    input_frame.pack(fill='x', pady=30, padx=300)  # Sticky set to 'ew' for full width
 
-    # Calculate the center position
-    screen_width = deposit_toplevel.winfo_screenwidth()
-    screen_height = deposit_toplevel.winfo_screenheight()
-    position_x = int((screen_width / 2) - (window_width / 2))
-    position_y = int((screen_height / 2) - (window_height / 2))
-
-    # Set the window position
-    deposit_toplevel.geometry(f"{window_width}x{window_height}+{position_x}+{position_y}")
-
-    # Bind activity events to the edit_window to reset the inactivity timer
-    deposit_toplevel.bind("<Motion>", reset_timer)
-    deposit_toplevel.bind("<KeyPress>", reset_timer)
-    deposit_toplevel.bind("<ButtonPress>", reset_timer)
-
-    # Ensure the inactivity timer starts when the edit_window is shown
-    start_timer()
-
-    title_label = tk.Label(deposit_toplevel, text="Deposit Medicine", font=("Arial", 18, "bold"), bg=motif_color, fg='white')
-    title_label.grid(row=0, column=0, columnspan=2, sticky='new')
+    # Instantiate OnScreenKeyboard
+    keyboard = OnScreenKeyboard(content_frame)
+    keyboard.create_keyboard()
+    keyboard.hide_keyboard()  # Initially hide the keyboard
 
     # Display QR code if it exists
-    qr_image = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'image_icon.png')).resize((200, 200), Image.LANCZOS))
-    qr_code_image_label = tk.Label(deposit_toplevel, image=qr_image)
+    qr_image = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'image_icon.png')).resize((250, 250), Image.LANCZOS))
+    qr_code_image_label = tk.Label(input_frame, image=qr_image)
     qr_code_image_label.image = qr_image
-    qr_code_image_label.grid(row=1, column=0, columnspan=2, pady=10)
-
-    input_frame = tk.Frame(deposit_toplevel)
-    input_frame.grid(row=2, column=0, sticky='new')
-
-    # Ensure the input_frame expands to fill the available space
-    input_frame.grid_rowconfigure(1, weight=1)
-    input_frame.grid_columnconfigure(0, weight=1)
+    qr_code_image_label.grid(row=0, column=2, rowspan=5, columnspan=2, pady=10, padx=40, sticky='nsew')  # Sticky set to 'nsew' for proper positioning
 
     # Labels and AutocompleteComboboxes for the form
-    tk.Label(input_frame, text="Name of Medicine", font=("Arial", 16)).grid(row=0, column=0, padx=10, pady=10)
+    tk.Label(input_frame, text="Name of Medicine", font=("Arial", 16)).grid(row=0, column=0, padx=(30, 10), pady=10, sticky='w')
     name_combobox = AutocompleteCombobox(input_frame, font=("Arial", 16), width=20)
     name_combobox.set_completion_list(["Biogesic", "Alaxan", "Mefenamic", "Paracetamol"])
-    name_combobox.grid(row=0, column=1, padx=10, pady=10)
+    name_combobox.grid(row=0, column=1, padx=10, pady=10, sticky='ew')
 
-    tk.Label(input_frame, text="Type", font=("Arial", 16)).grid(row=1, column=0, padx=10, pady=10)
+    tk.Label(input_frame, text="Type", font=("Arial", 16)).grid(row=1, column=0, padx=(30, 10), pady=10, sticky='w')
     type_combobox = AutocompleteCombobox(input_frame, font=("Arial", 16), width=20)
     type_combobox.set_completion_list(["Hypertension", "Fever", "Pain Reliever"])
-    type_combobox.grid(row=1, column=1, padx=10, pady=10)
+    type_combobox.grid(row=1, column=1, padx=10, pady=10, sticky='ew')
 
-    tk.Label(input_frame, text="Quantity", font=("Arial", 16)).grid(row=2, column=0, padx=10, pady=10)
+    tk.Label(input_frame, text="Quantity", font=("Arial", 16)).grid(row=2, column=0, padx=(30, 10), pady=10, sticky='w')
     quantity_spinbox = tk.Spinbox(input_frame, from_=0, to=100, font=("Arial", 16), width=20)
-    quantity_spinbox.grid(row=2, column=1, padx=10, pady=10)
+    quantity_spinbox.grid(row=2, column=1, padx=10, pady=10, sticky='ew')
 
-    tk.Label(input_frame, text="Unit", font=("Arial", 16)).grid(row=3, column=0, padx=10, pady=10)
+    tk.Label(input_frame, text="Unit", font=("Arial", 16)).grid(row=3, column=0, padx=(30, 10), pady=10, sticky='w')
     unit_combobox = AutocompleteCombobox(input_frame, font=("Arial", 16), width=20)
     unit_combobox.set_completion_list(["Tablet", "Syrup", "Pieces", "Box"])
-    unit_combobox.grid(row=3, column=1, padx=10, pady=10)
+    unit_combobox.grid(row=3, column=1, padx=10, pady=10, sticky='ew')
 
-    tk.Label(input_frame, text="Expiration Date", font=("Arial", 16)).grid(row=4, column=0, padx=10, pady=10)
+    tk.Label(input_frame, text="Expiration Date", font=("Arial", 16)).grid(row=4, column=0, padx=(30, 10), pady=10, sticky='w')
     expiration_date_entry = DateEntry(input_frame, font=("Arial", 16), date_pattern='mm-dd-y', width=20)
-    expiration_date_entry.grid(row=4, column=1, padx=10, pady=10)
-    
-    button_frame = tk.Frame(deposit_toplevel, bg=motif_color, pady=10)
-    button_frame.grid(row=3, column=0, columnspan=2, sticky='ews')
+    expiration_date_entry.grid(row=4, column=1, padx=10, pady=10, sticky='ew')
 
+    # Bind the focus events to show/hide the keyboard for each widget
+    for widget in [name_combobox, type_combobox, quantity_spinbox, unit_combobox, expiration_date_entry]:
+        widget.bind("<FocusIn>", lambda e: keyboard.show_keyboard())
+        widget.bind("<FocusOut>", lambda e: keyboard.hide_keyboard())
+
+    # Cancel and Save buttons
     cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
-    cancel_button = tk.Button(button_frame, text="Cancel", font=("Arial", 14), command=lambda: toplevel_destroy(deposit_toplevel), width=118, padx=10, relief="raised", bd=3, compound=tk.LEFT, image=cancel_img)
+    cancel_button = tk.Button(input_frame, text="Cancel", font=("Arial", 16), bg=motif_color, fg='white', command=show_medicine_supply, width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=cancel_img, pady=5)
     cancel_button.image = cancel_img
-    cancel_button.grid(row=0, column=0, padx=79)
+    cancel_button.grid(row=5, column=0, columnspan=3, padx=(40, 60), pady=(50, 0))
 
     save_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'saveBlack_icon.png')).resize((25, 25), Image.LANCZOS))
-    save_button = tk.Button(button_frame, text="Save", font=("Arial", 14), width=118, padx=10, relief="raised", bd=3, compound=tk.LEFT, image=save_img)
+    save_button = tk.Button(input_frame, text="Save", font=("Arial", 16), bg=motif_color, fg='white', width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=save_img, pady=5)
     save_button.image = save_img
-    save_button.grid(row=0, column=1, padx=79)
+    save_button.grid(row=5, column=1, columnspan=3, padx=(60, 40), pady=(50, 0))
+
 
 # Function that creates the UI for medicine inventory in the content_frame
 def show_medicine_supply():
@@ -613,6 +604,22 @@ def show_medicine_supply():
     search_entry.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
     search_entry.insert(0, 'Search here')
 
+    def focus_in_search(event):
+        search_entry.config(fg='black')
+        if search_entry.get() == 'Search here':
+            search_entry.delete(0, tk.END)
+            search_entry.config(fg='black')
+        keyboard.show_keyboard()
+
+    def focus_out_search(event):
+        if not search_entry.get():
+            search_entry.insert(0, 'Search here')
+            search_entry.config(fg='grey')
+    keyboard.hide_keyboard()
+
+    search_entry.bind("<FocusIn>", focus_in_search)
+    search_entry.bind("<FocusOut>", focus_out_search)
+
     # Bind events to the search bar
     search_entry.bind("<FocusIn>", clear_placeholder)
     search_entry.bind("<FocusOut>", add_placeholder)
@@ -620,8 +627,8 @@ def show_medicine_supply():
     search_entry.bind("<Return>", lambda event: search_treeview())
 
     # Bind focus events to the search_entry to show/hide the keyboard
-    search_entry.bind("<FocusIn>", lambda event: keyboard.show_keyboard())
-    search_entry.bind("<FocusOut>", lambda event: keyboard.hide_keyboard())
+    search_entry.bind("<FocusIn>", lambda event: (keyboard.show_keyboard(), clear_placeholder()))
+    search_entry.bind("<FocusOut>", lambda event: (keyboard.hide_keyboard(), add_placeholder(None)))
 
     # Bind events to the search bar
     search_entry.bind("<KeyPress>", clear_placeholder)
