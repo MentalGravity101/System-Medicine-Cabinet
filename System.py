@@ -9,6 +9,8 @@ import io
 from tkcalendar import DateEntry
 from datetime import datetime
 import mysql.connector
+import subprocess
+
 
 conn = mysql.connector.connect(
   host="localhost",
@@ -29,6 +31,151 @@ active_bg_color = "#fff"  # Active background color
 default_bg_color = motif_color  # Default background color
 active_fg_color ='#000000' # Active foreground color
 default_fg_color="#fff" # Default foreground color
+
+class OnScreenKeyboard:
+    def __init__(self, parent_frame):
+        self.parent_frame = parent_frame
+        self.keyboard_frame = None
+        self.capslock_on = False
+        
+        # Load images for CapsLock button
+        self.capslock_image_on = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'capsOn_icon.png')).resize((30, 30), Image.LANCZOS))
+        self.capslock_image_off = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'capsOff_icon.png')).resize((30, 30), Image.LANCZOS))
+
+    def create_keyboard(self):
+        if self.keyboard_frame:
+            return
+        
+        # Create a new frame for the keyboard
+        self.keyboard_frame = tk.Frame(self.parent_frame, bg='lightgrey')
+
+        # Layout of keys resembling a PC keyboard
+        keys = [
+            ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'Backspace'],
+            ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '[', ']', '\\'],
+            ['Caps\nLock', 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', "'", 'Enter'],
+            ['Z', 'X', 'C', 'V', 'B', 'N', 'M', ',', '.', '/'],
+            ['Space']
+        ]
+
+        # Create buttons for each row and pack them
+        for row in keys:
+            row_frame = tk.Frame(self.keyboard_frame)
+            row_frame.pack(pady=5, padx=3)  # Space between rows
+
+            for key in row:
+                if key == "CapsLock":
+                    button = tk.Button(
+                        row_frame,
+                        image=self.capslock_image_off,
+                        width=10,  # Wider width for CapsLock
+                        height=3,  # Height consistent with other keys
+                        command=lambda: self.on_key_press(key),
+                        borderwidth=0,
+                        padx=5, pady=5, font=('Arial', 12),
+                        relief='raised', bd=3
+                    )
+                elif key == "Enter":
+                    button = tk.Button(
+                        row_frame,
+                        text=key,
+                        width=10,  # Wider width for Enter
+                        height=3,  # Height consistent with other keys
+                        command=lambda: self.on_key_press(key), 
+                        font=('Arial', 12),
+                        relief='raised', bd=3
+                    )
+                elif key == "Backspace":
+                    button = tk.Button(
+                        row_frame,
+                        text=key,
+                        width=10,  # Wider width for Backspace
+                        height=3,  # Height consistent with other keys
+                        font=('Arial', 12),
+                        command=lambda: self.on_key_press(key)
+                    )
+                elif key == "Space":
+                    button = tk.Button(
+                        row_frame,
+                        text=key,
+                        width=35,  # Very wide width for Spacebar
+                        height=3,  # Height consistent with other keys
+                        font=('Arial', 12),
+                        command=lambda: self.on_key_press(key),
+                        relief='raised', bd=3
+                    )
+                else:
+                    button = tk.Button(
+                        row_frame,
+                        text=key,
+                        width=6,  # Standard width for other keys
+                        height=3,  # Height consistent with other keys
+                        command=lambda key=key: self.on_key_press(key),
+                        font=('Arial', 12),
+                        relief='raised', bd=3
+                    )
+
+                button.pack(side="left", padx=3)  # Pack buttons in the row
+
+        # Make the keyboard large and centered in its frame
+        self.keyboard_frame.pack(side="bottom", fill="x")
+
+    def on_key_press(self, key):
+        # Handle CapsLock toggle
+        if key == "CapsLock":
+            self.capslock_on = not self.capslock_on
+            self.update_capslock_button()
+            return
+
+        # Handle special keys
+        if key == "Space":
+            key = " "
+        elif key == "Enter":
+            self.hide_keyboard()
+            return
+        elif key == "Backspace":
+            focused_widget = self.parent_frame.focus_get()
+            if isinstance(focused_widget, tk.Entry):
+                # Delete a character if no selection, otherwise delete the selection
+                if focused_widget.selection_present():
+                    focused_widget.delete(tk.SEL_FIRST, tk.SEL_LAST)
+                else:
+                    focused_widget.delete(focused_widget.index(tk.END)-1)  # Delete the last character
+            return
+
+        # Toggle case if CapsLock is on
+        if self.capslock_on and key.isalpha():
+            key = key.upper() if key.islower() else key.lower()
+
+        # Insert the key into the currently focused widget
+        focused_widget = self.parent_frame.focus_get()
+        if isinstance(focused_widget, tk.Entry):
+            focused_widget.insert(tk.END, key)
+
+    def update_capslock_button(self):
+        # Find the CapsLock button and update its image
+        for row in self.keyboard_frame.winfo_children():
+            for button in row.winfo_children():
+                if isinstance(button, tk.Button) and button.cget("image") != "":
+                    if self.capslock_on:
+                        button.config(image=self.capslock_image_on)
+                    else:
+                        button.config(image=self.capslock_image_off)
+
+    def toggle_keyboard(self):
+        if self.keyboard_frame.winfo_ismapped():
+            self.hide_keyboard()
+        else:
+            self.show_keyboard()
+
+    def show_keyboard(self):
+        if not self.keyboard_frame:
+            self.create_keyboard()
+        self.keyboard_frame.pack(side="bottom", fill="x")
+
+    def hide_keyboard(self):
+        if self.keyboard_frame:
+            self.keyboard_frame.pack_forget()
 
 
 #----------------------------------------------------LOGIN WINDOW--------------------------------------------------------
@@ -51,16 +198,12 @@ def authenticate_user(username, password):
     else:
         messagebox.showerror("Login Failed", "Invalid username or password.")
 
-#function to open touch pad
-def callback(event):
-    os.system("C:\\PROGRA~1\\COMMON~1\\MICROS~1\\ink\\TabTip.exe")
-
-#function to create the UI of login frame
+#Function that creates the UI for login frame
 def create_login_frame(container):
     global login_frame
     login_frame = tk.Frame(container, bg=motif_color)
     box_frame = tk.Frame(login_frame, bg='#ffffff', bd=5, relief="ridge", padx=50, pady=30)
-    box_frame.place(relx=0.5, rely=0.5, anchor='center')
+    box_frame.pack()
     tk.Label(box_frame, text='ELECTRONIC \n MEDICINE CABINET', font=('Arial', 23, 'bold'), bg='white').pack()
     logo_path = os.path.join(os.path.dirname(__file__), 'images', 'SanMateoLogo.png')
     original_logo_img = Image.open(logo_path)
@@ -73,22 +216,26 @@ def create_login_frame(container):
     logo_label.pack(pady=(20, 10))
     username_label = tk.Label(box_frame, text="Username", font=("Arial", 18), bg='#ffffff')
     username_label.pack(pady=10)
+    
+    # Create username entry
     global username_entry
     username_entry = tk.Entry(box_frame, font=("Arial", 16), relief='sunken', bd=3, width=25)
-    username_entry.bind("<FocusIn>", callback)
     username_entry.pack(pady=5)
+    
     password_label = tk.Label(box_frame, text="Password", font=("Arial", 18), bg='#ffffff')
     password_label.pack(pady=10)
     password_frame = tk.Frame(box_frame, bg='#ffffff')
     password_frame.pack(pady=5, fill='x')
+    
+    # Create password entry
     global password_entry
     password_entry = tk.Entry(password_frame, show="*", font=("Arial", 16), relief='sunken', bd=3, width=20)
-    password_entry.bind("<FocusIn>", callback)
     password_entry.pack(side='left', fill='x', expand=True)
+    
     eye_open_image = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'eye_open.png')).resize((20, 20), Image.LANCZOS))
     eye_closed_image = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'eye_close.png')).resize((20, 20), Image.LANCZOS))
-    
-    #function for toggleable hidden/visible password (eye icon)
+
+    # Function for toggleable hidden/visible password (eye icon)
     def toggle_password():
         if password_entry.cget('show') == '':
             password_entry.config(show='*')
@@ -96,12 +243,36 @@ def create_login_frame(container):
         else:
             password_entry.config(show='')
             toggle_button.config(image=eye_open_image)
+
     toggle_button = tk.Button(password_frame, image=eye_closed_image, bg='#ffffff', command=toggle_password, bd=0)
     toggle_button.pack(side='right')
+    
     login_button = tk.Button(box_frame, text="Login", font=("Arial", 16), command=lambda: authenticate_user(username_entry.get(), password_entry.get()), fg='#ffffff', bg='#2c3e50', width=20)
     login_button.pack(pady=20)
+
+
     login_frame.grid(row=0, column=0, sticky='nsew')
+
+    # Create an instance of OnScreenKeyboard and bind it to entry widgets
+    on_screen_keyboard = OnScreenKeyboard(login_frame)
+
+    # Bind focus events to show/hide the on-screen keyboard
+    def show_keyboard(event):
+        on_screen_keyboard.show_keyboard()
+
+    def hide_keyboard(event):
+        on_screen_keyboard.hide_keyboard()
+
+    # Bind the FocusIn event to show the keyboard when focused
+    username_entry.bind("<FocusIn>", show_keyboard)
+    password_entry.bind("<FocusIn>", show_keyboard)
+
+    # Optional: Bind FocusOut to hide the keyboard when losing focus (optional, can be removed if not needed)
+    username_entry.bind("<FocusOut>", hide_keyboard)
+    password_entry.bind("<FocusOut>", hide_keyboard)
     return login_frame
+
+    
 
 
 # -----------------------------------------------MAIN UI (Sidebar)------------------------------------------------------
@@ -153,7 +324,7 @@ def create_main_ui_frame(container):
     logout_button.image = logout_img
     logout_button.grid(row=6, column=0, sticky="we", columnspan=2)
     content_frame = tk.Frame(main_ui_frame, bg='#ecf0f1')
-    content_frame.pack(expand=True, fill='both', side='right')
+    content_frame.pack(expand=True, fill='both', side='top')
     main_ui_frame.grid(row=0, column=0, sticky='nsew')
     show_medicine_supply()
     return main_ui_frame
@@ -317,7 +488,7 @@ def deposit_window():
     save_button.image = save_img
     save_button.grid(row=0, column=1, padx=79)
 
-#Function that creates the UI for medicine inventory in the content_frame
+# Function that creates the UI for medicine inventory in the content_frame
 def show_medicine_supply():
     clear_frame()
     reset_button_colors()
@@ -325,14 +496,16 @@ def show_medicine_supply():
     inventory_button.config(bg=active_bg_color)
     inventory_button.config(fg=active_fg_color)
 
+    # Initialize the On-Screen Keyboard
+    keyboard = OnScreenKeyboard(content_frame)
+    keyboard.create_keyboard()
+    keyboard.hide_keyboard()  # Initially hide the keyboard
+
     # Track the current active sort order and column
-    global active_column, sort_order, search_term, active_column_logs, sort_order_logs
+    global active_column, sort_order, search_term
     active_column = "date_stored"  # Default sorting column
     sort_order = "ASC"  # Default sorting order
-    active_column_logs = "date"  # Default sorting column
-    sort_order_logs = "ASC"  # Default sorting order
     search_term = ""  # Store the search term globally
-    search_term_logs = ""  # Store the search term globally
 
     # Create a custom style for the notebook tabs
     style = ttk.Style()
@@ -379,12 +552,10 @@ def show_medicine_supply():
             tree.delete(row)
 
         # Fetch all data from the database first
-        # conn = sqlite3.connect('Medicine Cabinet.db')
         cursor = conn.cursor()
         query = f"SELECT name, type, quantity, unit, date_stored, expiration_date FROM medicine_inventory ORDER BY {order_by} {sort}"
         cursor.execute(query)
         medicine = cursor.fetchall()
-        # conn.close()
 
         # Filter data in Python based on the search term
         filtered_medicine = []
@@ -392,11 +563,10 @@ def show_medicine_supply():
 
         for med in medicine:
             name, type, quantity, unit, date_stored, expiration_date = med
-            # Generate both abbreviated and full month names for comparison
-            date_stored_abbr = datetime.strptime(date_stored, "%Y-%m-%d").strftime("%b %d, %Y").lower()
-            date_stored_full = datetime.strptime(date_stored, "%Y-%m-%d").strftime("%B %d, %Y").lower()
-            expiration_date_abbr = datetime.strptime(expiration_date, "%Y-%m-%d").strftime("%b %d, %Y").lower()
-            expiration_date_full = datetime.strptime(expiration_date, "%Y-%m-%d").strftime("%B %d, %Y").lower()
+
+            # Convert date objects to strings
+            date_stored_str = date_stored.strftime("%b %d, %Y").lower()
+            expiration_date_str = expiration_date.strftime("%b %d, %Y").lower()
 
             # Check if the search term matches any of the fields
             if (
@@ -404,21 +574,18 @@ def show_medicine_supply():
                 search_term_lower in type.lower() or
                 search_term_lower in unit.lower() or
                 search_term_lower in str(quantity).lower() or
-                search_term_lower in date_stored_abbr or
-                search_term_lower in date_stored_full or
-                search_term_lower in expiration_date_abbr or
-                search_term_lower in expiration_date_full
+                search_term_lower in date_stored_str or
+                search_term_lower in expiration_date_str
             ):
                 filtered_medicine.append(med)
 
         # Use the filtered results to populate the Treeview
         for i, med in enumerate(filtered_medicine):
             name, type, quantity, unit, date_stored, expiration_date = med
-            date_stored_str = datetime.strptime(date_stored, "%Y-%m-%d").strftime("%b %d, %Y")
-            expiration_date_str = datetime.strptime(expiration_date, "%Y-%m-%d").strftime("%b %d, %Y")
+            date_stored_str = date_stored.strftime("%b %d, %Y")
+            expiration_date_str = expiration_date.strftime("%b %d, %Y")
             tag = 'evenrow' if i % 2 == 0 else 'oddrow'
             tree.insert("", "end", values=(name, type, quantity, unit, date_stored_str, expiration_date_str), tags=(tag,))
-
 
     def sort_treeview(column, clicked_button):
         global active_column, sort_order
@@ -452,13 +619,23 @@ def show_medicine_supply():
     search_entry.bind("<KeyPress>", clear_placeholder)
     search_entry.bind("<Return>", lambda event: search_treeview())
 
+    # Bind focus events to the search_entry to show/hide the keyboard
+    search_entry.bind("<FocusIn>", lambda event: keyboard.show_keyboard())
+    search_entry.bind("<FocusOut>", lambda event: keyboard.hide_keyboard())
+
+    # Bind events to the search bar
+    search_entry.bind("<KeyPress>", clear_placeholder)
+    search_entry.bind("<Return>", lambda event: search_treeview())
+
+
     # Add the search icon next to the Entry widget
     search_icon_label = tk.Label(search_frame, image=search_img, bg='white')
     search_icon_label.image = search_img  # Keep a reference to avoid garbage collection
     search_icon_label.pack(side=tk.RIGHT, padx=(0, 5))
+
     buttons = []
 
-    #Sorting buttons
+    # Sorting buttons
     sort_button_1 = tk.Button(header_frame, text="Sort by Name", bg=motif_color, fg="white", padx=10, pady=5,
                               command=lambda: sort_treeview("name", sort_button_1), relief="raised", bd=4)
     sort_button_1.grid(row=0, column=2, padx=(110, 0), pady=10, sticky="e")
@@ -486,14 +663,15 @@ def show_medicine_supply():
 
     activate_button(sort_button_5)
 
+    # Treeview setup
     tree_frame = tk.Frame(content_frame)
     tree_frame.pack(fill="both", expand=True)
 
     tree_scroll = ttk.Scrollbar(tree_frame)
-    tree_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+    tree_scroll.pack(side=tk.RIGHT)
 
     columns = ("name", "type", "quantity", "unit", "date stored", "expiration date")
-    tree = ttk.Treeview(tree_frame, columns=columns, show="headings", yscrollcommand=tree_scroll.set, height=15)
+    tree = ttk.Treeview(tree_frame, columns=columns, show="headings", yscrollcommand=tree_scroll.set, height=10)
 
     tree_scroll.config(command=tree.yview)
 
@@ -504,35 +682,25 @@ def show_medicine_supply():
     tree.heading("date stored", text="Date Stored")
     tree.heading("expiration date", text="Expiration Date")
 
-    tree.column("name", width=160)
-    tree.column("type", width=170)
-    tree.column("quantity", width=120)
-    tree.column("unit", width=140)
-    tree.column("date stored", width=150)
-    tree.column("expiration date", width=150)
+    tree.column("name", anchor=tk.CENTER, width=100)
+    tree.column("type", anchor=tk.CENTER, width=100)
+    tree.column("quantity", anchor=tk.CENTER, width=100)
+    tree.column("unit", anchor=tk.CENTER, width=100)
+    tree.column("date stored", anchor=tk.CENTER, width=100)
+    tree.column("expiration date", anchor=tk.CENTER, width=100)
 
-    # conn = sqlite3.connect('Medicine Cabinet.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT name, type, quantity, unit, date_stored, expiration_date FROM medicine_inventory ORDER BY date_stored")
-    medicine = cursor.fetchall()
-    # conn.close()
-
-    style.configure("Treeview", rowheight=30, font=('Arial', 12))
-    style.configure("Treeview.Heading", font=('Arial', 14, 'bold'), padding=[10, 5])
-
-    # Custom tag styles
     tree.tag_configure('oddrow', background="white")
-    tree.tag_configure('evenrow', background="#ebebeb")
-    style.map('Treeview', background=[('selected', motif_color)])
-
-    for i, med in enumerate(medicine):
-        name, type, quantity, unit, date_stored, expiration_date = med
-        date_stored = datetime.strptime(str(date_stored), "%Y-%m-%d").strftime("%b %d, %Y")
-        expiration_date = datetime.strptime(str(expiration_date), "%Y-%m-%d").strftime("%b %d, %Y")
-        tag = 'evenrow' if i % 2 == 0 else 'oddrow'
-        tree.insert("", "end", values=(name, type, quantity, unit, date_stored, expiration_date), tags=(tag,))
+    tree.tag_configure('evenrow', background="#f2f2f2")
 
     tree.pack(fill="both", expand=True)
+
+    # Populate treeview for the first time
+    populate_treeview()
+
+    # Clear search button
+    clear_button = tk.Button(header_frame, text="Clear Search", bg=motif_color, fg="white", padx=10, pady=5,
+                             command=clear_search, relief="raised", bd=4)
+    clear_button.grid(row=0, column=1, padx=(10, 0), pady=10, sticky="w")
 
     # Create a frame for the buttons below the Treeview
     button_frame = tk.Frame(content_frame, bg='white', padx=30)
@@ -567,7 +735,6 @@ def show_medicine_supply():
     refresh_button = tk.Button(button_frame, text="Reload All", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=refresh_img, command=clear_search)
     refresh_button.image = refresh_img
     refresh_button.grid(row=0, column=3, padx=20, pady=(12, 7), sticky='ew')
-
 
 
 
@@ -1208,8 +1375,6 @@ def scanning():
     # Configure the row and column to expand equally
     button_frame.grid_rowconfigure(0, weight=1)
     button_frame.grid_columnconfigure(0, weight=1)
-
-
 
 #-----------------------------------------------MAIN------------------------------------------------------
 def main():
