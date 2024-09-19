@@ -9,7 +9,8 @@ import io
 from tkcalendar import DateEntry
 from datetime import datetime
 import mysql.connector
-import subprocess
+from keyboard import OnScreenKeyboard
+from autocomplete import AutocompleteCombobox
 
 
 conn = mysql.connector.connect(
@@ -32,157 +33,6 @@ default_bg_color = motif_color  # Default background color
 active_fg_color ='#000000' # Active foreground color
 default_fg_color="#fff" # Default foreground color
 
-class OnScreenKeyboard:
-    def __init__(self, parent_frame):
-        self.parent_frame = parent_frame
-        self.keyboard_frame = None
-        self.capslock_on = False
-        
-        # Load images for CapsLock button
-        self.capslock_image_on = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'capsOn_icon.png')).resize((50, 50), Image.LANCZOS))
-        self.capslock_image_off = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'capsOff_icon.png')).resize((50, 50), Image.LANCZOS))
-
-    def create_keyboard(self):
-        if self.keyboard_frame:
-            return
-        
-        # Create a new frame for the keyboard
-        self.keyboard_frame = tk.Frame(self.parent_frame, bg='lightgrey')
-
-        # Layout of keys resembling a PC keyboard
-        keys = [
-            ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'Backspace'],
-            ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '[', ']', '\\'],
-            ['Caps\nLock', 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', "'", 'Enter'],
-            ['Z', 'X', 'C', 'V', 'B', 'N', 'M', ',', '.', '/'],
-            ['Space']
-        ]
-
-        # Create buttons for each row and pack them
-        for row in keys:
-            row_frame = tk.Frame(self.keyboard_frame)
-            row_frame.pack(pady=5, padx=3)  # Space between rows
-
-            for key in row:
-                if key == "CapsLock":
-                    button = tk.Button(
-                        row_frame,
-                        image=self.capslock_image_off,
-                        width=10,  # Wider width for CapsLock
-                        height=3,  # Height consistent with other keys
-                        command=self.toggle_capslock,
-                        borderwidth=0,
-                        padx=5, pady=5, font=('Arial', 12),
-                        relief='raised', bd=3
-                    )
-                elif key == "Enter":
-                    button = tk.Button(
-                        row_frame,
-                        text=key,
-                        width=10,  # Wider width for Enter
-                        height=3,  # Height consistent with other keys
-                        command=lambda: self.on_key_press(key), 
-                        font=('Arial', 12),
-                        relief='raised', bd=3
-                    )
-                elif key == "Backspace":
-                    button = tk.Button(
-                        row_frame,
-                        text=key,
-                        width=10,  # Wider width for Backspace
-                        height=3,  # Height consistent with other keys
-                        font=('Arial', 12),
-                        command=self.handle_backspace
-                    )
-                elif key == "Space":
-                    button = tk.Button(
-                        row_frame,
-                        text=key,
-                        width=35,  # Very wide width for Spacebar
-                        height=3,  # Height consistent with other keys
-                        font=('Arial', 12),
-                        command=lambda: self.on_key_press(" "),
-                        relief='raised', bd=3
-                    )
-                else:
-                    button = tk.Button(
-                        row_frame,
-                        text=key,
-                        width=6,  # Standard width for other keys
-                        height=3,  # Height consistent with other keys
-                        command=lambda key=key: self.on_key_press(key),
-                        font=('Arial', 12),
-                        relief='raised', bd=3
-                    )
-
-                button.pack(side="left", padx=3)  # Pack buttons in the row
-
-        # Make the keyboard large and centered in its frame
-        self.keyboard_frame.pack(side="bottom", fill="x")
-
-    def on_key_press(self, key):
-        # Handle CapsLock toggle
-        if self.capslock_on:
-            key = key.upper()
-
-        # Insert the key into the currently focused widget
-        focused_widget = self.parent_frame.focus_get()
-        
-        if isinstance(focused_widget, tk.Entry):
-            focused_widget.insert(tk.INSERT, key)
-
-    def handle_backspace(self):
-        # Handle backspace functionality
-        focused_widget = self.parent_frame.focus_get()
-        if isinstance(focused_widget, tk.Entry):
-            cursor_pos = focused_widget.index(tk.INSERT)
-            if cursor_pos > 0:
-                focused_widget.delete(cursor_pos - 1, cursor_pos)
-        elif isinstance(focused_widget, tk.Text):
-            cursor_pos = focused_widget.index(tk.INSERT)
-            if focused_widget.tag_ranges(tk.SEL):
-                focused_widget.delete(tk.SEL_FIRST, tk.SEL_LAST)
-            else:
-                row, col = map(int, cursor_pos.split('.'))
-                if col > 0:
-                    focused_widget.delete(f"{row}.{col-1}")
-                else:
-                    if row > 1:
-                        prev_line_length = len(focused_widget.get(f"{row-1}.0", f"{row-1}.end"))
-                        focused_widget.delete(f"{row-1}.{prev_line_length}")
-
-    def toggle_capslock(self):
-        self.capslock_on = not self.capslock_on
-        self.update_capslock_button()
-
-    def update_capslock_button(self):
-        # Find the CapsLock button and update its image
-        for row in self.keyboard_frame.winfo_children():
-            for button in row.winfo_children():
-                if isinstance(button, tk.Button) and button.cget("image") != "":  # Check if it's the CapsLock button
-                    if self.capslock_on:
-                        button.config(image=self.capslock_image_on)
-                    else:
-                        button.config(image=self.capslock_image_off)
-
-    def toggle_keyboard(self):
-        if self.keyboard_frame.winfo_ismapped():
-            self.hide_keyboard()
-        else:
-            self.show_keyboard()
-
-    def show_keyboard(self):
-        if not self.keyboard_frame:
-            self.create_keyboard()
-        self.keyboard_frame.pack(side="bottom", fill="x")
-
-    def hide_keyboard(self):
-        if self.keyboard_frame:
-            self.keyboard_frame.pack_forget()
-
-
-
-
 
 #----------------------------------------------------LOGIN WINDOW--------------------------------------------------------
 
@@ -204,61 +54,60 @@ def authenticate_user(username, password):
     else:
         messagebox.showerror("Login Failed", "Invalid username or password.")
 
-#Function that creates the UI for login frame
+# Function that creates the UI for login frame
 def create_login_frame(container):
-
     global login_frame
     login_frame = tk.Frame(container, bg=motif_color)
     box_frame = tk.Frame(login_frame, bg='#ffffff', bd=5, relief="ridge", padx=50, pady=30)
-    box_frame.pack()
-    tk.Label(box_frame, text='ELECTRONIC \n MEDICINE CABINET', font=('Arial', 23, 'bold'), bg='white').pack()
+    box_frame.pack(expand=True, fill='x', padx=730)
+
     logo_path = os.path.join(os.path.dirname(__file__), 'images', 'SanMateoLogo.png')
     original_logo_img = Image.open(logo_path)
-    desired_width = 200
-    desired_height = 200
-    resized_logo_img = original_logo_img.resize((desired_width, desired_height), Image.LANCZOS)
+    resized_logo_img = original_logo_img.resize((150, 150), Image.LANCZOS)
     logo_img = ImageTk.PhotoImage(resized_logo_img)
+
     logo_label = tk.Label(box_frame, image=logo_img, bg='#ffffff')
     logo_label.image = logo_img
-    logo_label.pack(pady=(20, 10))
+    logo_label.pack(pady=(5, 10))
+
+    title = tk.Label(box_frame, text='ELECTRONIC \n MEDICINE CABINET', font=('Arial', 23, 'bold'), bg='white')
+    title.pack()
+
     username_label = tk.Label(box_frame, text="Username", font=("Arial", 18), bg='#ffffff')
     username_label.pack(pady=10)
-    
+
     # Create username entry
     global username_entry
-    username_entry = tk.Entry(box_frame, font=("Arial", 16), relief='sunken', bd=3, width=25)
-    username_entry.pack(pady=5)
-    
+    username_entry = tk.Entry(box_frame, font=("Arial", 16), relief='sunken', bd=3)
+    username_entry.pack(pady=5, fill='x')
+
     password_label = tk.Label(box_frame, text="Password", font=("Arial", 18), bg='#ffffff')
     password_label.pack(pady=10)
-    password_frame = tk.Frame(box_frame, bg='#ffffff')
-    password_frame.pack(pady=5, fill='x')
-    
+
     # Create password entry
     global password_entry
-    password_entry = tk.Entry(password_frame, show="*", font=("Arial", 16), relief='sunken', bd=3, width=20)
-    password_entry.pack(side='left', fill='x', expand=True)
-    
-    eye_open_image = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'eye_open.png')).resize((20, 20), Image.LANCZOS))
-    eye_closed_image = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'eye_close.png')).resize((20, 20), Image.LANCZOS))
+    password_entry = tk.Entry(box_frame, show="*", font=("Arial", 16), relief='sunken', bd=3)
+    password_entry.pack(pady=5, fill='x')
 
-    # Function for toggleable hidden/visible password (eye icon)
-    def toggle_password():
-        if password_entry.cget('show') == '':
-            password_entry.config(show='*')
-            toggle_button.config(image=eye_closed_image)
-        else:
+    # Function to show/hide password based on Checkbutton state
+    def toggle_password_visibility():
+        if show_password_var.get():
             password_entry.config(show='')
-            toggle_button.config(image=eye_open_image)
+        else:
+            password_entry.config(show='*')
 
-    toggle_button = tk.Button(password_frame, image=eye_closed_image, bg='#ffffff', command=toggle_password, bd=0)
-    toggle_button.pack(side='right')
-    
-    login_button = tk.Button(box_frame, text="Login", font=("Arial", 16), command=lambda: authenticate_user(username_entry.get(), password_entry.get()), fg='#ffffff', bg='#2c3e50', width=20)
+    # Variable to track the state of the Checkbutton
+    show_password_var = tk.BooleanVar()
+    show_password_checkbutton = tk.Checkbutton(box_frame, text="Show Password", variable=show_password_var,
+                                                command=toggle_password_visibility, bg='#ffffff', font=("Arial", 14))
+    show_password_checkbutton.pack(anchor='w', padx=(5, 0), pady=(5, 10))  # Align to the left with padding
+
+    login_button = tk.Button(box_frame, text="Login", font=("Arial", 16), 
+                             command=lambda: authenticate_user(username_entry.get(), password_entry.get()), 
+                             fg='#ffffff', bg='#2c3e50', width=20)
     login_button.pack(pady=20)
 
-
-    login_frame.grid(row=0, column=0, sticky='nsew')
+    login_frame.grid(row=0, column=0, sticky='news')
 
     # Create an instance of OnScreenKeyboard and bind it to entry widgets
     on_screen_keyboard = OnScreenKeyboard(login_frame)
@@ -277,7 +126,9 @@ def create_login_frame(container):
     # Optional: Bind FocusOut to hide the keyboard when losing focus (optional, can be removed if not needed)
     username_entry.bind("<FocusOut>", hide_keyboard)
     password_entry.bind("<FocusOut>", hide_keyboard)
+
     return login_frame
+
 
     
 
@@ -498,12 +349,6 @@ def show_medicine_supply():
     sort_order = "ASC"  # Default sorting order
     search_term = ""  # Store the search term globally
 
-    # Create a custom style for the notebook tabs
-    style = ttk.Style()
-    style.configure("TNotebook.Tab", font=("Arial", 14), padding=[20, 10])
-    style.configure("TNotebook.Tab", background="white", foreground="black", borderwidth=1)
-    style.map("TNotebook.Tab", background=[("selected", motif_color)], foreground=[("selected", "black")], borderwidth=[("selected", 1)])
-
     header_frame = tk.Frame(content_frame, bg=motif_color)
     header_frame.pack(fill="x", pady=10)
 
@@ -518,6 +363,7 @@ def show_medicine_supply():
         if search_term == "search here" or not search_term:
             search_term = ""
         populate_treeview()  # Repopulate with search filter
+        
 
     def clear_placeholder(event=None):
         if search_entry.get() == 'Search here':
@@ -617,23 +463,22 @@ def show_medicine_supply():
             search_entry.config(fg='grey')
     keyboard.hide_keyboard()
 
+    # Bind the Return key to close the keyboard and perform the search
+    def handle_enter_key(event):
+        keyboard.hide_keyboard()  # Hide the on-screen keyboard
+        search_treeview()         # Trigger the search functionality
+        add_placeholder(None)
+        return "break"            # Prevent the default behavior of the Return key (inserting a newline or unwanted characters)
+
+
     search_entry.bind("<FocusIn>", focus_in_search)
     search_entry.bind("<FocusOut>", focus_out_search)
-
-    # Bind events to the search bar
-    search_entry.bind("<FocusIn>", clear_placeholder)
-    search_entry.bind("<FocusOut>", add_placeholder)
+    
+    # Bind events to the search_entry to show/hide the keyboard
     search_entry.bind("<KeyPress>", clear_placeholder)
-    search_entry.bind("<Return>", lambda event: search_treeview())
-
-    # Bind focus events to the search_entry to show/hide the keyboard
     search_entry.bind("<FocusIn>", lambda event: (keyboard.show_keyboard(), clear_placeholder()))
     search_entry.bind("<FocusOut>", lambda event: (keyboard.hide_keyboard(), add_placeholder(None)))
-
-    # Bind events to the search bar
-    search_entry.bind("<KeyPress>", clear_placeholder)
-    search_entry.bind("<Return>", lambda event: search_treeview())
-
+    search_entry.bind("<Return>", handle_enter_key)
 
     # Add the search icon next to the Entry widget
     search_icon_label = tk.Label(search_frame, image=search_img, bg='white')
@@ -670,12 +515,18 @@ def show_medicine_supply():
 
     activate_button(sort_button_5)
 
-    # Treeview setup
-    tree_frame = tk.Frame(content_frame)
-    tree_frame.pack(fill="both", expand=True)
-
+    # Treeview widget with alternating row colors
+    tree_frame = tk.Frame(content_frame, bg="#f0f0f0")
+    tree_frame.pack(fill="both", expand=True, padx=10, pady=10)
     tree_scroll = ttk.Scrollbar(tree_frame)
     tree_scroll.pack(side=tk.RIGHT)
+
+    # Add styling for the treeview
+    style = ttk.Style()
+    style.configure("Treeview", rowheight=40, borderwidth=2, relief="solid")
+    style.map('Treeview', 
+                background=[('selected', motif_color)],
+                foreground=[('selected', 'white')])
 
     columns = ("name", "type", "quantity", "unit", "date stored", "expiration date")
     tree = ttk.Treeview(tree_frame, columns=columns, show="headings", yscrollcommand=tree_scroll.set, height=10)
@@ -853,8 +704,6 @@ def show_account_setting():
     delete_button = tk.Button(button_frame, text="Delete User", font=("Arial", 15), pady=20, padx=25, bg=motif_color, fg='white', height=25, relief="raised", bd=3, compound=tk.LEFT, image=delete_img, command=lambda: delete_selected_user(tree))
     delete_button.image = delete_img
     delete_button.grid(row=0, column=2, padx=30, pady=10, sticky="ew")
-
-
 
 
 def delete_selected_user(tree):
@@ -1166,49 +1015,7 @@ def add_user():
 # Function that ensures users cannot type into the combobox  
 def validate_combobox_input(action, value_if_allowed):
     return False
-# Class for Autocompletion of Combobox based on the values of the particular comboboxes
-class AutocompleteCombobox(ttk.Combobox):
-    def set_completion_list(self, completion_list):
-        self._completion_list = sorted(completion_list, key=str.lower)  # sort case insensitive
-        self._hits = []
-        self._hit_index = 0
-        self.position = 0
-        self.bind('<KeyRelease>', self.handle_keyrelease)
-        self['values'] = self._completion_list
 
-    def autocomplete(self, delta=0):
-        if delta:
-            self.delete(self.position, tk.END)
-        else:
-            self.position = len(self.get())
-        _hits = []
-        for item in self._completion_list:
-            if item.lower().startswith(self.get().lower()):
-                _hits.append(item)
-        if _hits != self._hits:
-            self._hit_index = 0
-            self._hits = _hits
-        else:
-            self._hit_index = (self._hit_index + delta) % len(self._hits)
-        if self._hits:
-            self.set_completion(self._hits[self._hit_index])
-
-    def set_completion(self, completion):
-        self.delete(0, tk.END)
-        self.insert(0, completion)
-        self.select_range(self.position, tk.END)
-
-    def handle_keyrelease(self, event):
-        if event.keysym in ['BackSpace', 'Left', 'Right', 'Up', 'Down', 'Shift']:
-            return
-        if event.keysym == 'Return':
-            self.set_completion(self._hits[self._hit_index])
-            return
-        if event.keysym == 'Escape':
-            self.delete(0, tk.END)
-            self['values'] = self._completion_list
-            return
-        self.autocomplete()
 
 #Function for switching of Frames
 def clear_frame():
