@@ -11,6 +11,7 @@ from datetime import datetime
 import mysql.connector
 from keyboard import OnScreenKeyboard
 from autocomplete import AutocompleteCombobox
+from custom_messagebox import CustomMessageBox
 
 
 conn = mysql.connector.connect(
@@ -20,7 +21,7 @@ conn = mysql.connector.connect(
   database="db_medicine_cabinet"
 )
 
-INACTIVITY_PERIOD = 60000 #automatic logout timer in milliseconds
+INACTIVITY_PERIOD = 10000 #automatic logout timer in milliseconds
 inactivity_timer = None #initialization of idle timer
 root = None  # Global variable for root window
 login_frame = None
@@ -50,9 +51,14 @@ def authenticate_user(username, password):
         bind_activity_events()
         show_medicine_supply()
         configure_sidebar(user_role)
-        not_lock()
     else:
-        messagebox.showerror("Login Failed", "Invalid username or password.")
+        message_box = CustomMessageBox(
+            root=root,
+            title="WARNING",
+            message="Invalid username or password.",
+            color="red",  # Background color for warning
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
+        )
 
 # Function that creates the UI for login frame
 def create_login_frame(container):
@@ -232,7 +238,16 @@ def logout(reason):
         account_setting_button.grid_remove()
     account_setting_button = None
     if reason == 'inactivity':
-        messagebox.showinfo('Logged Out', 'You have been logged out due to inactivity.')
+        message_box = CustomMessageBox(
+        root=root,
+        title="WARNING",
+        message="You have been logged-out due to inactivity.",
+        color="red",  # Background color for warning
+        icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
+    )
+        
+def on_ok_pressed():
+    print("Custom OK action triggered!")
 
 #Function that initialize the counting for user idle
 def start_timer():
@@ -249,6 +264,9 @@ def reset_timer(event=None):
 def automatic_logout():
     print("User has been automatically logged out due to inactivity.")
     logout('inactivity')
+    OnScreenKeyboard(login_frame).hide_keyboard()
+    messagebox = CustomMessageBox(root=root, title='Logout During Idle', message="You have been logged-out due to inactivity", color=motif_color, icon_path=os.path.join(os.path.dirname(__file__), 'images', 'automaticLogout_icon.png'))
+
 
 #Function for binding user activities in the Main UI Frame and toplevels
 def bind_activity_events():
@@ -450,35 +468,31 @@ def show_medicine_supply():
     search_entry.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
     search_entry.insert(0, 'Search here')
 
+    # Bind events to the search_entry to show/hide the keyboard
     def focus_in_search(event):
-        search_entry.config(fg='black')
-        if search_entry.get() == 'Search here':
-            search_entry.delete(0, tk.END)
-            search_entry.config(fg='black')
-        keyboard.show_keyboard()
+        clear_placeholder()
+        keyboard.show_keyboard()  # Always show the keyboard on focus
 
     def focus_out_search(event):
         if not search_entry.get():
             search_entry.insert(0, 'Search here')
             search_entry.config(fg='grey')
-    keyboard.hide_keyboard()
+        # No need to hide keyboard on focus out, it will be hidden by pressing Enter
 
-    # Bind the Return key to close the keyboard and perform the search
     def handle_enter_key(event):
         keyboard.hide_keyboard()  # Hide the on-screen keyboard
-        search_treeview()         # Trigger the search functionality
+        search_treeview()  # Trigger the search functionality
         add_placeholder(None)
-        return "break"            # Prevent the default behavior of the Return key (inserting a newline or unwanted characters)
+        return "break"  # Prevent default behavior of Enter key
 
-
-    search_entry.bind("<FocusIn>", focus_in_search)
-    search_entry.bind("<FocusOut>", focus_out_search)
+    # Bindings for the search_entry widget
+    search_entry.bind("<FocusIn>", focus_in_search)  # Show keyboard when focused
+    search_entry.bind("<FocusOut>", focus_out_search)  # Add placeholder when out of focus
+    search_entry.bind("<Return>", handle_enter_key)  # Hide keyboard and search on Enter
     
     # Bind events to the search_entry to show/hide the keyboard
     search_entry.bind("<KeyPress>", clear_placeholder)
-    search_entry.bind("<FocusIn>", lambda event: (keyboard.show_keyboard(), clear_placeholder()))
     search_entry.bind("<FocusOut>", lambda event: (keyboard.hide_keyboard(), add_placeholder(None)))
-    search_entry.bind("<Return>", handle_enter_key)
 
     # Add the search icon next to the Entry widget
     search_icon_label = tk.Label(search_frame, image=search_img, bg='white')
@@ -524,6 +538,7 @@ def show_medicine_supply():
     # Add styling for the treeview
     style = ttk.Style()
     style.configure("Treeview", rowheight=40, borderwidth=2, relief="solid")
+    style.configure("Treeview.Heading", font=("Helvetica", 13, "bold"))
     style.map('Treeview', 
                 background=[('selected', motif_color)],
                 foreground=[('selected', 'white')])
@@ -572,7 +587,7 @@ def show_medicine_supply():
 
     # Add the first new button (e.g., 'Button 1')
     widthdraw_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'minus_icon.png')).resize((25, 25), Image.LANCZOS))
-    withdraw_button = tk.Button(button_frame, text="Withdraw", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=widthdraw_icon, command=unlocked)
+    withdraw_button = tk.Button(button_frame, text="Withdraw", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=widthdraw_icon)
     withdraw_button.image = widthdraw_icon
     withdraw_button.grid(row=0, column=0, padx=20, pady=(12, ), sticky='ew')
 
@@ -710,13 +725,25 @@ def delete_selected_user(tree):
     selected_item = tree.selection()  # Get selected item
     if selected_item:
         username = tree.item(selected_item, "values")[0]
-        if messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete the user '{username}'?"):
-            # conn = sqlite3.connect('Medicine Cabinet.db')
+
+        def yes_delete():
             cursor = conn.cursor()
             cursor.execute("DELETE FROM users WHERE username = %s", [username])
             conn.commit()
-            # conn.close()
+            # Refresh the table after deleting
             show_account_setting()
+
+        def no_delete():
+            print("User deletion canceled.")
+
+        CustomMessageBox(
+            root=tree, 
+            title="Confirm Delete", 
+            message=f"Are you sure you want to delete the user '{username}'?", 
+            color="red", 
+            yes_callback=yes_delete, 
+            no_callback=no_delete
+        )
 
 def on_tree_select(tree):
     selected_item = tree.selection()  # Get selected item
@@ -724,8 +751,13 @@ def on_tree_select(tree):
         username = tree.item(selected_item, "values")[0]
         edit_user(username)
     else:
-        messagebox.showwarning("Select a User", "Please select a user from the list to edit.")
-
+        message_box = CustomMessageBox(
+            root=root,
+            title="WARNING",
+            message="Please select a user to edit.",
+            color="red",
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
+    )
 
 def validate_all_fields_filled(*widgets):
     for widget in widgets:
@@ -751,33 +783,75 @@ def validate_user_info(action, username, password, confirm_password, new_positio
 
     if action == 'edit':
         if new_accountType == 'Admin' and admin_count >= 2:
-            messagebox.showerror("Error", "Maximum 2 admin accounts allowed.")
+            message_box = CustomMessageBox(
+                root=root,
+                title="WARNING",
+                message="Maximum of 2 Admin accounts only.",
+                color="red",  # Background color for warning
+                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
+            )
             return 
         elif new_accountType == 'Staff' and staff_count >= 5:
-            messagebox.showerror("Error", "Maximum 5 staff accounts allowed.")
+            message_box = CustomMessageBox(
+                root=root,
+                title="WARNING",
+                message="Maximum of 5 staff accounts only.",
+                color="red",  # Background color for warning
+                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
+            )
             return
         return True
     elif action == 'add':
         if username_exists:
-            messagebox.showerror("Error", "Username already exists.")
+            message_box = CustomMessageBox(
+                root=root,
+                title="WARNING",
+                message="Usernam already exits.",
+                color="red",  # Background color for warning
+                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
+            )
             return False
 
     # Validate password strength
     if len(password) < 6 or not any(char.isdigit() for char in password) or not any(char.isalpha() for char in password):
-        messagebox.showerror("Error", "Password must be at least 6 characters long and contain both letters and numbers.")
+        message_box = CustomMessageBox(
+            root=root,
+            title="WARNING",
+            message="Password must be atleast six alphanumeric characters.",
+            color="red",  # Background color for warning
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
+        )        
         return False
 
     # Validate password match
     if password != confirm_password:
-        messagebox.showerror("Error", "Passwords do not match.")
+        message_box = CustomMessageBox(
+                root=root,
+                title="WARNING",
+                message="Password do not match.",
+                color="red",  # Background color for warning
+                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
+            )
         return False
     
     # Check if adding another user exceeds the limit
     if new_accountType == 'Admin' and admin_count >= 2:
-        messagebox.showerror("Error", "Maximum 2 admin accounts allowed.")
+        message_box = CustomMessageBox(
+                root=root,
+                title="WARNING",
+                message="Maximum of 2 Admin accounts allowed.",
+                color="red",  # Background color for warning
+                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
+            )
         return
     elif new_accountType == 'Staff' and staff_count >= 5:
-        messagebox.showerror("Error", "Maximum 5 staff accounts allowed.")
+        message_box = CustomMessageBox(
+                root=root,
+                title="WARNING",
+                message="Maximum of 5 staff accounts allowed.",
+                color="red",  # Background color for warning
+                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
+            )
         return
     return True
 
@@ -874,7 +948,12 @@ def edit_user(username):
             conn.commit()
             conn.close()
             
-            messagebox.showinfo("Success", "User information updated successfully.")
+            message_box = CustomMessageBox(
+                root=root,
+                title="SUCCESS",
+                message="User account successfully configured.",
+                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
+            )
             edit_window.destroy()
             show_account_setting()
 
@@ -993,7 +1072,13 @@ def add_user():
                 add_window.destroy()
                 show_account_setting()
         else:
-            messagebox.showerror("Error", "Please fill in all fields.")
+            message_box = CustomMessageBox(
+                root=root,
+                title="ERROR",
+                message="Please fill in all the fields.",
+                color="red",  # Background color for warning
+                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
+            )
 
     button_frame = tk.Frame(add_window, bg=motif_color)
     button_frame.grid(row=7, column=0, columnspan=2, sticky='ew')
@@ -1021,174 +1106,6 @@ def validate_combobox_input(action, value_if_allowed):
 def clear_frame():
     for widget in content_frame.winfo_children():
         widget.destroy()
-
-#Top Level Warning if door is not locked
-def not_lock():
-    lockStatus_window = tk.Toplevel(relief='groove', bd=5)
-    lockStatus_window.overrideredirect(True)  # Remove the title bar
-    lockStatus_window.resizable(width=False, height=False)
-
-    # Get the window dimensions
-    lockStatus_window.update_idletasks()  # Ensure the window size is calculated
-    window_width = 620  # Adjust the width as needed
-    window_height = 385  # Adjust the height as needed
-
-    # Calculate the center position
-    screen_width = lockStatus_window.winfo_screenwidth()
-    screen_height = lockStatus_window.winfo_screenheight()
-    position_x = int((screen_width / 2) - (window_width / 2))
-    position_y = int((screen_height / 2) - (window_height / 2))
-
-    # Set the window position
-    lockStatus_window.geometry(f"{window_width}x{window_height}+{position_x}+{position_y}")
-
-    # Bind activity events to reset the inactivity timer
-    lockStatus_window.bind("<Motion>", reset_timer)
-    lockStatus_window.bind("<KeyPress>", reset_timer)
-    lockStatus_window.bind("<ButtonPress>", reset_timer)
-
-    # Start the inactivity timer
-    start_timer()
-
-    # Add the warning label with padding for better alignment
-    tk.Label(lockStatus_window, text='WARNING', font=('Arial', 25, 'bold'), bg='red', fg='white', pady=12).pack(fill=tk.X)
-
-    # Load and display the status image with a message
-    status_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')).resize((150, 150), Image.LANCZOS))
-    logo_label = tk.Label(lockStatus_window, text='Please close both doors properly before locking.', image=status_img, compound=tk.TOP, font=('Arial', 18))
-    logo_label.image = status_img
-    logo_label.pack(pady=(10, 20))
-
-    button_frame = tk.Frame(lockStatus_window, bg='red')
-    button_frame.pack(fill=tk.X)
-
-    # Centering the button inside the frame
-    button_frame.grid_columnconfigure(0, weight=1)  # Make the column stretch
-
-    # Load and display the 'Okay' button with an icon, modern styling, and padding
-    ok_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'okGrey_icon.png')).resize((35, 35), Image.LANCZOS))
-    ok_button = tk.Button(button_frame, text="Okay", font=("Arial", 20), bg='white', fg='black', relief="raised", bd=3, padx=20, pady=7, compound=tk.LEFT, image=ok_img, command=lambda: toplevel_destroy(lockStatus_window))
-    ok_button.image = ok_img  # Keep a reference to avoid garbage collection
-
-    # Add the button to the grid, center it with sticky and columnspan
-    ok_button.grid(row=0, column=0, padx=90, pady=18, sticky="ew")
-
-    # Configure the row and column to expand equally
-    button_frame.grid_rowconfigure(0, weight=1)
-    button_frame.grid_columnconfigure(0, weight=1)
-
-def proceed_to_scan(window):
-    """Close current window and proceed to scanning window."""
-    toplevel_destroy(window)
-    scanning()
-
-def unlocked():
-    unlocked_window = tk.Toplevel(relief='groove', bd=5)
-    unlocked_window.overrideredirect(True)  # Remove the title bar
-    unlocked_window.resizable(width=False, height=False)
-
-    # Get the window dimensions
-    unlocked_window.update_idletasks()  # Ensure the window size is calculated
-    window_width = 620  # Adjust the width as needed
-    window_height = 400  # Adjust the height as needed
-
-    # Calculate the center position
-    screen_width = unlocked_window.winfo_screenwidth()
-    screen_height = unlocked_window.winfo_screenheight()
-    position_x = int((screen_width / 2) - (window_width / 2))
-    position_y = int((screen_height / 2) - (window_height / 2))
-
-    # Set the window position
-    unlocked_window.geometry(f"{window_width}x{window_height}+{position_x}+{position_y}")
-
-    # Bind activity events to reset the inactivity timer
-    unlocked_window.bind("<Motion>", reset_timer)
-    unlocked_window.bind("<KeyPress>", reset_timer)
-    unlocked_window.bind("<ButtonPress>", reset_timer)
-
-    # Start the inactivity timer
-    start_timer()
-
-    # Add the warning label with padding for better alignment
-    tk.Label(unlocked_window, text='NOTICE', font=('Arial', 25, 'bold'), bg=motif_color, fg='white', pady=12).pack(fill=tk.X)
-
-    # Load and display the status image with a message
-    unlock_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png')).resize((150, 170), Image.LANCZOS))
-    logo_label = tk.Label(unlocked_window, text='The door is finally unlocked, \nyou may now proceed to scan the QR code.', image=unlock_img, compound=tk.TOP, font=('Arial', 18), pady=7)
-    logo_label.image = unlock_img
-    logo_label.pack(pady=(10, 20))
-
-    button_frame = tk.Frame(unlocked_window, bg=motif_color)
-    button_frame.pack(fill=tk.X)
-
-    # Centering the button inside the frame
-    button_frame.grid_columnconfigure(0, weight=1)
-
-    # Load and display the 'Okay' button with an icon, modern styling, and padding
-    ok_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'okGrey_icon.png')).resize((30, 30), Image.LANCZOS))
-    ok_button = tk.Button(button_frame, text="Okay", font=("Arial", 20), bg='white', fg='black', relief="raised", bd=3, padx=20, pady=10, compound=tk.LEFT, image=ok_img, command=lambda: proceed_to_scan(unlocked_window))
-    ok_button.image = ok_img  # Keep a reference to avoid garbage collection
-
-    # Add the button to the grid, center it with sticky and columnspan
-    ok_button.grid(row=0, column=0, padx=90, pady=5, sticky="ew")
-
-    # Configure the row and column to expand equally
-    button_frame.grid_rowconfigure(0, weight=1)
-    button_frame.grid_columnconfigure(0, weight=1)
-
-def scanning():
-    scanning_window = tk.Toplevel(relief='groove', bd=5)
-    scanning_window.overrideredirect(True)  # Remove the title bar
-    scanning_window.resizable(width=False, height=False)
-
-    # Get the window dimensions
-    scanning_window.update_idletasks()  # Ensure the window size is calculated
-    window_width = 620  # Adjust the width as needed
-    window_height = 400  # Adjust the height as needed
-
-    # Calculate the center position
-    screen_width = scanning_window.winfo_screenwidth()
-    screen_height = scanning_window.winfo_screenheight()
-    position_x = int((screen_width / 2) - (window_width / 2))
-    position_y = int((screen_height / 2) - (window_height / 2))
-
-    # Set the window position
-    scanning_window.geometry(f"{window_width}x{window_height}+{position_x}+{position_y}")
-
-    # Bind activity events to reset the inactivity timer
-    scanning_window.bind("<Motion>", reset_timer)
-    scanning_window.bind("<KeyPress>", reset_timer)
-    scanning_window.bind("<ButtonPress>", reset_timer)
-
-    # Start the inactivity timer
-    start_timer()
-
-    # Add the warning label with padding for better alignment
-    tk.Label(scanning_window, text='NOTICE', font=('Arial', 25, 'bold'), bg=motif_color, fg='white', pady=12).pack(fill=tk.X)
-
-    # Load and display the status image with a message
-    scanner_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'scanning_icon.png')).resize((150, 170), Image.LANCZOS))
-    logo_label = tk.Label(scanning_window, text='Please scan the QR code of the desired medicine \n using the scanner at the right of the cabinet.', image=scanner_img, compound=tk.TOP, font=('Arial', 18))
-    logo_label.image = scanner_img
-    logo_label.pack(pady=(10, 20))
-
-    button_frame = tk.Frame(scanning_window, bg=motif_color)
-    button_frame.pack(fill=tk.X)
-
-    # Centering the button inside the frame
-    button_frame.grid_columnconfigure(0, weight=1)
-
-    # Load and display the 'Okay' button with an icon, modern styling, and padding
-    ok_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'okGrey_icon.png')).resize((35, 35), Image.LANCZOS))
-    ok_button = tk.Button(button_frame, text="Okay", font=("Arial", 20), bg='white', fg='black', relief="raised", bd=3, padx=20, pady=7, compound=tk.LEFT, image=ok_img, command=lambda: toplevel_destroy(scanning_window))
-    ok_button.image = ok_img  # Keep a reference to avoid garbage collection
-
-    # Add the button to the grid, center it with sticky and columnspan
-    ok_button.grid(row=0, column=0, padx=90, pady=5, sticky="ew")
-
-    # Configure the row and column to expand equally
-    button_frame.grid_rowconfigure(0, weight=1)
-    button_frame.grid_columnconfigure(0, weight=1)
 
 #-----------------------------------------------MAIN------------------------------------------------------
 def main():

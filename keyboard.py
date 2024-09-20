@@ -101,7 +101,6 @@ class OnScreenKeyboard:
                 # Hide the keyboard
                 self.hide_keyboard()
                 # Remove focus from the focused widget
-                focused_widget.unbind("<FocusIn>")
                 self.parent_frame.focus_set()  # Set focus back to the parent frame
             return  # Exit here to ensure no additional character insertion happens
 
