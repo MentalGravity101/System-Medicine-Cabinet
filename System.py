@@ -12,7 +12,7 @@ import mysql.connector
 from keyboard import OnScreenKeyboard
 from autocomplete import AutocompleteCombobox
 from custom_messagebox import CustomMessageBox
-
+from medicine_manager import MedicineManager
 
 conn = mysql.connector.connect(
   host="localhost",
@@ -21,7 +21,7 @@ conn = mysql.connector.connect(
   database="db_medicine_cabinet"
 )
 
-INACTIVITY_PERIOD = 10000 #automatic logout timer in milliseconds
+INACTIVITY_PERIOD = 60000 #automatic logout timer in milliseconds
 inactivity_timer = None #initialization of idle timer
 root = None  # Global variable for root window
 login_frame = None
@@ -39,11 +39,9 @@ default_fg_color="#fff" # Default foreground color
 
 #function for authentication during the login frame
 def authenticate_user(username, password):
-    # conn = sqlite3.connect('Medicine Cabinet.db')
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE username = %s AND password = %s", [username, password])
     user = cursor.fetchone()
-    # conn.close()
     if user:
         user_role = user[2] 
         main_ui_frame.tkraise()
@@ -239,12 +237,12 @@ def logout(reason):
     account_setting_button = None
     if reason == 'inactivity':
         message_box = CustomMessageBox(
-        root=root,
-        title="WARNING",
-        message="You have been logged-out due to inactivity.",
-        color="red",  # Background color for warning
-        icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
-    )
+            root=root,
+            title="Automatic Logout",
+            message="You have been logged-out due to inactivity.",
+            color=motif_color,  # Background color for warning
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'logout_icon.png')
+        )
         
 def on_ok_pressed():
     print("Custom OK action triggered!")
@@ -264,9 +262,6 @@ def reset_timer(event=None):
 def automatic_logout():
     print("User has been automatically logged out due to inactivity.")
     logout('inactivity')
-    OnScreenKeyboard(login_frame).hide_keyboard()
-    messagebox = CustomMessageBox(root=root, title='Logout During Idle', message="You have been logged-out due to inactivity", color=motif_color, icon_path=os.path.join(os.path.dirname(__file__), 'images', 'automaticLogout_icon.png'))
-
 
 #Function for binding user activities in the Main UI Frame and toplevels
 def bind_activity_events():
@@ -301,11 +296,13 @@ def deposit_window():
     keyboard.create_keyboard()
     keyboard.hide_keyboard()  # Initially hide the keyboard
 
+    tk.Label(input_frame, text="Medicines' QR Code below:", font=('Arial', 16)).grid(row=0, column=3, columnspan=2, sticky='news')
+
     # Display QR code if it exists
     qr_image = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'image_icon.png')).resize((250, 250), Image.LANCZOS))
     qr_code_image_label = tk.Label(input_frame, image=qr_image)
     qr_code_image_label.image = qr_image
-    qr_code_image_label.grid(row=0, column=2, rowspan=5, columnspan=2, pady=10, padx=40, sticky='nsew')  # Sticky set to 'nsew' for proper positioning
+    qr_code_image_label.grid(row=1, column=3, rowspan=4, columnspan=2, pady=(2,10), padx=40, sticky='nsew')  # Sticky set to 'nsew' for proper positioning
 
     # Labels and AutocompleteComboboxes for the form
     tk.Label(input_frame, text="Name of Medicine", font=("Arial", 16)).grid(row=0, column=0, padx=(30, 10), pady=10, sticky='w')
@@ -346,6 +343,7 @@ def deposit_window():
     save_button = tk.Button(input_frame, text="Save", font=("Arial", 16), bg=motif_color, fg='white', width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=save_img, pady=5)
     save_button.image = save_img
     save_button.grid(row=5, column=1, columnspan=3, padx=(60, 40), pady=(50, 0))
+
 
 
 # Function that creates the UI for medicine inventory in the content_frame
@@ -611,7 +609,6 @@ def show_medicine_supply():
 
 
 
-
 #--------------------------------------------------------- DOOR FUNCTIONS -----------------------------------------------------------       
 
 #Function that creates the UI for door function in the content_frame
@@ -640,11 +637,32 @@ def show_notification():
     notification_label.pack()
 
 
-
-
 #------------------------------------------------------ACCOUNT SETTINGS FRAME----------------------------------------------------------------------
 image_refs = []
 def show_account_setting():
+    global conn
+    try:
+        # Ensure the connection is active
+        if conn.is_connected() == False:
+            conn = mysql.connector.connect(
+                host="localhost",
+                user="root",
+                password="",
+                database="db_medicine_cabinet"
+            )
+    except mysql.connector.Error as err:
+        print(f"Error reconnecting to the database: {err}")
+        message_box = CustomMessageBox(
+            root=root,
+            title="ERROR",
+            message="Database connection lost. Reconnecting...",
+            color="red",
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+        )
+        return
+    
+    cursor = conn.cursor()
+
     clear_frame()
     reset_button_colors()
     if account_setting_button:
@@ -745,280 +763,78 @@ def delete_selected_user(tree):
             no_callback=no_delete
         )
 
-def on_tree_select(tree):
-    selected_item = tree.selection()  # Get selected item
-    if selected_item:
-        username = tree.item(selected_item, "values")[0]
-        edit_user(username)
-    else:
-        message_box = CustomMessageBox(
-            root=root,
-            title="WARNING",
-            message="Please select a user to edit.",
-            color="red",
-            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
-    )
-
-def validate_all_fields_filled(*widgets):
-    for widget in widgets:
-        if isinstance(widget, tk.Entry):
-            if not widget.get():
-                return False
-        elif isinstance(widget, ttk.Combobox):
-            if not widget.get():
-                return False
-    return True
-
-def validate_user_info(action, username, password, confirm_password, new_position, new_accountType):
-    # Validate username uniqueness
-    # conn = sqlite3.connect('Medicine Cabinet.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM users WHERE username = %s", [username])
-    username_exists = cursor.fetchone()[0] > 0
-    cursor.execute("SELECT COUNT(*) FROM users WHERE accountType = 'Admin'")
-    admin_count = cursor.fetchone()[0]
-    cursor.execute("SELECT COUNT(*) FROM users WHERE accountType = 'Staff'")
-    staff_count = cursor.fetchone()[0]
-    # conn.close()
-
-    if action == 'edit':
-        if new_accountType == 'Admin' and admin_count >= 2:
-            message_box = CustomMessageBox(
-                root=root,
-                title="WARNING",
-                message="Maximum of 2 Admin accounts only.",
-                color="red",  # Background color for warning
-                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
-            )
-            return 
-        elif new_accountType == 'Staff' and staff_count >= 5:
-            message_box = CustomMessageBox(
-                root=root,
-                title="WARNING",
-                message="Maximum of 5 staff accounts only.",
-                color="red",  # Background color for warning
-                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
-            )
-            return
-        return True
-    elif action == 'add':
-        if username_exists:
-            message_box = CustomMessageBox(
-                root=root,
-                title="WARNING",
-                message="Usernam already exits.",
-                color="red",  # Background color for warning
-                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
-            )
-            return False
-
-    # Validate password strength
-    if len(password) < 6 or not any(char.isdigit() for char in password) or not any(char.isalpha() for char in password):
-        message_box = CustomMessageBox(
-            root=root,
-            title="WARNING",
-            message="Password must be atleast six alphanumeric characters.",
-            color="red",  # Background color for warning
-            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
-        )        
-        return False
-
-    # Validate password match
-    if password != confirm_password:
-        message_box = CustomMessageBox(
-                root=root,
-                title="WARNING",
-                message="Password do not match.",
-                color="red",  # Background color for warning
-                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
-            )
-        return False
-    
-    # Check if adding another user exceeds the limit
-    if new_accountType == 'Admin' and admin_count >= 2:
-        message_box = CustomMessageBox(
-                root=root,
-                title="WARNING",
-                message="Maximum of 2 Admin accounts allowed.",
-                color="red",  # Background color for warning
-                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
-            )
-        return
-    elif new_accountType == 'Staff' and staff_count >= 5:
-        message_box = CustomMessageBox(
-                root=root,
-                title="WARNING",
-                message="Maximum of 5 staff accounts allowed.",
-                color="red",  # Background color for warning
-                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
-            )
-        return
-    return True
-
-def toplevel_destroy(window):
-        window.destroy()
-
-def edit_user(username):
-    edit_window = tk.Toplevel(relief='groove', bd=5)
-    edit_window.overrideredirect(True)  # Remove the title bar
-    edit_window.resizable(width=False, height=False)
-
-    # Get the window dimensions
-    edit_window.update_idletasks()  # Ensure the window size is calculated
-    window_width = 620  # Adjust the width as needed
-    window_height = 650  # Adjust the height as needed
-
-    # Calculate the center position
-    screen_width = edit_window.winfo_screenwidth()
-    screen_height = edit_window.winfo_screenheight()
-    position_x = int((screen_width / 2) - (window_width / 2))
-    position_y = int((screen_height / 2) - (window_height / 2))
-
-    # Set the window position
-    edit_window.geometry(f"{window_width}x{window_height}+{position_x}+{position_y}")
-
-    # Bind activity events to the edit_window to reset the inactivity timer
-    edit_window.bind("<Motion>", reset_timer)
-    edit_window.bind("<KeyPress>", reset_timer)
-    edit_window.bind("<ButtonPress>", reset_timer)
-
-    # Ensure the inactivity timer starts when the edit_window is shown
-    start_timer()
-    
-    # conn = sqlite3.connect('Medicine Cabinet.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT position, accountType, password, qr_code FROM users WHERE username = %s", [username])
-    user = cursor.fetchone()
-    # conn.close()
-
-    # Title label
-    title_label = tk.Label(edit_window, text="Edit User Information", font=("Arial", 18, "bold"), bg=motif_color, fg='white')
-    title_label.grid(row=0, column=0, columnspan=2, sticky='new', padx=(0, 10))
-
-    # Display QR code if it exists
-    qr_code_image_label = tk.Label(edit_window)
-    qr_code_image_label.grid(row=1, column=0, columnspan=2, pady=10)
-
-    if user[3]:  # Check if qr_code is not None
-        qr_image = ImageTk.PhotoImage(Image.open(io.BytesIO(user[3])))
-        qr_code_image_label.config(image=qr_image)
-        qr_code_image_label.image = qr_image    
-    
-    tk.Label(edit_window, text="Username", font=("Arial", 14)).grid(row=2, column=0, padx=10, pady=10)
-    username_entry = tk.Entry(edit_window, font=("Arial", 14))
-    username_entry.grid(row=2, column=1, padx=10, pady=10)
-    username_entry.insert(0, username)
-    
-    tk.Label(edit_window, text="Password", font=("Arial", 14)).grid(row=3, column=0, padx=10, pady=10)
-    password_entry = tk.Entry(edit_window, show="*", font=("Arial", 14))
-    password_entry.grid(row=3, column=1, padx=10, pady=10)
-    password_entry.insert(0, user[2])
-    
-    tk.Label(edit_window, text="Confirm Password", font=("Arial", 14)).grid(row=4, column=0, padx=10, pady=10)
-    confirm_password_entry = tk.Entry(edit_window, show="*", font=("Arial", 14))
-    confirm_password_entry.grid(row=4, column=1, padx=10, pady=10)
-    
-    tk.Label(edit_window, text="Position", font=("Arial", 14)).grid(row=5, column=0, padx=10, pady=10)
-    position_combobox = ttk.Combobox(edit_window, font=("Arial", 14), values=["Midwife", "BHW", "BNS"])  # Adjust values as needed
-    position_combobox.grid(row=5, column=1, padx=10, pady=10)
-    position_combobox.set(user[0])
-    position_combobox.config(validate="key", validatecommand=(position_combobox.register(validate_combobox_input), '%d', '%S'))
-    
-    tk.Label(edit_window, text="Account Type", font=("Arial", 14)).grid(row=6, column=0, padx=10, pady=10)
-    accountType_combobox = ttk.Combobox(edit_window, font=("Arial", 14), values=["Admin", "Staff"])  # Adjust values as needed
-    accountType_combobox.grid(row=6, column=1, padx=10, pady=10)
-    accountType_combobox.set(user[1])
-    position_combobox.config(validate="key", validatecommand=(position_combobox.register(validate_combobox_input), '%d', '%S'))
-
-    def save_changes():
-        new_username = username_entry.get()
-        new_password = password_entry.get()
-        confirm_password = confirm_password_entry.get()
-        new_position = position_combobox.get()
-        new_accountType = accountType_combobox.get()
-
-        if validate_user_info('edit', new_username, new_password, confirm_password, new_position, new_accountType):
-            # conn = sqlite3.connect('Medicine Cabinet.db')
-            cursor = conn.cursor()
-            cursor.execute("""
-                UPDATE users
-                SET username = %s, password = %s, position = %s, accountType = %s
-                WHERE username = %s
-            """, [new_username, new_password, new_position, new_accountType, username])
-            conn.commit()
-            conn.close()
-            
-            message_box = CustomMessageBox(
-                root=root,
-                title="SUCCESS",
-                message="User account successfully configured.",
-                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
-            )
-            edit_window.destroy()
-            show_account_setting()
-
-    button_frame = tk.Frame(edit_window, bg=motif_color)
-
-    # Cancel button (now on the right side)
-    
-    cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
-    cancel_button = tk.Button(button_frame, text="Cancel", font=("Arial", 14), command=lambda: toplevel_destroy(edit_window), width=118, padx=10, relief="raised", bd=3, compound=tk.LEFT, image=cancel_img)
-    cancel_button.image = cancel_img
-    cancel_button.grid(row=0, column=0, pady=10, padx=80)
-    
-    # Save button (now on the left side)
-    save_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'saveBlack_icon.png')).resize((25, 25), Image.LANCZOS))
-    save_button = tk.Button(button_frame, text="Save", font=("Arial", 14), command=save_changes, width=118, padx=10, relief="raised", bd=3, compound=tk.LEFT, image=save_img)
-    save_button.image = save_img
-    save_button.grid(row=0, column=1, pady=10, padx=80)
-
-    button_frame.grid(row=7, column=0, columnspan=2, sticky="new", padx=(0,20), pady=(0, 50))
-
-
 def add_user():
-    add_window = tk.Toplevel(relief='raised', bd=3)
-    add_window.overrideredirect(True)
-    add_window.resizable(width=False, height=False)
+    global conn
+    try:
+        # Ensure the connection is active
+        if conn.is_connected() == False:
+            conn = mysql.connector.connect(
+                host="localhost",
+                user="root",
+                password="",
+                database="db_medicine_cabinet"
+            )
+    except mysql.connector.Error as err:
+        print(f"Error reconnecting to the database: {err}")
+        message_box = CustomMessageBox(
+            root=root,
+            title="ERROR",
+            message="Database connection lost. Reconnecting...",
+            color="red",
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+        )
+        return
+    
+    clear_frame()
 
-    window_width = 600
-    window_height = 600
-    screen_width = add_window.winfo_screenwidth()
-    screen_height = add_window.winfo_screenheight()
-    position_x = int((screen_width / 2) - (window_width / 2))
-    position_y = int((screen_height / 2) - (window_height / 2))
-    add_window.geometry(f"{window_width}x{window_height}+{position_x}+{position_y}")
+    # Ensure content_frame expands to fill the available width
+    content_frame.grid_columnconfigure(0, weight=1)
 
-    Add_User_header = tk.Label(add_window, bg=motif_color, text='Add User', font=('Arial', 18, 'bold'), fg='white')
-    Add_User_header.grid(row=0, column=0, columnspan=2, sticky='new')
+    title_label = tk.Label(content_frame, text="ACCOUNT SETTINGS", bg=motif_color, fg="white", font=('Arial', 25, 'bold'), height=2, relief='groove', bd=1)
+    title_label.pack(fill='both')
+
+    # Create input frame and ensure it expands horizontally
+    input_frame = tk.LabelFrame(content_frame, text='ADD NEW USER ACCOUNT', font=('Arial', 14), pady=20, padx=5, relief='raised', bd=5)
+    input_frame.pack(fill='x', pady=30, padx=300)  # Sticky set to 'ew' for full width
+
+    # Instantiate OnScreenKeyboard
+    keyboard = OnScreenKeyboard(content_frame)
+    keyboard.create_keyboard()
+    keyboard.hide_keyboard()  # Initially hide the keyboard
 
     default_image_path = os.path.join(os.path.dirname(__file__), 'images', 'image_icon.png')
     try:
-        default_photo = ImageTk.PhotoImage(Image.open(default_image_path).resize((220, 220), Image.LANCZOS))
-        image_label = tk.Label(add_window, image=default_photo)
+        default_photo = ImageTk.PhotoImage(Image.open(default_image_path).resize((250, 250), Image.LANCZOS))
+        image_label = tk.Label(input_frame, image=default_photo)
         image_label.image = default_photo
-        image_label.grid(row=1, column=0, columnspan=2, pady=10)
+        image_label.grid(row=0, column=2, columnspan=2, rowspan=5, pady=10, padx=40, sticky='nsew')
     except Exception as e:
         print(f"Error loading default image: {e}")
 
-    tk.Label(add_window, text="Username", font=("Arial", 14)).grid(row=2, column=0, padx=10, pady=(29, 10))
-    username_entry = tk.Entry(add_window, font=("Arial", 14), width=20)
-    username_entry.grid(row=2, column=1, padx=10, pady=(29, 10))
+    tk.Label(input_frame, text="Username", font=("Arial", 14)).grid(row=1, column=0, padx=10, pady=10)
+    username_entry = tk.Entry(input_frame, font=("Arial", 14), width=20)
+    username_entry.grid(row=1, column=1, padx=10, pady=10)
 
-    tk.Label(add_window, text="Password", font=("Arial", 14)).grid(row=3, column=0, padx=10, pady=10)
-    password_entry = tk.Entry(add_window, show="*", font=("Arial", 14), width=20)
-    password_entry.grid(row=3, column=1, padx=10, pady=10)
+    tk.Label(input_frame, text="Password", font=("Arial", 14)).grid(row=2, column=0, padx=10, pady=10)
+    password_entry = tk.Entry(input_frame, show="*", font=("Arial", 14), width=20)
+    password_entry.grid(row=2, column=1, padx=10, pady=10)
 
-    tk.Label(add_window, text="Confirm Password", font=("Arial", 14)).grid(row=4, column=0, padx=10, pady=10)
-    confirm_password_entry = tk.Entry(add_window, show="*", font=("Arial", 14), width=20)
-    confirm_password_entry.grid(row=4, column=1, padx=10, pady=10)
+    tk.Label(input_frame, text="Confirm Password", font=("Arial", 14)).grid(row=3, column=0, padx=10, pady=10)
+    confirm_password_entry = tk.Entry(input_frame, show="*", font=("Arial", 14), width=20)
+    confirm_password_entry.grid(row=3, column=1, padx=10, pady=10)
 
-    tk.Label(add_window, text="Position", font=("Arial", 14)).grid(row=5, column=0, padx=10, pady=10)
-    position_combobox = ttk.Combobox(add_window, font=("Arial", 14), values=["Midwife", "BHW", "BNS"], width=20)
-    position_combobox.grid(row=5, column=1, padx=10, pady=10)
+    tk.Label(input_frame, text="Position", font=("Arial", 14)).grid(row=4, column=0, padx=10, pady=10)
+    position_combobox = ttk.Combobox(input_frame, font=("Arial", 14), values=["Midwife", "BHW", "BNS"], width=20)
+    position_combobox.grid(row=4, column=1, padx=10, pady=10)
 
-    tk.Label(add_window, text="Account Type", font=("Arial", 14)).grid(row=6, column=0, padx=10, pady=10)
-    accountType_combobox = ttk.Combobox(add_window, font=("Arial", 14), values=["Admin", "Staff"], width=20)
-    accountType_combobox.grid(row=6, column=1, padx=10, pady=10)
+    tk.Label(input_frame, text="Account Type", font=("Arial", 14)).grid(row=5, column=0, padx=10, pady=10)
+    accountType_combobox = ttk.Combobox(input_frame, font=("Arial", 14), values=["Admin", "Staff"], width=20)
+    accountType_combobox.grid(row=5, column=1, padx=10, pady=10)
+
+    # Bind the focus events to show/hide the keyboard for each widget
+    for widget in [username_entry, password_entry, confirm_password_entry, position_combobox, accountType_combobox]:
+        widget.bind("<FocusIn>", lambda e: keyboard.show_keyboard())
+        widget.bind("<FocusOut>", lambda e: keyboard.hide_keyboard())
 
     def generate_qr_code():
         new_username = username_entry.get().strip()
@@ -1062,36 +878,204 @@ def add_user():
                 qr.save(qr_bytes)
                 qr_code = qr_bytes.getvalue()
 
-                conn = sqlite3.connect('Medicine Cabinet.db')
                 cursor = conn.cursor()
-                cursor.execute("INSERT INTO users (username, password, position, accountType, qr_code) VALUES (?, ?, ?, ?, ?)",
-                               (new_username, new_password, new_position, new_accountType, qr_code))
+                cursor.execute("INSERT INTO users (username, password, position, accountType, qr_code) VALUES (%s, %s, %s, %s, %s)",
+                            (new_username, new_password, new_position, new_accountType, qr_code))
                 conn.commit()
                 conn.close()
+                
+                show_account_setting()  # Refresh Treeview with updated user data
+            else:
+                message_box = CustomMessageBox(
+                    root=root,
+                    title="ERROR",
+                    message="Please fill in all the fields.",
+                    color="red",  # Background color for warning
+                    icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
+                )
 
-                add_window.destroy()
-                show_account_setting()
-        else:
+    # Cancel and Save buttons
+    cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
+    cancel_button = tk.Button(input_frame, text="Cancel", font=("Arial", 16), bg=motif_color, fg='white', command=show_account_setting, width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=cancel_img, pady=5)
+    cancel_button.image = cancel_img
+    cancel_button.grid(row=7, column=0, columnspan=3, padx=(40, 60), pady=(50, 0))
+
+    save_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'saveBlack_icon.png')).resize((25, 25), Image.LANCZOS))
+    save_button = tk.Button(input_frame, text="Save", font=("Arial", 16), bg=motif_color, fg='white', width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=save_img, pady=5, command=add_new_user)
+    save_button.image = save_img
+    save_button.grid(row=7, column=1, columnspan=3, padx=(60, 40), pady=(50, 0))    
+
+def on_tree_select(tree):
+    selected_item = tree.selection()  # Get selected item
+    if selected_item:
+        username = tree.item(selected_item, "values")[0]
+        edit_user(username)
+    else:
+        message_box = CustomMessageBox(
+            root=root,
+            title="WARNING",
+            message="Please select a user to edit.",
+            color="red",
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
+    )
+
+def validate_all_fields_filled(*widgets):
+    for widget in widgets:
+        if isinstance(widget, tk.Entry):
+            if not widget.get():
+                return False
+        elif isinstance(widget, ttk.Combobox):
+            if not widget.get():
+                return False
+    return True
+
+def validate_user_info(mode, username, password, confirm_password, position, accountType):
+    # Check if passwords match
+    if password != confirm_password:
+        message_box = CustomMessageBox(
+            root=root,
+            title="ERROR",
+            message="Passwords do not match.",
+            color="red",
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+        )
+        return False
+
+    # Check if username already exists
+    cursor = conn.cursor()
+    cursor.execute("SELECT username FROM users WHERE username = %s", [username])
+    user_exists = cursor.fetchone()
+
+    if mode == 'add' and user_exists:
+        message_box = CustomMessageBox(
+            root=root,
+            title="ERROR",
+            message="Username already exists.",
+            color="red",
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+        )
+        return False
+
+    # Check if accountType is Admin and if there are already 2 Admins
+    if accountType == 'Admin':
+        cursor.execute("SELECT COUNT(*) FROM users WHERE accountType = 'Admin'")
+        admin_count = cursor.fetchone()[0]
+
+        if admin_count >= 2:
             message_box = CustomMessageBox(
                 root=root,
                 title="ERROR",
-                message="Please fill in all the fields.",
-                color="red",  # Background color for warning
-                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
+                message="There are already 2 admin accounts. You cannot add more.",
+                color="red",
+                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
             )
+            return False
 
-    button_frame = tk.Frame(add_window, bg=motif_color)
-    button_frame.grid(row=7, column=0, columnspan=2, sticky='ew')
+    # All validations passed
+    return True
 
+
+def toplevel_destroy(window):
+        window.destroy()
+
+def edit_user(username):
+    # Clear the content_frame
+    for widget in content_frame.winfo_children():
+        widget.destroy()
+
+    # Retrieve the user information from the database
+    cursor = conn.cursor()
+    cursor.execute("SELECT position, accountType, password, qr_code FROM users WHERE username = %s", [username])
+    user = cursor.fetchone()
+
+    title_label = tk.Label(content_frame, text="ACCOUNT SETTINGS", bg=motif_color, fg="white", font=('Arial', 25, 'bold'), height=2, relief='groove', bd=1)
+    title_label.pack(fill='both')
+
+    # Create input frame and ensure it expands horizontally
+    input_frame = tk.LabelFrame(content_frame, text='Edit User Account', font=('Arial', 14), pady=20, padx=10, relief='raised', bd=5)
+    input_frame.pack(fill='x', pady=30, padx=300)  # Sticky set to 'ew' for full width
+
+    # Instantiate OnScreenKeyboard
+    keyboard = OnScreenKeyboard(content_frame)
+    keyboard.create_keyboard()
+    keyboard.hide_keyboard()  # Initially hide the keyboard
+
+    # Display QR code if it exists
+    qr_code_image_label = tk.Label(input_frame)
+    qr_code_image_label.grid(row=0, column=2, columnspan=2, rowspan=5, pady=10, padx=40, sticky='nsew')
+
+    if user[3]:  # Check if qr_code is not None
+        qr_image = ImageTk.PhotoImage(Image.open(io.BytesIO(user[3])))
+        qr_code_image_label.config(image=qr_image)
+        qr_code_image_label.image = qr_image    
+
+    # Username entry
+    tk.Label(input_frame, text="Username", font=("Arial", 14)).grid(row=0, column=0, padx=10, pady=10)
+    username_entry = tk.Entry(input_frame, font=("Arial", 14))
+    username_entry.grid(row=0, column=1, padx=10, pady=10)
+    username_entry.insert(0, username)
+    
+    # Password entry
+    tk.Label(input_frame, text="Password", font=("Arial", 14)).grid(row=1, column=0, padx=10, pady=10)
+    password_entry = tk.Entry(input_frame, show="*", font=("Arial", 14))
+    password_entry.grid(row=1, column=1, padx=10, pady=10)
+    password_entry.insert(0, user[2])
+    
+    # Position combobox
+    tk.Label(input_frame, text="Position", font=("Arial", 14)).grid(row=2, column=0, padx=10, pady=10)
+    position_combobox = ttk.Combobox(input_frame, font=("Arial", 14), values=["Midwife", "BHW", "BNS"])
+    position_combobox.grid(row=2, column=1, padx=10, pady=10)
+    position_combobox.set(user[0])
+    position_combobox.config(validate="key", validatecommand=(position_combobox.register(validate_combobox_input), '%d', '%S'))
+
+    # Account Type combobox
+    tk.Label(input_frame, text="Account Type", font=("Arial", 14)).grid(row=3, column=0, padx=10, pady=10)
+    accountType_combobox = ttk.Combobox(input_frame, font=("Arial", 14), values=["Admin", "Staff"])
+    accountType_combobox.grid(row=3, column=1, padx=10, pady=10)
+    accountType_combobox.set(user[1])
+    accountType_combobox.config(validate="key", validatecommand=(position_combobox.register(validate_combobox_input), '%d', '%S'))
+
+    # Save changes button
+    def save_changes():
+        new_username = username_entry.get()
+        new_password = password_entry.get()
+        new_position = position_combobox.get()
+        new_accountType = accountType_combobox.get()
+
+        if validate_user_info('edit', new_username, new_password, new_position, new_accountType):
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE users
+                SET username = %s, password = %s, position = %s, accountType = %s
+                WHERE username = %s
+            """, [new_username, new_password, new_position, new_accountType, username])
+            conn.commit()
+
+            # Success message
+            message_box = CustomMessageBox(
+                root=root,
+                title="SUCCESS",
+                message="User account successfully configured.",
+                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'accountSetting_Icon.png'),
+            )
+            show_account_setting()  # Refresh the user table
+    
+    # Cancel and Save buttons
     cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
-    cancel_button = tk.Button(button_frame, text="Cancel", font=("Arial", 14), command=lambda: toplevel_destroy(add_window), width=118, padx=10, relief="raised", bd=3, compound=tk.LEFT, image=cancel_img)
+    cancel_button = tk.Button(input_frame, text="Cancel", font=("Arial", 16), bg=motif_color, fg='white', command=show_account_setting, width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=cancel_img, pady=5)
     cancel_button.image = cancel_img
-    cancel_button.grid(row=0, column=0, pady=10, padx=79)
+    cancel_button.grid(row=5, column=0, columnspan=3, padx=(40, 60), pady=(50, 0))
 
     save_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'saveBlack_icon.png')).resize((25, 25), Image.LANCZOS))
-    save_button = tk.Button(button_frame, text="Save", font=("Arial", 14), command=add_new_user, width=118, padx=10, relief="raised", bd=3, compound=tk.LEFT, image=save_img)
+    save_button = tk.Button(input_frame, text="Save", font=("Arial", 16), bg=motif_color, fg='white', width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=save_img, pady=5, command=save_changes)
     save_button.image = save_img
-    save_button.grid(row=0, column=1, pady=10, padx=79)
+    save_button.grid(row=5, column=1, columnspan=3, padx=(60, 40), pady=(50, 0))
+
+    # Bind the focus events to show/hide the keyboard for each widget
+    for widget in [username_entry, password_entry, position_combobox, accountType_combobox]:
+        widget.bind("<FocusIn>", lambda e: keyboard.show_keyboard())
+        widget.bind("<FocusOut>", lambda e: keyboard.hide_keyboard())
+
 
 
 
