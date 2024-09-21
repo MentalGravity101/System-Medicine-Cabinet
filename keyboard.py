@@ -185,3 +185,88 @@ class OnScreenKeyboard:
     def hide_keyboard(self):
         if self.keyboard_frame:
             self.keyboard_frame.pack_forget()
+
+
+class NumericKeyboard:
+    def __init__(self, parent_frame):
+        self.parent_frame = parent_frame
+        self.keyboard_frame = None
+        self.create_keyboard()
+
+    def create_keyboard(self):
+        """Creates the numeric keyboard layout."""
+        if self.keyboard_frame:
+            return
+
+        self.keyboard_frame = tk.Frame(self.parent_frame, bg='lightgrey', relief='sunken', bd=3)
+
+        # Define the keys layout with a 4th column for Backspace, Enter, and 0
+        keys = [
+            ['7', '8', '9', 'Backspace'],
+            ['4', '5', '6', 'Enter'],
+            ['1', '2', '3', '0']
+        ]
+
+        # Load Backspace image with relative path
+        backspace_image_path = os.path.join(os.path.dirname(__file__), "images", "backspace_icon.png") # Update folder as needed
+        self.backspace_image = ImageTk.PhotoImage(Image.open(backspace_image_path).resize((30, 30), Image.LANCZOS))
+
+        for row in keys:
+            row_frame = tk.Frame(self.keyboard_frame)
+            row_frame.pack(pady=5, padx=3)
+
+            for key in row:
+                if key == "Backspace":
+                    button = tk.Button(
+                        row_frame,
+                        image=self.backspace_image,
+                        width=55, height=55,
+                        command=self.on_backspace,
+                        relief='raised', bd=3
+                    )
+                else:
+                    button = tk.Button(
+                        row_frame,
+                        text=key,
+                        width=6, height=3,
+                        command=lambda key=key: self.on_key_press(key),
+                        font=('Arial', 12),
+                        relief='raised', bd=3
+                    )
+                button.pack(side="left", padx=3)
+
+        self.keyboard_frame.pack(side="bottom", fill="x")
+
+    def on_key_press(self, key):
+        """Handles key presses on the numeric keyboard."""
+        focused_widget = self.parent_frame.focus_get()
+
+        # Handle Enter key press
+        if key == "Enter":
+            if isinstance(focused_widget, tk.Spinbox):
+                print("Search initiated with value:", focused_widget.get())
+            self.hide()  # Hide the keyboard
+            return
+
+        # Handle numeric input
+        if isinstance(focused_widget, tk.Spinbox):
+            current_value = focused_widget.get()
+            if current_value.isdigit():
+                focused_widget.delete(0, tk.END)
+                focused_widget.insert(0, current_value + key)
+
+    def on_backspace(self):
+        """Handles the backspace action."""
+        focused_widget = self.parent_frame.focus_get()
+        if isinstance(focused_widget, tk.Spinbox):
+            current_value = focused_widget.get()
+            focused_widget.delete(0, tk.END)
+            focused_widget.insert(0, current_value[:-1])  # Remove last character
+
+    def show(self):
+        """Displays the numeric keyboard."""
+        self.keyboard_frame.pack(side="bottom", fill="x")
+
+    def hide(self):
+        """Hides the numeric keyboard."""
+        self.keyboard_frame.pack_forget()

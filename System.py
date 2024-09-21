@@ -9,7 +9,7 @@ import io
 from tkcalendar import DateEntry
 from datetime import datetime
 import mysql.connector
-from keyboard import OnScreenKeyboard
+from keyboard import *
 from autocomplete import AutocompleteCombobox
 from custom_messagebox import CustomMessageBox
 from medicine_manager import MedicineManager
@@ -296,6 +296,10 @@ def deposit_window():
     keyboard.create_keyboard()
     keyboard.hide_keyboard()  # Initially hide the keyboard
 
+    numKeyboard = NumericKeyboard(content_frame)
+    numKeyboard.create_keyboard()
+    numKeyboard.hide()
+
     tk.Label(input_frame, text="Medicines' QR Code below:", font=('Arial', 16)).grid(row=0, column=3, columnspan=2, sticky='news')
 
     # Display QR code if it exists
@@ -329,9 +333,11 @@ def deposit_window():
     expiration_date_entry.grid(row=4, column=1, padx=10, pady=10, sticky='ew')
 
     # Bind the focus events to show/hide the keyboard for each widget
-    for widget in [name_combobox, type_combobox, quantity_spinbox, unit_combobox, expiration_date_entry]:
+    for widget in [name_combobox, type_combobox, unit_combobox, expiration_date_entry]:
         widget.bind("<FocusIn>", lambda e: keyboard.show_keyboard())
         widget.bind("<FocusOut>", lambda e: keyboard.hide_keyboard())
+    quantity_spinbox.bind("<FocusIn>", lambda e: numKeyboard.show())
+    quantity_spinbox.bind("<FocusOut>", lambda e: numKeyboard.hide())
 
     # Cancel and Save buttons
     cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
@@ -527,43 +533,54 @@ def show_medicine_supply():
 
     activate_button(sort_button_5)
 
-    # Treeview widget with alternating row colors
+    # Frame for the treeview
     tree_frame = tk.Frame(content_frame, bg="#f0f0f0")
     tree_frame.pack(fill="both", expand=True, padx=10, pady=10)
-    tree_scroll = ttk.Scrollbar(tree_frame)
-    tree_scroll.pack(side=tk.RIGHT)
 
-    # Add styling for the treeview
+    # Custom scrollbar for the treeview
+    tree_scroll = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL)
+    tree_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+
+    # Treeview styling
     style = ttk.Style()
     style.configure("Treeview", rowheight=40, borderwidth=2, relief="solid")
     style.configure("Treeview.Heading", font=("Helvetica", 13, "bold"))
     style.map('Treeview', 
-                background=[('selected', motif_color)],
-                foreground=[('selected', 'white')])
+              background=[('selected', motif_color)],
+              foreground=[('selected', 'white')])
 
+    # Customize scrollbar
+    style.configure("Vertical.TScrollbar", 
+                    gripcolor=motif_color,  # Color of the grip
+                    background="#f0f0f0",  # Background color of scrollbar
+                    troughcolor=motif_color,  # Background color of the trough
+                    arrowcolor=motif_color)  # Color of the arrows
+
+    # Define columns
     columns = ("name", "type", "quantity", "unit", "date stored", "expiration date")
     tree = ttk.Treeview(tree_frame, columns=columns, show="headings", yscrollcommand=tree_scroll.set, height=10)
 
     tree_scroll.config(command=tree.yview)
 
-    tree.heading("name", text="Name")
-    tree.heading("type", text="Type")
-    tree.heading("quantity", text="Quantity")
-    tree.heading("unit", text="Unit")
-    tree.heading("date stored", text="Date Stored")
-    tree.heading("expiration date", text="Expiration Date")
+    # Column headings
+    for col in columns:
+        tree.heading(col, text=col.capitalize())
 
-    tree.column("name", anchor=tk.CENTER, width=100)
-    tree.column("type", anchor=tk.CENTER, width=100)
-    tree.column("quantity", anchor=tk.CENTER, width=100)
-    tree.column("unit", anchor=tk.CENTER, width=100)
-    tree.column("date stored", anchor=tk.CENTER, width=100)
-    tree.column("expiration date", anchor=tk.CENTER, width=100)
+    # Column configurations
+    for col in columns:
+        tree.column(col, anchor=tk.CENTER, width=100)
 
+    # Row styling
     tree.tag_configure('oddrow', background="white")
     tree.tag_configure('evenrow', background="#f2f2f2")
 
-    tree.pack(fill="both", expand=True)
+    tree.pack(side=tk.LEFT, fill="both", expand=True)
+
+    # Mouse wheel support
+    def on_mouse_wheel(event):
+        tree.yview_scroll(int(-1*(event.delta/120)), "units")
+
+    tree.bind_all("<MouseWheel>", on_mouse_wheel)
 
     # Populate treeview for the first time
     populate_treeview()
