@@ -12,7 +12,7 @@ import mysql.connector
 from keyboard import *
 from autocomplete import AutocompleteCombobox
 from custom_messagebox import CustomMessageBox
-from medicine_manager import MedicineManager
+from medicine_manager import MedicineDeposit
 
 conn = mysql.connector.connect(
   host="localhost",
@@ -310,13 +310,11 @@ def deposit_window():
 
     # Labels and AutocompleteComboboxes for the form
     tk.Label(input_frame, text="Name of Medicine", font=("Arial", 16)).grid(row=0, column=0, padx=(30, 10), pady=10, sticky='w')
-    name_combobox = AutocompleteCombobox(input_frame, font=("Arial", 16), width=20)
-    name_combobox.set_completion_list(["Biogesic", "Alaxan", "Mefenamic", "Paracetamol"])
+    name_combobox = ttk.Combobox(input_frame, font=("Arial", 16), width=20)
     name_combobox.grid(row=0, column=1, padx=10, pady=10, sticky='ew')
 
     tk.Label(input_frame, text="Type", font=("Arial", 16)).grid(row=1, column=0, padx=(30, 10), pady=10, sticky='w')
-    type_combobox = AutocompleteCombobox(input_frame, font=("Arial", 16), width=20)
-    type_combobox.set_completion_list(["Hypertension", "Fever", "Pain Reliever"])
+    type_combobox = ttk.Combobox(input_frame, font=("Arial", 16), width=20)
     type_combobox.grid(row=1, column=1, padx=10, pady=10, sticky='ew')
 
     tk.Label(input_frame, text="Quantity", font=("Arial", 16)).grid(row=2, column=0, padx=(30, 10), pady=10, sticky='w')
@@ -324,8 +322,7 @@ def deposit_window():
     quantity_spinbox.grid(row=2, column=1, padx=10, pady=10, sticky='ew')
 
     tk.Label(input_frame, text="Unit", font=("Arial", 16)).grid(row=3, column=0, padx=(30, 10), pady=10, sticky='w')
-    unit_combobox = AutocompleteCombobox(input_frame, font=("Arial", 16), width=20)
-    unit_combobox.set_completion_list(["Tablet", "Syrup", "Pieces", "Box"])
+    unit_combobox = ttk.Combobox(input_frame, font=("Arial", 16), width=20)
     unit_combobox.grid(row=3, column=1, padx=10, pady=10, sticky='ew')
 
     tk.Label(input_frame, text="Expiration Date", font=("Arial", 16)).grid(row=4, column=0, padx=(30, 10), pady=10, sticky='w')
@@ -339,6 +336,40 @@ def deposit_window():
     quantity_spinbox.bind("<FocusIn>", lambda e: numKeyboard.show())
     quantity_spinbox.bind("<FocusOut>", lambda e: numKeyboard.hide())
 
+
+    # Function to generate QR code and display it
+    def generate_and_show_qr_code():
+        name = name_combobox.get()
+        expiration_date = expiration_date_entry.get_date().strftime('%m-%d-%Y')
+
+        if name and expiration_date:
+            # Generate the QR code
+            qr_filepath = MedicineDeposit(name, "", 0, "", expiration_date).generate_qr_code()
+
+            if qr_filepath:
+                # Display the generated QR code image
+                qr_image = ImageTk.PhotoImage(Image.open(qr_filepath).resize((250, 250), Image.LANCZOS))
+                qr_code_image_label.config(image=qr_image, text="")  # Remove the text when image is loaded
+                qr_code_image_label.image = qr_image  # Prevent garbage collection
+
+    # Bind the name and expiration date inputs to trigger QR code generation
+    name_combobox.bind("<FocusOut>", lambda e: generate_and_show_qr_code())
+    expiration_date_entry.bind("<FocusOut>", lambda e: generate_and_show_qr_code())
+
+    # Save button logic to validate and process the medicine data
+    def save_medicine_data():
+        name = name_combobox.get()
+        type_ = type_combobox.get()
+        quantity = int(quantity_spinbox.get())
+        unit = unit_combobox.get()
+        expiration_date = expiration_date_entry.get_date().strftime('%m-%d-%Y')
+
+        # Create a MedicineDeposit object and process it
+        medicine = MedicineDeposit(name, type_, quantity, unit, expiration_date)
+
+        if medicine.process_medicine():
+            show_medicine_supply()  # Assuming this refreshes or clears the form after saving
+
     # Cancel and Save buttons
     cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
     cancel_button = tk.Button(input_frame, text="Cancel", font=("Arial", 16), bg=motif_color, fg='white', command=show_medicine_supply, width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=cancel_img, pady=5)
@@ -346,9 +377,11 @@ def deposit_window():
     cancel_button.grid(row=5, column=0, columnspan=3, padx=(40, 60), pady=(50, 0))
 
     save_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'saveBlack_icon.png')).resize((25, 25), Image.LANCZOS))
-    save_button = tk.Button(input_frame, text="Save", font=("Arial", 16), bg=motif_color, fg='white', width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=save_img, pady=5)
+    save_button = tk.Button(input_frame, text="Save", font=("Arial", 16), bg=motif_color, fg='white', width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=save_img, pady=5, command=save_medicine_data)
     save_button.image = save_img
     save_button.grid(row=5, column=1, columnspan=3, padx=(60, 40), pady=(50, 0))
+
+
 
 
 
@@ -423,9 +456,9 @@ def show_medicine_supply():
         for med in medicine:
             name, type, quantity, unit, date_stored, expiration_date = med
 
-            # Convert date objects to strings
-            date_stored_str = date_stored.strftime("%b %d, %Y").lower()
-            expiration_date_str = expiration_date.strftime("%b %d, %Y").lower()
+            # Convert date objects to strings (handling NoneType)
+            date_stored_str = date_stored.strftime("%b %d, %Y").lower() if date_stored else "N/A"
+            expiration_date_str = expiration_date.strftime("%b %d, %Y").lower() if expiration_date else "N/A"
 
             # Check if the search term matches any of the fields
             if (
@@ -441,8 +474,8 @@ def show_medicine_supply():
         # Use the filtered results to populate the Treeview
         for i, med in enumerate(filtered_medicine):
             name, type, quantity, unit, date_stored, expiration_date = med
-            date_stored_str = date_stored.strftime("%b %d, %Y")
-            expiration_date_str = expiration_date.strftime("%b %d, %Y")
+            date_stored_str = date_stored.strftime("%b %d, %Y") if date_stored else "N/A"
+            expiration_date_str = expiration_date.strftime("%b %d, %Y") if expiration_date else "N/A"
             tag = 'evenrow' if i % 2 == 0 else 'oddrow'
             tree.insert("", "end", values=(name, type, quantity, unit, date_stored_str, expiration_date_str), tags=(tag,))
 
@@ -1107,6 +1140,7 @@ def validate_combobox_input(action, value_if_allowed):
 def clear_frame():
     for widget in content_frame.winfo_children():
         widget.destroy()
+
 
 #-----------------------------------------------MAIN------------------------------------------------------
 def main():

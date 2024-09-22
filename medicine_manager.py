@@ -3,7 +3,7 @@ import qrcode
 import os
 from tkinter import messagebox
 
-class MedicineManager:
+class MedicineDeposit:
     def __init__(self, name, type_, quantity, unit, expiration_date):
         self.name = name
         self.type = type_
@@ -25,7 +25,8 @@ class MedicineManager:
             
             # Save the QR code image in the current directory
             qr_filename = f"{self.name}_{self.expiration_date.replace('/', '-')}.png"
-            qr_filepath = os.path.join(os.path.dirname(__file__), qr_filename)
+            qr_filepath = os.path.join(os.path.dirname(__file__), 'qr_codes', qr_filename)  # Save in 'qr_codes' folder
+            os.makedirs(os.path.dirname(qr_filepath), exist_ok=True)
             qr_img.save(qr_filepath)
             
             return qr_filepath
@@ -38,12 +39,16 @@ class MedicineManager:
             # Open a connection to the MySQL database
             conn = mysql.connector.connect(
                 host="localhost",
-                user="root",
-                password="",
-                database="db_medicine_cabinet"
+                user="root",  # Make sure the username is correct
+                password="",  # Ensure the password is correct
+                database="db_medicine_cabinet"  # Ensure the correct database name is used
             )
             cursor = conn.cursor()
 
+            # Check if the connection is successful
+            if conn.is_connected():
+                print("Connected to database")
+            
             # Read the QR code file as binary
             with open(qr_filepath, "rb") as qr_file:
                 qr_code_data = qr_file.read()
@@ -54,6 +59,8 @@ class MedicineManager:
             VALUES (%s, %s, %s, %s, %s, %s)
             """
             cursor.execute(insert_query, (self.name, self.type, self.quantity, self.unit, self.expiration_date, qr_code_data))
+            
+            # Commit the transaction to save changes
             conn.commit()
 
             messagebox.showinfo("Success", "Medicine data and QR code saved successfully.")
@@ -67,6 +74,7 @@ class MedicineManager:
             if conn.is_connected():
                 cursor.close()
                 conn.close()
+
 
     def process_medicine(self):
         # Validate inputs

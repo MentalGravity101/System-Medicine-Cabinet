@@ -244,7 +244,7 @@ class NumericKeyboard:
         # Handle Enter key press
         if key == "Enter":
             if isinstance(focused_widget, tk.Spinbox):
-                print("Search initiated with value:", focused_widget.get())
+                focused_widget.event_generate("<Return>")
             self.hide()  # Hide the keyboard
             return
 
