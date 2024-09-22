@@ -2,6 +2,7 @@ import mysql.connector
 import qrcode
 import os
 from tkinter import messagebox
+from datetime import datetime, date
 
 class MedicineDeposit:
     def __init__(self, name, type_, quantity, unit, expiration_date):
@@ -9,12 +10,28 @@ class MedicineDeposit:
         self.type = type_
         self.quantity = quantity
         self.unit = unit
-        self.expiration_date = expiration_date
+        self.expiration_date = expiration_date  # Expecting the expiration_date to be a string
 
     def validate_inputs(self):
+        """Checks if the expiration date is not the current date."""
+        current_date = date.today()
+        
         if not self.name or not self.type or not self.quantity or not self.unit or not self.expiration_date:
             messagebox.showerror("Input Error", "Please fill out all fields.")
             return False
+        
+        # Convert expiration_date from string to a date object for comparison
+        try:
+            exp_date = datetime.strptime(self.expiration_date, "%Y-%m-%d").date()
+        except ValueError:
+            messagebox.showerror("Invalid Date", "Please enter a valid expiration date (YYYY-MM-DD).")
+            return False
+        
+        # Compare current date with expiration date
+        if exp_date == current_date:
+            messagebox.showerror("Invalid Expiration Date", "Expiration date cannot be the current date!")
+            return False
+        
         return True
 
     def generate_qr_code(self):
@@ -74,7 +91,6 @@ class MedicineDeposit:
             if conn.is_connected():
                 cursor.close()
                 conn.close()
-
 
     def process_medicine(self):
         # Validate inputs

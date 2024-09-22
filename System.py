@@ -2,12 +2,10 @@ import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
 import os
-import sqlite3
 import qrcode
 from tkinter import messagebox
 import io
 from tkcalendar import DateEntry
-from datetime import datetime
 import mysql.connector
 from keyboard import *
 from autocomplete import AutocompleteCombobox
@@ -362,7 +360,8 @@ def deposit_window():
         type_ = type_combobox.get()
         quantity = int(quantity_spinbox.get())
         unit = unit_combobox.get()
-        expiration_date = expiration_date_entry.get_date().strftime('%m-%d-%Y')
+        expiration_date = expiration_date_entry.get_date().strftime('%Y-%m-%d')
+
 
         # Create a MedicineDeposit object and process it
         medicine = MedicineDeposit(name, type_, quantity, unit, expiration_date)
