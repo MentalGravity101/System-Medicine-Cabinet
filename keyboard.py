@@ -192,6 +192,7 @@ class NumericKeyboard:
         self.parent_frame = parent_frame
         self.keyboard_frame = None
         self.create_keyboard()
+        self.bind_focus_events()  # Bind focus events upon initialization
 
     def create_keyboard(self):
         """Creates the numeric keyboard layout."""
@@ -200,15 +201,15 @@ class NumericKeyboard:
 
         self.keyboard_frame = tk.Frame(self.parent_frame, bg='lightgrey', relief='sunken', bd=3)
 
-        # Define the keys layout with a 4th column for Backspace, Enter, and 0
+        # Define the keys layout
         keys = [
             ['7', '8', '9', 'Backspace'],
             ['4', '5', '6', 'Enter'],
             ['1', '2', '3', '0']
         ]
 
-        # Load Backspace image with relative path
-        backspace_image_path = os.path.join(os.path.dirname(__file__), "images", "backspace_icon.png") # Update folder as needed
+        # Load Backspace image
+        backspace_image_path = os.path.join(os.path.dirname(__file__), "images", "backspace_icon.png")
         self.backspace_image = ImageTk.PhotoImage(Image.open(backspace_image_path).resize((30, 30), Image.LANCZOS))
 
         for row in keys:
@@ -216,6 +217,11 @@ class NumericKeyboard:
             row_frame.pack(pady=5, padx=3)
 
             for key in row:
+                button_config = {
+                    'width': 6, 'height': 3,
+                    'font': ('Arial', 12),
+                    'relief': 'raised', 'bd': 3
+                }
                 if key == "Backspace":
                     button = tk.Button(
                         row_frame,
@@ -224,14 +230,19 @@ class NumericKeyboard:
                         command=self.on_backspace,
                         relief='raised', bd=3
                     )
+                elif key == "Enter":
+                    button = tk.Button(
+                        row_frame,
+                        text=key,
+                        command=self.on_enter,
+                        **button_config
+                    )
                 else:
                     button = tk.Button(
                         row_frame,
                         text=key,
-                        width=6, height=3,
                         command=lambda key=key: self.on_key_press(key),
-                        font=('Arial', 12),
-                        relief='raised', bd=3
+                        **button_config
                     )
                 button.pack(side="left", padx=3)
 
@@ -241,27 +252,29 @@ class NumericKeyboard:
         """Handles key presses on the numeric keyboard."""
         focused_widget = self.parent_frame.focus_get()
 
-        # Handle Enter key press
-        if key == "Enter":
-            if isinstance(focused_widget, tk.Spinbox):
-                focused_widget.event_generate("<Return>")
-            self.hide()  # Hide the keyboard
-            return
-
         # Handle numeric input
         if isinstance(focused_widget, tk.Spinbox):
             current_value = focused_widget.get()
-            if current_value.isdigit():
+            # Allow adding numbers even if the current value is empty
+            if current_value.isdigit() or current_value == "":
                 focused_widget.delete(0, tk.END)
                 focused_widget.insert(0, current_value + key)
+
+    def on_enter(self):
+        """Handles the Enter key press."""
+        self.hide()  # Hide the keyboard
+        focused_widget = self.parent_frame.focus_get()
+        if isinstance(focused_widget, tk.Spinbox):
+            focused_widget.focus_set()  # Reset focus to the Spinbox
 
     def on_backspace(self):
         """Handles the backspace action."""
         focused_widget = self.parent_frame.focus_get()
         if isinstance(focused_widget, tk.Spinbox):
             current_value = focused_widget.get()
-            focused_widget.delete(0, tk.END)
-            focused_widget.insert(0, current_value[:-1])  # Remove last character
+            if current_value:  # Only backspace if there's something to delete
+                focused_widget.delete(0, tk.END)
+                focused_widget.insert(0, current_value[:-1])  # Remove last character
 
     def show(self):
         """Displays the numeric keyboard."""
@@ -270,3 +283,16 @@ class NumericKeyboard:
     def hide(self):
         """Hides the numeric keyboard."""
         self.keyboard_frame.pack_forget()
+
+    def bind_focus_events(self):
+        """Binds focus events to show/hide the keyboard."""
+        def show_keyboard(event):
+            self.show()
+        
+        def hide_keyboard(event):
+            self.hide()
+
+        for widget in self.parent_frame.winfo_children():
+            if isinstance(widget, tk.Spinbox):
+                widget.bind("<FocusIn>", show_keyboard)
+                widget.bind("<FocusOut>", hide_keyboard)

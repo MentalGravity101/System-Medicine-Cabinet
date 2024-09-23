@@ -4,11 +4,12 @@ import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
 import os
+import pygame
 
 motif_color = '#42a7f5'
 
 class CustomMessageBox:
-    def __init__(self, root, title, message, color=motif_color, icon_path=None, ok_callback=None, yes_callback=None, no_callback=None):
+    def __init__(self, root, title, message, color=motif_color, icon_path=None, sound_file=None, ok_callback=None, yes_callback=None, no_callback=None):
         self.window = tk.Toplevel(root, relief='raised', bd=5)
         self.window.overrideredirect(True)  # Remove the title bar
         self.window.resizable(width=False, height=False)
@@ -18,17 +19,34 @@ class CustomMessageBox:
         self.message = message
         self.color = color
         self.icon_path = icon_path
+        self.sound_file = sound_file  # New parameter for sound file
 
         # Default behavior for callbacks
         self.ok_callback = ok_callback if ok_callback else self._default_ok_callback
         self.yes_callback = yes_callback
         self.no_callback = no_callback
 
+        # Initialize pygame mixer
+        if self.sound_file:
+            pygame.mixer.init()
+
         # Get the window dimensions and center the window
         self._set_window_position()
 
         # Create the UI components
         self._create_ui()
+        
+        # Play sound if a sound file is provided
+        if self.sound_file:
+            self.play_sound()
+
+    def play_sound(self):
+        """Play the sound file."""
+        try:
+            pygame.mixer.music.load(self.sound_file)
+            pygame.mixer.music.play()
+        except Exception as e:
+            print(f"Sound Error: {str(e)}")
 
     def _set_window_position(self):
         """Set the window dimensions and center it on the screen."""

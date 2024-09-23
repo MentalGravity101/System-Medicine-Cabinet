@@ -19,7 +19,7 @@ conn = mysql.connector.connect(
   database="db_medicine_cabinet"
 )
 
-INACTIVITY_PERIOD = 60000 #automatic logout timer in milliseconds
+INACTIVITY_PERIOD = 10000 #automatic logout timer in milliseconds
 inactivity_timer = None #initialization of idle timer
 root = None  # Global variable for root window
 login_frame = None
@@ -54,6 +54,7 @@ def authenticate_user(username, password):
             message="Invalid username or password.",
             color="red",  # Background color for warning
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
+            sound_file="sounds/invalidLogin.mp3"
         )
 
 # Function that creates the UI for login frame
@@ -239,9 +240,10 @@ def logout(reason):
             title="Automatic Logout",
             message="You have been logged-out due to inactivity.",
             color=motif_color,  # Background color for warning
-            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'logout_icon.png')
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'logout_icon.png'),
+            sound_file ="sounds/automaticLogout.mp3"
         )
-        
+        OnScreenKeyboard(content_frame).hide_keyboard()
 def on_ok_pressed():
     print("Custom OK action triggered!")
 
@@ -809,7 +811,8 @@ def delete_selected_user(tree):
             message=f"Are you sure you want to delete the user '{username}'?", 
             color="red", 
             yes_callback=yes_delete, 
-            no_callback=no_delete
+            no_callback=no_delete,
+            sound_file="sounds/confirmDelete.mp3"
         )
 
 def add_user():
@@ -939,8 +942,9 @@ def add_user():
                     root=root,
                     title="ERROR",
                     message="Please fill in all the fields.",
-                    color="red",  # Background color for warning
+                    color="red",  # Background color for warning,
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
+                    sound_file="sounds/FillAllFields.mp3"
                 )
 
     # Cancel and Save buttons
