@@ -19,7 +19,7 @@ conn = mysql.connector.connect(
   database="db_medicine_cabinet"
 )
 
-INACTIVITY_PERIOD = 10000 #automatic logout timer in milliseconds
+INACTIVITY_PERIOD = 30000 #automatic logout timer in milliseconds
 inactivity_timer = None #initialization of idle timer
 root = None  # Global variable for root window
 login_frame = None
@@ -445,6 +445,12 @@ def show_medicine_supply():
             tree.delete(row)
 
         # Fetch all data from the database first
+        conn = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="",
+            database="db_medicine_cabinet"
+        )
         cursor = conn.cursor()
         query = f"SELECT name, type, quantity, unit, date_stored, expiration_date FROM medicine_inventory ORDER BY {order_by} {sort}"
         cursor.execute(query)
@@ -479,6 +485,7 @@ def show_medicine_supply():
             expiration_date_str = expiration_date.strftime("%b %d, %Y") if expiration_date else "N/A"
             tag = 'evenrow' if i % 2 == 0 else 'oddrow'
             tree.insert("", "end", values=(name, type, quantity, unit, date_stored_str, expiration_date_str), tags=(tag,))
+
 
     def sort_treeview(column, clicked_button):
         global active_column, sort_order
@@ -608,8 +615,6 @@ def show_medicine_supply():
     tree.tag_configure('oddrow', background="white")
     tree.tag_configure('evenrow', background="#f2f2f2")
 
-    tree.pack(side=tk.LEFT, fill="both", expand=True)
-
     # Mouse wheel support
     def on_mouse_wheel(event):
         tree.yview_scroll(int(-1*(event.delta/120)), "units")
@@ -618,6 +623,8 @@ def show_medicine_supply():
 
     # Populate treeview for the first time
     populate_treeview()
+
+    tree.pack(side=tk.LEFT, fill="both", expand=True)
 
     # Clear search button
     clear_button = tk.Button(header_frame, text="Clear Search", bg=motif_color, fg="white", padx=10, pady=5,
@@ -654,7 +661,7 @@ def show_medicine_supply():
 
     # Reload All button
     refresh_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'refresh_icon.png')).resize((25, 25), Image.LANCZOS))
-    refresh_button = tk.Button(button_frame, text="Reload All", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=refresh_img, command=clear_search)
+    refresh_button = tk.Button(button_frame, text="Reload All", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=refresh_img, command=populate_treeview)
     refresh_button.image = refresh_img
     refresh_button.grid(row=0, column=3, padx=20, pady=(12, 7), sticky='ew')
 
