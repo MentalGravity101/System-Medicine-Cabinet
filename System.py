@@ -11,6 +11,9 @@ from keyboard import *
 from autocomplete import AutocompleteCombobox
 from custom_messagebox import CustomMessageBox
 from medicine_manager import MedicineDeposit
+from doorlogs import DoorLogsViewer
+import datetime
+
 
 conn = mysql.connector.connect(
   host="localhost",
@@ -675,9 +678,421 @@ def show_doorLog():
     reset_button_colors()
     doorLogs_button.config(bg=active_bg_color)
     doorLogs_button.config(fg=active_fg_color)
-    tk.Label(content_frame, text="Door Logs Content", bg="#121212", fg="white").pack()
-    doorLogs_label = tk.Label(content_frame, text="Door Logs Page", font=("Arial", 24))
-    doorLogs_label.pack()
+
+    # Local variables to track sorting and search for door logs
+    active_column = "date"  # Default sorting column for door logs
+    sort_order = "ASC"  # Default sorting order
+    search_term = ""  # Store the search term locally
+
+    # Header frame for sorting buttons and search bar
+    header_frame = tk.Frame(content_frame, bg=motif_color)
+    header_frame.pack(fill="x", pady=10)
+
+    # Load the search icon image
+    search_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'search_icon.png')).resize((14, 14), Image.LANCZOS))
+
+    # Create a Frame to hold the Entry and the search icon
+    search_frame = tk.Frame(header_frame, bg='white')
+    search_frame.grid(row=0, column=0, padx=10, pady=10, sticky="w")
+
+    # Create the Entry widget (search bar)
+    search_entry = tk.Entry(search_frame, width=25, fg='grey', font=('Arial', 12))
+    search_entry.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    search_entry.insert(0, 'Search here')
+
+    # Add the search icon next to the Entry widget
+    search_icon_label = tk.Label(search_frame, image=search_img, bg='white')
+    search_icon_label.image = search_img  # Keep a reference to avoid garbage collection
+    search_icon_label.pack(side=tk.RIGHT, padx=(0, 5))
+
+
+    buttons = []
+
+    # Sorting buttons
+    sort_button_1 = tk.Button(header_frame, text="Sort by Username", bg=motif_color, fg="white", padx=10, pady=5,
+                              command=lambda: sort_treeview("name", sort_button_1), relief="raised", bd=4)
+    sort_button_1.grid(row=0, column=2, padx=(110, 0), pady=10, sticky="e")
+    buttons.append(sort_button_1)
+
+    sort_button_2 = tk.Button(header_frame, text="Sort by Account Type", bg=motif_color, fg="white", padx=10, pady=5,
+                              command=lambda: sort_treeview("type", sort_button_2), relief="raised", bd=4)
+    sort_button_2.grid(row=0, column=3, padx=5, pady=10, sticky="e")
+    buttons.append(sort_button_2)
+
+    sort_button_3 = tk.Button(header_frame, text="Sort by Position", bg=motif_color, fg="white", padx=10, pady=5,
+                              command=lambda: sort_treeview("unit", sort_button_3), relief="raised", bd=4)
+    sort_button_3.grid(row=0, column=4, padx=5, pady=10, sticky="e")
+    buttons.append(sort_button_3)
+
+    sort_button_4 = tk.Button(header_frame, text="Sort by Time", bg=motif_color, fg="white", padx=10, pady=5,
+                              command=lambda: sort_treeview("time", sort_button_4), relief="raised", bd=4)
+    sort_button_4.grid(row=0, column=5, padx=5, pady=10, sticky="e")
+    buttons.append(sort_button_4)
+
+    sort_button_5 = tk.Button(header_frame, text="Sort by Date", bg="white", fg=motif_color, padx=10, pady=5,
+                              command=lambda: sort_treeview("date_stored", sort_button_5), relief="raised", bd=4)
+    sort_button_5.grid(row=0, column=6, padx=5, pady=10, sticky="e")
+    buttons.append(sort_button_5)
+
+    sort_button_6 = tk.Button(header_frame, text="Sort by Action Taken", bg=motif_color, fg='white', padx=10, pady=5,
+                              command=lambda: sort_treeview("action_taken", sort_button_6), relief="raised", bd=4)
+    sort_button_6.grid(row=0, column=7, padx=5, pady=10, sticky="e")
+    buttons.append(sort_button_6)
+
+    def activate_button(clicked_button):
+        # Reset all buttons to default color
+        for btn in buttons:
+            btn.config(bg='lightgrey', fg="black")
+        # Highlight the clicked button
+        clicked_button.config(bg="white", fg="black")
+
+    def search_treeview():
+        nonlocal search_term
+        search_term = search_entry.get().lower()
+        if search_term == "search here" or not search_term:
+            search_term = ""
+        populate_treeview()  # Repopulate with search filter
+
+    def clear_placeholder(event=None):
+        if search_entry.get() == 'Search here':
+            search_entry.delete(0, tk.END)
+            search_entry.config(fg='black')
+
+    def add_placeholder(event):
+        if not search_entry.get():
+            search_entry.insert(0, 'Search here')
+            search_entry.config(fg='grey')
+
+    def clear_search():
+        nonlocal search_term
+        search_term = ""
+        search_entry.delete(0, tk.END)
+        search_entry.insert(0, 'Search here')
+        search_entry.config(fg='grey')
+        populate_treeview()
+
+    def populate_treeview(order_by="date", sort="ASC"):
+        # Clear the Treeview
+        for row in tree.get_children():
+            tree.delete(row)
+
+        # Fetch all data from the database first
+        conn = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="",
+            database="db_medicine_cabinet"
+        )
+        cursor = conn.cursor()
+        query = f"SELECT username, accountType, position, date, time, action_taken FROM door_logs ORDER BY {order_by} {sort}"
+        cursor.execute(query)
+        logs = cursor.fetchall()
+
+        cursor.close()  # Close the cursor
+        conn.close()  # Close the connection
+
+        # Filter data in Python based on the search term
+        filtered_logs = []
+        search_term_lower = search_term.lower()
+
+        for log in logs:
+            username, accountType, position, date, time, action_taken = log
+            date_str = date.strftime("%b %d, %Y").lower() if date else "N/A"
+            if time:
+                total_seconds = int(time.total_seconds())
+                hours, remainder = divmod(total_seconds, 3600)
+                minutes, seconds = divmod(remainder, 60)
+                time_str = f"{hours:02}:{minutes:02}:{seconds:02}"
+            else:
+                time_str = "N/A"
+            # Check if the search term matches any of the fields
+            if (
+                search_term_lower in username.lower() or
+                search_term_lower in accountType.lower() or
+                search_term_lower in position.lower() or
+                search_term_lower in date_str or
+                search_term_lower in time_str or
+                search_term_lower in action_taken.lower()
+            ):
+                filtered_logs.append(log)
+
+        # Populate the Treeview with the filtered results
+        for i, log in enumerate(filtered_logs):
+            username, accountType, position, date, time, action_taken = log
+            date_str = date.strftime("%b %d, %Y") if date else "N/A"
+            time_str = time.strftime("%H:%M:%S") if time else "N/A"
+            tag = 'evenrow' if i % 2 == 0 else 'oddrow'
+            tree.insert("", "end", values=(username, accountType, position, date_str, time_str, action_taken), tags=(tag,))
+
+    def sort_treeview(column, clicked_button):
+        nonlocal active_column, sort_order
+        activate_button(clicked_button)
+
+        # Set the active column and toggle sort order
+        if active_column == column:
+            sort_order = "DESC" if sort_order == "ASC" else "ASC"
+        else:
+            active_column = column
+            sort_order = "ASC"
+
+        # Repopulate the treeview with the current search term and sort order
+        populate_treeview(order_by=active_column, sort=sort_order)
+        # Frame for the treeview
+    tree_frame = tk.Frame(content_frame, bg="#f0f0f0")
+    tree_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+    # Custom scrollbar for the treeview
+    tree_scroll = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL)
+    tree_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+
+    # Treeview styling
+    style = ttk.Style()
+    style.configure("Treeview", rowheight=40, borderwidth=2, relief="solid")
+    style.configure("Treeview.Heading", font=("Helvetica", 13, "bold"))
+    style.map('Treeview', 
+              background=[('selected', motif_color)],
+              foreground=[('selected', 'white')])
+
+    # Customize scrollbar
+    style.configure("Vertical.TScrollbar", 
+                    gripcolor=motif_color,  # Color of the grip
+                    background="#f0f0f0",  # Background color of scrollbar
+                    troughcolor=motif_color,  # Background color of the trough
+                    arrowcolor=motif_color)  # Color of the arrows
+
+     # Create the Treeview to display the door logs
+    tree = ttk.Treeview(tree_frame, columns=("username", "accountType", "position", "date", "time", "action_taken"), show="headings")
+    tree.pack(fill="both", expand=True)
+
+    # Define column headings
+    tree.heading("username", text="Username", command=lambda: sort_treeview("username", buttons[0]))
+    tree.heading("accountType", text="Account Type", command=lambda: sort_treeview("accountType", buttons[1]))
+    tree.heading("position", text="Position", command=lambda: sort_treeview("position", buttons[2]))
+    tree.heading("date", text="Date", command=lambda: sort_treeview("date", buttons[3]))
+    tree.heading("time", text="Time", command=lambda: sort_treeview("time", buttons[4]))
+    tree.heading("action_taken", text="Action Taken", command=lambda: sort_treeview("action_taken", buttons[5]))
+
+    # Set column widths
+    tree.column("username", width=150)
+    tree.column("accountType", width=100)
+    tree.column("position", width=100)
+    tree.column("date", width=100)
+    tree.column("time", width=100)
+    tree.column("action_taken", width=200)
+
+    # Populate the treeview initially
+    populate_treeview()
+
+    # Define columns
+    columns = ("Username", "Account Tye", "Position", "Time", "Date", "Action Taken")
+    tree_scroll.config(command=tree.yview)
+
+    # Column headings
+    for col in columns:
+        tree.heading(col, text=col.capitalize())
+
+    # Column configurations
+    for col in columns:
+        tree.column(col, anchor=tk.CENTER, width=100)
+
+    # Row styling
+    tree.tag_configure('oddrow', background="white")
+    tree.tag_configure('evenrow', background="#f2f2f2")
+
+    # Mouse wheel support
+    def on_mouse_wheel(event):
+        tree.yview_scroll(int(-1*(event.delta/120)), "units")
+
+    tree.bind_all("<MouseWheel>", on_mouse_wheel)
+
+    tree.pack(side=tk.LEFT, fill="both", expand=True)
+
+    # Clear search button
+    clear_button = tk.Button(header_frame, text="Clear Search", bg=motif_color, fg="white", padx=10, pady=5,
+                             command=clear_search, relief="raised", bd=4)
+    clear_button.grid(row=0, column=1, padx=(10, 0), pady=10, sticky="w")
+
+    # Create a frame for the buttons below the Treeview
+    button_frame = tk.Frame(content_frame, bg='white', padx=30)
+    button_frame.pack(fill="x", anchor='e')  # Align to the right
+
+    # Configure the columns in button_frame to distribute buttons evenly
+    button_frame.columnconfigure(0, weight=1)
+    button_frame.columnconfigure(1, weight=1)
+    button_frame.columnconfigure(2, weight=1)
+    button_frame.columnconfigure(3, weight=1)
+
+    # Add the first new button (e.g., 'Button 1')
+    widthdraw_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'minus_icon.png')).resize((25, 25), Image.LANCZOS))
+    withdraw_button = tk.Button(button_frame, text="Withdraw", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=widthdraw_icon)
+    withdraw_button.image = widthdraw_icon
+    withdraw_button.grid(row=0, column=0, padx=20, pady=(12, ), sticky='ew')
+
+    # Add the second new button (e.g., 'Button 2')
+    deposit_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'add_icon.png')).resize((25, 25), Image.LANCZOS))
+    deposit_button = tk.Button(button_frame, text="Deposit", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=deposit_icon,command=deposit_window)
+    deposit_button.image = deposit_icon
+    deposit_button.grid(row=0, column=1, padx=20, pady=(12, 7), sticky='ew')
+
+    # Extract CSV button
+    extract_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'extract_icon.png')).resize((25, 25), Image.LANCZOS))
+    extract_button = tk.Button(button_frame, text="Extract CSV", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=extract_img)
+    extract_button.image = extract_img
+    extract_button.grid(row=0, column=2, padx=20, pady=(12, 7), sticky='ew')
+
+    # Reload All button
+    refresh_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'refresh_icon.png')).resize((25, 25), Image.LANCZOS))
+    refresh_button = tk.Button(button_frame, text="Reload All", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=refresh_img, command=populate_treeview)
+    refresh_button.image = refresh_img
+    refresh_button.grid(row=0, column=3, padx=20, pady=(12, 7), sticky='ew')
+
+# def show_doorLog():
+#     clear_frame()
+#     reset_button_colors()
+#     doorLogs_button.config(bg=active_bg_color)
+#     doorLogs_button.config(fg=active_fg_color)
+
+#     header_frame = tk.Frame(content_frame, bg=motif_color)
+#     header_frame.pack(fill="x", pady=10)
+
+#     # Load the search icon image
+#     search_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'search_icon.png')).resize((14, 14), Image.LANCZOS))
+
+#     # Create a Frame to hold the Entry and the search icon
+#     search_frame = tk.Frame(header_frame, bg='white')
+#     search_frame.grid(row=0, column=0, padx=10, pady=10, sticky="w")
+
+#     # Create the Entry widget (search bar)
+#     search_entry = tk.Entry(search_frame, width=25, fg='grey', font=('Arial', 12))
+#     search_entry.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+#     search_entry.insert(0, 'Search here')
+
+#     # Add the search icon next to the Entry widget
+#     search_icon_label = tk.Label(search_frame, image=search_img, bg='white')
+#     search_icon_label.image = search_img  # Keep a reference to avoid garbage collection
+#     search_icon_label.pack(side=tk.RIGHT, padx=(0, 5))
+
+#     buttons = []
+
+#     # Sorting buttons
+#     sort_button_1 = tk.Button(header_frame, text="Sort by Username", bg=motif_color, fg="white", padx=10, pady=5,
+#                               command=lambda: sort_treeview("name", sort_button_1), relief="raised", bd=4)
+#     sort_button_1.grid(row=0, column=2, padx=(110, 0), pady=10, sticky="e")
+#     buttons.append(sort_button_1)
+
+#     sort_button_2 = tk.Button(header_frame, text="Sort by Account Type", bg=motif_color, fg="white", padx=10, pady=5,
+#                               command=lambda: sort_treeview("type", sort_button_2), relief="raised", bd=4)
+#     sort_button_2.grid(row=0, column=3, padx=5, pady=10, sticky="e")
+#     buttons.append(sort_button_2)
+
+#     sort_button_3 = tk.Button(header_frame, text="Sort by Position", bg=motif_color, fg="white", padx=10, pady=5,
+#                               command=lambda: sort_treeview("unit", sort_button_3), relief="raised", bd=4)
+#     sort_button_3.grid(row=0, column=4, padx=5, pady=10, sticky="e")
+#     buttons.append(sort_button_3)
+
+#     sort_button_4 = tk.Button(header_frame, text="Sort by Time", bg=motif_color, fg="white", padx=10, pady=5,
+#                               command=lambda: sort_treeview("expiration_date", sort_button_4), relief="raised", bd=4)
+#     sort_button_4.grid(row=0, column=5, padx=5, pady=10, sticky="e")
+#     buttons.append(sort_button_4)
+
+#     sort_button_5 = tk.Button(header_frame, text="Sort by Date", bg="white", fg=motif_color, padx=10, pady=5,
+#                               command=lambda: sort_treeview("date_stored", sort_button_5), relief="raised", bd=4)
+#     sort_button_5.grid(row=0, column=6, padx=5, pady=10, sticky="e")
+#     buttons.append(sort_button_5)
+
+#     sort_button_6 = tk.Button(header_frame, text="Sort by Action Taken", bg=motif_color, fg='white', padx=10, pady=5,
+#                               command=lambda: sort_treeview("action_taken", sort_button_6), relief="raised", bd=4)
+#     sort_button_6.grid(row=0, column=7, padx=5, pady=10, sticky="e")
+#     buttons.append(sort_button_6)
+
+
+#     # Frame for the treeview
+#     tree_frame = tk.Frame(content_frame, bg="#f0f0f0")
+#     tree_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+#     # Custom scrollbar for the treeview
+#     tree_scroll = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL)
+#     tree_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+
+#     # Treeview styling
+#     style = ttk.Style()
+#     style.configure("Treeview", rowheight=40, borderwidth=2, relief="solid")
+#     style.configure("Treeview.Heading", font=("Helvetica", 13, "bold"))
+#     style.map('Treeview', 
+#               background=[('selected', motif_color)],
+#               foreground=[('selected', 'white')])
+
+#     # Customize scrollbar
+#     style.configure("Vertical.TScrollbar", 
+#                     gripcolor=motif_color,  # Color of the grip
+#                     background="#f0f0f0",  # Background color of scrollbar
+#                     troughcolor=motif_color,  # Background color of the trough
+#                     arrowcolor=motif_color)  # Color of the arrows
+
+#     # Define columns
+#     columns = ("Username", "Account Tye", "Position", "Time", "Date", "Action Taken")
+#     tree = ttk.Treeview(tree_frame, columns=columns, show="headings", yscrollcommand=tree_scroll.set, height=10)
+
+#     tree_scroll.config(command=tree.yview)
+
+#     # Column headings
+#     for col in columns:
+#         tree.heading(col, text=col.capitalize())
+
+#     # Column configurations
+#     for col in columns:
+#         tree.column(col, anchor=tk.CENTER, width=100)
+
+#     # Row styling
+#     tree.tag_configure('oddrow', background="white")
+#     tree.tag_configure('evenrow', background="#f2f2f2")
+
+#     # Mouse wheel support
+#     def on_mouse_wheel(event):
+#         tree.yview_scroll(int(-1*(event.delta/120)), "units")
+
+#     tree.bind_all("<MouseWheel>", on_mouse_wheel)
+
+#     tree.pack(side=tk.LEFT, fill="both", expand=True)
+
+#     # Clear search button
+#     clear_button = tk.Button(header_frame, text="Clear Search", bg=motif_color, fg="white", padx=10, pady=5,
+#                              command=clear_search, relief="raised", bd=4)
+#     clear_button.grid(row=0, column=1, padx=(10, 0), pady=10, sticky="w")
+
+#     # Create a frame for the buttons below the Treeview
+#     button_frame = tk.Frame(content_frame, bg='white', padx=30)
+#     button_frame.pack(fill="x", anchor='e')  # Align to the right
+
+#     # Configure the columns in button_frame to distribute buttons evenly
+#     button_frame.columnconfigure(0, weight=1)
+#     button_frame.columnconfigure(1, weight=1)
+#     button_frame.columnconfigure(2, weight=1)
+#     button_frame.columnconfigure(3, weight=1)
+
+#     # Add the first new button (e.g., 'Button 1')
+#     widthdraw_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'minus_icon.png')).resize((25, 25), Image.LANCZOS))
+#     withdraw_button = tk.Button(button_frame, text="Withdraw", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=widthdraw_icon)
+#     withdraw_button.image = widthdraw_icon
+#     withdraw_button.grid(row=0, column=0, padx=20, pady=(12, ), sticky='ew')
+
+#     # Add the second new button (e.g., 'Button 2')
+#     deposit_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'add_icon.png')).resize((25, 25), Image.LANCZOS))
+#     deposit_button = tk.Button(button_frame, text="Deposit", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=deposit_icon,command=deposit_window)
+#     deposit_button.image = deposit_icon
+#     deposit_button.grid(row=0, column=1, padx=20, pady=(12, 7), sticky='ew')
+
+#     # Extract CSV button
+#     extract_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'extract_icon.png')).resize((25, 25), Image.LANCZOS))
+#     extract_button = tk.Button(button_frame, text="Extract CSV", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=extract_img)
+#     extract_button.image = extract_img
+#     extract_button.grid(row=0, column=2, padx=20, pady=(12, 7), sticky='ew')
+
+#     # Reload All button
+#     refresh_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'refresh_icon.png')).resize((25, 25), Image.LANCZOS))
+#     refresh_button = tk.Button(button_frame, text="Reload All", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=refresh_img, command=populate_treeview)
+#     refresh_button.image = refresh_img
+#     refresh_button.grid(row=0, column=3, padx=20, pady=(12, 7), sticky='ew')
 
 
 
