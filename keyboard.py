@@ -15,6 +15,8 @@ class OnScreenKeyboard:
             Image.open(os.path.join(os.path.dirname(__file__), 'images', 'capsOn_icon.png')).resize((30, 30), Image.LANCZOS))
         self.capslock_image_off = ImageTk.PhotoImage(
             Image.open(os.path.join(os.path.dirname(__file__), 'images', 'capsOff_icon.png')).resize((30, 30), Image.LANCZOS))
+        self.close_image = ImageTk.PhotoImage(
+            Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((30, 30), Image.LANCZOS))
         
     def bind_widgets(self):
         """Bind all entry and combobox widgets to show the keyboard on focus."""
@@ -35,17 +37,18 @@ class OnScreenKeyboard:
             ['Z', 'X', 'C', 'V', 'B', 'N', 'M', ',', '.', '/'],
             ['Space']
         ]
-
+        
         for row in keys:
             row_frame = tk.Frame(self.keyboard_frame)
             row_frame.pack(pady=5, padx=3)
 
             for key in row:
+                # Existing key creation logic...
                 if key == "CapsLock":
                     button = tk.Button(
                         row_frame,
-                        image=self.capslock_image_off,  # Image for CapsLock button
-                        width=55, height=55,  # Increase width and height for better visibility
+                        image=self.capslock_image_off,
+                        width=55, height=55,
                         command=self.toggle_capslock,
                         borderwidth=0, padx=5, pady=5,
                         font=('Arial', 12),
@@ -55,7 +58,7 @@ class OnScreenKeyboard:
                     button = tk.Button(
                         row_frame,
                         text=key, width=10, height=3,
-                        command=lambda: self.on_key_press("Enter"),  # Ensure key is passed as "Enter"
+                        command=lambda: self.on_key_press("Enter"),
                         font=('Arial', 12),
                         relief='raised', bd=3
                     )
@@ -71,13 +74,13 @@ class OnScreenKeyboard:
                         row_frame,
                         text=key, width=35, height=3,
                         font=('Arial', 12),
-                        command=lambda: self.on_key_press(" "),  # Ensure key is passed as "Space"
+                        command=lambda: self.on_key_press(" "),
                         relief='raised', bd=3
                     )
                 else:
                     button = tk.Button(
                         row_frame,
-                        text=key.lower(),  # Set keys to lowercase by default
+                        text=key.lower(),
                         width=6, height=3,
                         command=lambda key=key: self.on_key_press(key),
                         font=('Arial', 12),
@@ -88,6 +91,26 @@ class OnScreenKeyboard:
                 button.pack(side="left", padx=3)
 
         self.keyboard_frame.pack(side="bottom", fill="x")
+
+        self.parent_frame.update_idletasks()
+        self.keyboard_frame.update_idletasks()
+
+        # Place the close "X" button at the top-right corner
+        close_button = tk.Button(
+            self.keyboard_frame,
+            image=self.close_image,
+            width=55, height=55,
+            bg=self.keyboard_frame['bg'],
+            command=lambda: (self.hide_keyboard(), self.parent_frame.focus_set()),  # Ensure hide_keyboard is called correctly
+            borderwidth=0, padx=0, pady=0  # Set padding to zero for tighter fit
+        )
+
+        frame_width = self.keyboard_frame.winfo_width()  # Get the actual width of the frame
+
+        # Place the close button at the top-right corner
+        close_button.place(x=frame_width - 60, y=5)  # Adjust 'x' to the right edge minus button width
+
+
 
     def on_key_press(self, key):
         """Handle key press event, supporting CapsLock functionality."""
