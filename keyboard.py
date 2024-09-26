@@ -3,6 +3,10 @@ import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
 
+motif_color = '#42a7f5'
+font_style = 'Helvetica'
+font_size = 13
+
 class OnScreenKeyboard:
     def __init__(self, parent_frame):
         self.parent_frame = parent_frame
@@ -51,7 +55,7 @@ class OnScreenKeyboard:
                         width=55, height=55,
                         command=self.toggle_capslock,
                         borderwidth=0, padx=5, pady=5,
-                        font=('Arial', 12),
+                        font=(font_style, font_size),
                         relief='raised', bd=4
                     )
                 elif key == "Enter":
@@ -59,21 +63,21 @@ class OnScreenKeyboard:
                         row_frame,
                         text=key, width=10, height=3,
                         command=lambda: self.on_key_press("Enter"),
-                        font=('Arial', 12),
+                        font=(font_style, font_size),
                         relief='raised', bd=3
                     )
                 elif key == "Backspace":
                     button = tk.Button(
                         row_frame,
                         text=key, width=10, height=3,
-                        font=('Arial', 12),
+                        font=(font_style, font_size),
                         command=self.handle_backspace
                     )
                 elif key == "Space":
                     button = tk.Button(
                         row_frame,
                         text=key, width=35, height=3,
-                        font=('Arial', 12),
+                        font=(font_style, font_size),
                         command=lambda: self.on_key_press(" "),
                         relief='raised', bd=3
                     )
@@ -83,7 +87,7 @@ class OnScreenKeyboard:
                         text=key.lower(),
                         width=6, height=3,
                         command=lambda key=key: self.on_key_press(key),
-                        font=('Arial', 12),
+                        font=(font_style, font_size),
                         relief='raised', bd=3
                     )
                     self.keys_buttons[key] = button  # Save reference to button for updates

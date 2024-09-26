@@ -27,6 +27,8 @@ root = None  # Global variable for root window
 login_frame = None
 
 motif_color = '#42a7f5'
+font_style = 'Arial'
+font_size = 15
 
 # Define the active and default background colors for Sidebar
 active_bg_color = "#fff"  # Active background color
@@ -162,28 +164,28 @@ def create_main_ui_frame(container):
     logo_label.grid(row=0, column=0, pady=5, padx=10, sticky="w")
     app_name_label = tk.Label(title_frame, text="Barangay San Mateo \nHealth Center\nMedicine Cabinet", font=("Arial", 18), fg="white", bg=motif_color, justify="left")
     app_name_label.grid(row=0, column=1, pady=10, padx=0, sticky="w", columnspan=1)
-    inventory_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'inventory_icon.png')).resize((40, 40), Image.LANCZOS))
+    inventory_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'inventory_icon.png')).resize((50, 50), Image.LANCZOS))
     global inventory_button
-    inventory_button = tk.Button(sidebar_frame, height=100, width=350, text="Medicine Inventory", command=show_medicine_supply, font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=inventory_img, padx=10)
+    inventory_button = tk.Button(sidebar_frame, height=100, width=350, text="Medicine Inventory", command=show_medicine_supply, font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=inventory_img, padx=10, anchor='w')
     inventory_button.image = inventory_img
     inventory_button.grid(row=1, column=0, sticky="w", columnspan=2)
-    doorLogs_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cabinet_Icon.png')).resize((40, 40), Image.LANCZOS))
+    doorLogs_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cabinet_Icon.png')).resize((50, 50), Image.LANCZOS))
     global doorLogs_button
-    doorLogs_button = tk.Button(sidebar_frame, height=100, width=350, text="Door Functions", command=show_doorLog, font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=doorLogs_img, padx=10)
+    doorLogs_button = tk.Button(sidebar_frame, height=100, width=350, text="Door Functions", command=show_doorLog, font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=doorLogs_img, padx=10, anchor='w')
     doorLogs_button.image = doorLogs_img
     doorLogs_button.grid(row=2, column=0, sticky="we", columnspan=2)
-    notification_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'notification_Icon.png')).resize((40, 40), Image.LANCZOS))
+    notification_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'notification_Icon.png')).resize((50, 50), Image.LANCZOS))
     global notification_button
-    notification_button = tk.Button(sidebar_frame, height=100, width=350, text="Notification", command=show_notification, font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=notification_img, justify="left", padx=10)
+    notification_button = tk.Button(sidebar_frame, height=100, width=350, text="Notification", command=show_notification, font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=notification_img, justify="left", padx=10, anchor='w')
     notification_button.image = notification_img
     notification_button.grid(row=4, column=0, sticky="we", columnspan=2)
     
-    account_setting_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'accountSetting_Icon.png')).resize((40, 40), Image.LANCZOS))
+    account_setting_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'accountSetting_Icon.png')).resize((50, 50), Image.LANCZOS))
     global account_setting_button
     account_setting_button = None
     
     logout_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'logout_icon.png')).resize((40, 40), Image.LANCZOS))
-    logout_button = tk.Button(sidebar_frame, height=100, width=350, text="Log Out", command=lambda: logout('manual logout'), font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=logout_img, padx=10)
+    logout_button = tk.Button(sidebar_frame, height=100, width=350, text="Log Out", command=lambda: logout('manual logout'), font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=logout_img, padx=10, anchor='w')
     logout_button.image = logout_img
     logout_button.grid(row=6, column=0, sticky="we", columnspan=2)
     content_frame = tk.Frame(main_ui_frame, bg='#ecf0f1')
@@ -209,7 +211,7 @@ def configure_sidebar(user_role):
     global account_setting_button
     if user_role == "Admin":     #if the user is 'Admin' then the account setting button will be present in the sidebar
         if account_setting_button is None:
-            account_setting_button = tk.Button(sidebar_frame, height=100, width=350, text="   Account Settings", command=show_account_setting, font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="groove", compound=tk.LEFT, image=account_setting_img, padx=10)
+            account_setting_button = tk.Button(sidebar_frame, height=100, width=350, text="Account Settings", command=show_account_setting, font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="groove", compound=tk.LEFT, image=account_setting_img, padx=10, anchor='w')
             account_setting_button.image = account_setting_img
         account_setting_button.grid(row=5, column=0, sticky="we", columnspan=2)
     else:
@@ -511,7 +513,7 @@ def show_medicine_supply():
     search_frame.grid(row=0, column=0, padx=10, pady=10, sticky="w")
 
     # Create the Entry widget (search bar)
-    search_entry = tk.Entry(search_frame, width=25, fg='grey', font=('Arial', 12))
+    search_entry = tk.Entry(search_frame, width=20, fg='grey', font=('Arial', 17))
     search_entry.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
     search_entry.insert(0, 'Search here')
 
@@ -550,27 +552,27 @@ def show_medicine_supply():
 
     # Sorting buttons
     sort_button_1 = tk.Button(header_frame, text="Sort by Name", bg=motif_color, fg="white", padx=10, pady=5,
-                              command=lambda: sort_treeview("name", sort_button_1), relief="raised", bd=4)
+                              command=lambda: sort_treeview("name", sort_button_1), relief="raised", bd=4, font=(font_style, font_size))
     sort_button_1.grid(row=0, column=2, padx=(110, 0), pady=10, sticky="e")
     buttons.append(sort_button_1)
 
     sort_button_2 = tk.Button(header_frame, text="Sort by Type", bg=motif_color, fg="white", padx=10, pady=5,
-                              command=lambda: sort_treeview("type", sort_button_2), relief="raised", bd=4)
+                              command=lambda: sort_treeview("type", sort_button_2), relief="raised", bd=4, font=(font_style, font_size))
     sort_button_2.grid(row=0, column=3, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_2)
 
     sort_button_3 = tk.Button(header_frame, text="Sort by Unit", bg=motif_color, fg="white", padx=10, pady=5,
-                              command=lambda: sort_treeview("unit", sort_button_3), relief="raised", bd=4)
+                              command=lambda: sort_treeview("unit", sort_button_3), relief="raised", bd=4, font=(font_style, font_size))
     sort_button_3.grid(row=0, column=4, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_3)
 
     sort_button_4 = tk.Button(header_frame, text="Sort by Expiration Date", bg=motif_color, fg="white", padx=10, pady=5,
-                              command=lambda: sort_treeview("expiration_date", sort_button_4), relief="raised", bd=4)
+                              command=lambda: sort_treeview("expiration_date", sort_button_4), relief="raised", bd=4, font=(font_style, font_size))
     sort_button_4.grid(row=0, column=5, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_4)
 
     sort_button_5 = tk.Button(header_frame, text="Sort by Date Stored", bg="white", fg=motif_color, padx=10, pady=5,
-                              command=lambda: sort_treeview("date_stored", sort_button_5), relief="raised", bd=4)
+                              command=lambda: sort_treeview("date_stored", sort_button_5), relief="raised", bd=4, font=(font_style, font_size))
     sort_button_5.grid(row=0, column=6, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_5)
 
@@ -587,7 +589,7 @@ def show_medicine_supply():
     # Treeview styling
     style = ttk.Style()
     style.configure("Treeview", rowheight=40, borderwidth=2, relief="solid")
-    style.configure("Treeview.Heading", font=("Helvetica", 13, "bold"))
+    style.configure("Treeview.Heading", font=(font_style, font_size))
     style.map('Treeview', 
               background=[('selected', motif_color)],
               foreground=[('selected', 'white')])
@@ -630,7 +632,7 @@ def show_medicine_supply():
 
     # Clear search button
     clear_button = tk.Button(header_frame, text="Clear Search", bg=motif_color, fg="white", padx=10, pady=5,
-                             command=clear_search, relief="raised", bd=4)
+                             command=clear_search, relief="raised", bd=4, font=(font_style, font_size))
     clear_button.grid(row=0, column=1, padx=(10, 0), pady=10, sticky="w")
 
     # Create a frame for the buttons below the Treeview
@@ -645,25 +647,25 @@ def show_medicine_supply():
 
     # Add the first new button (e.g., 'Button 1')
     widthdraw_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'minus_icon.png')).resize((25, 25), Image.LANCZOS))
-    withdraw_button = tk.Button(button_frame, text="Withdraw", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=widthdraw_icon)
+    withdraw_button = tk.Button(button_frame, text="Withdraw", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=widthdraw_icon)
     withdraw_button.image = widthdraw_icon
     withdraw_button.grid(row=0, column=0, padx=20, pady=(12, ), sticky='ew')
 
     # Add the second new button (e.g., 'Button 2')
     deposit_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'add_icon.png')).resize((25, 25), Image.LANCZOS))
-    deposit_button = tk.Button(button_frame, text="Deposit", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=deposit_icon,command=deposit_window)
+    deposit_button = tk.Button(button_frame, text="Deposit", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=deposit_icon,command=deposit_window)
     deposit_button.image = deposit_icon
     deposit_button.grid(row=0, column=1, padx=20, pady=(12, 7), sticky='ew')
 
     # Extract CSV button
     extract_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'extract_icon.png')).resize((25, 25), Image.LANCZOS))
-    extract_button = tk.Button(button_frame, text="Extract CSV", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=extract_img)
+    extract_button = tk.Button(button_frame, text="Extract CSV", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=extract_img)
     extract_button.image = extract_img
     extract_button.grid(row=0, column=2, padx=20, pady=(12, 7), sticky='ew')
 
     # Reload All button
     refresh_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'refresh_icon.png')).resize((25, 25), Image.LANCZOS))
-    refresh_button = tk.Button(button_frame, text="Reload All", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=refresh_img, command=populate_treeview)
+    refresh_button = tk.Button(button_frame, text="Reload All", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=refresh_img, command=populate_treeview)
     refresh_button.image = refresh_img
     refresh_button.grid(row=0, column=3, padx=20, pady=(12, 7), sticky='ew')
 
@@ -813,7 +815,7 @@ def show_doorLog():
     search_frame.grid(row=0, column=0, padx=10, pady=10, sticky="w")
 
     # Create the Entry widget (search bar)
-    search_entry = tk.Entry(search_frame, width=25, fg='grey', font=('Arial', 12))
+    search_entry = tk.Entry(search_frame, width=20, fg='grey', font=('Arial', 18))
     search_entry.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
     search_entry.insert(0, 'Search here')
 
@@ -852,32 +854,32 @@ def show_doorLog():
 
     # Sorting buttons
     sort_button_5 = tk.Button(header_frame, text="Sort by Date", bg="white", fg='black', padx=10, pady=5,
-                              command=lambda: sort_treeview("date", sort_button_5), relief="raised", bd=4)
+                              command=lambda: sort_treeview("date", sort_button_5), relief="raised", bd=4, font=(font_style, font_size))
     sort_button_5.grid(row=0, column=2, padx=(110, 0), pady=10, sticky="e")
     buttons.append(sort_button_5)
 
     sort_button_4 = tk.Button(header_frame, text="Sort by Time", bg=motif_color, fg="white", padx=10, pady=5,
-                              command=lambda: sort_treeview("time", sort_button_4), relief="raised", bd=4)
+                              command=lambda: sort_treeview("time", sort_button_4), relief="raised", bd=4, font=(font_style, font_size))
     sort_button_4.grid(row=0, column=3, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_4)
 
     sort_button_1 = tk.Button(header_frame, text="Sort by Username", bg=motif_color, fg="white", padx=10, pady=5,
-                              command=lambda: sort_treeview("username", sort_button_1), relief="raised", bd=4)
+                              command=lambda: sort_treeview("username", sort_button_1), relief="raised", bd=4, font=(font_style, font_size))
     sort_button_1.grid(row=0, column=4, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_1)
 
     sort_button_2 = tk.Button(header_frame, text="Sort by Account Type", bg=motif_color, fg="white", padx=10, pady=5,
-                              command=lambda: sort_treeview("accountType", sort_button_2), relief="raised", bd=4)
+                              command=lambda: sort_treeview("accountType", sort_button_2), relief="raised", bd=4, font=(font_style, font_size))
     sort_button_2.grid(row=0, column=5, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_2)
 
     sort_button_3 = tk.Button(header_frame, text="Sort by Position", bg=motif_color, fg="white", padx=10, pady=5,
-                              command=lambda: sort_treeview("position", sort_button_3), relief="raised", bd=4)
+                              command=lambda: sort_treeview("position", sort_button_3), relief="raised", bd=4, font=(font_style, font_size))
     sort_button_3.grid(row=0, column=6, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_3)
 
     sort_button_6 = tk.Button(header_frame, text="Sort by Action Taken", bg=motif_color, fg='white', padx=10, pady=5,
-                              command=lambda: sort_treeview("action_taken", sort_button_6), relief="raised", bd=4)
+                              command=lambda: sort_treeview("action_taken", sort_button_6), relief="raised", bd=4, font=(font_style, font_size))
     sort_button_6.grid(row=0, column=7, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_6)
 
@@ -949,25 +951,25 @@ def show_doorLog():
 
     # Add the first new button (e.g., 'Button 1')
     widthdraw_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'minus_icon.png')).resize((25, 25), Image.LANCZOS))
-    withdraw_button = tk.Button(button_frame, text="Withdraw", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=widthdraw_icon)
+    withdraw_button = tk.Button(button_frame, text="Withdraw", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=widthdraw_icon)
     withdraw_button.image = widthdraw_icon
     withdraw_button.grid(row=0, column=0, padx=20, pady=(12, ), sticky='ew')
 
     # Add the second new button (e.g., 'Button 2')
     deposit_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'add_icon.png')).resize((25, 25), Image.LANCZOS))
-    deposit_button = tk.Button(button_frame, text="Deposit", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=deposit_icon,command=deposit_window)
+    deposit_button = tk.Button(button_frame, text="Deposit", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=deposit_icon,command=deposit_window)
     deposit_button.image = deposit_icon
     deposit_button.grid(row=0, column=1, padx=20, pady=(12, 7), sticky='ew')
 
     # Extract CSV button
     extract_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'extract_icon.png')).resize((25, 25), Image.LANCZOS))
-    extract_button = tk.Button(button_frame, text="Extract CSV", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=extract_img)
+    extract_button = tk.Button(button_frame, text="Extract CSV", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=extract_img)
     extract_button.image = extract_img
     extract_button.grid(row=0, column=2, padx=20, pady=(12, 7), sticky='ew')
 
     # Reload All button
     refresh_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'refresh_icon.png')).resize((25, 25), Image.LANCZOS))
-    refresh_button = tk.Button(button_frame, text="Reload All", padx=20, pady=10, font=('Arial', 15), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=refresh_img, command=populate_treeview)
+    refresh_button = tk.Button(button_frame, text="Reload All", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=refresh_img, command=populate_treeview)
     refresh_button.image = refresh_img
     refresh_button.grid(row=0, column=3, padx=20, pady=(12, 7), sticky='ew')
 
