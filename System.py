@@ -982,9 +982,8 @@ def show_notification():
     reset_button_colors()
     notification_button.config(bg=active_bg_color)
     notification_button.config(fg=active_fg_color)
-    tk.Label(content_frame, text="Notification Content", bg="#121212", fg="white").pack()
-    notification_label = tk.Label(content_frame, text="Notification Page", font=("Arial", 24))
-    notification_label.pack()
+
+    tk.Label(content_frame, text="NOTIFICATION LOGS", bg=motif_color, fg="white", font=('Arial', 25, 'bold'), height=2, relief='groove', bd=1).pack(fill='x')
 
 
 #------------------------------------------------------ACCOUNT SETTINGS FRAME----------------------------------------------------------------------
@@ -1111,6 +1110,7 @@ def delete_selected_user(tree):
             color="red", 
             yes_callback=yes_delete, 
             no_callback=no_delete,
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
             sound_file="sounds/confirmDelete.mp3"
         )
 

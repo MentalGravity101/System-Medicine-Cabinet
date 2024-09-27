@@ -86,11 +86,17 @@ class CustomMessageBox:
 
     def _create_yes_no_buttons(self, button_frame):
         """Create Yes/No buttons for confirmation dialogs."""
+        # Set both buttons to the same width using 'sticky' and grid configuration
         yes_button = tk.Button(button_frame, text="Yes", font=("Arial", 20), bg='white', fg='black', relief="raised", bd=3, padx=20, pady=7, command=self._yes_action)
-        yes_button.grid(row=0, column=0, padx=50, pady=18, sticky="ew")
-
         no_button = tk.Button(button_frame, text="No", font=("Arial", 20), bg='white', fg='black', relief="raised", bd=3, padx=20, pady=7, command=self._no_action)
+
+        # Make both buttons take the same grid space with sticky="ew"
+        yes_button.grid(row=0, column=0, padx=50, pady=18, sticky="ew")
         no_button.grid(row=0, column=1, padx=50, pady=18, sticky="ew")
+
+        # Set equal column weight to ensure equal button size
+        button_frame.grid_columnconfigure(0, weight=1)
+        button_frame.grid_columnconfigure(1, weight=1)
 
     def _create_ok_button(self, button_frame):
         """Create an OK button if the messagebox is just an information dialog."""
