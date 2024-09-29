@@ -6,6 +6,7 @@ from tkinter import messagebox
 import win32file
 import win32con
 import ctypes
+from custom_messagebox import *
 
 # Define constants
 FSCTL_LOCK_VOLUME = 0x00090018
@@ -64,15 +65,15 @@ def safely_eject_drive(drive_letter):
 def get_flash_drive_path():
     return "E:/"
 
-# CSV export function (as before)
-def export_to_csv():
+# CSV export function
+def export_to_csv(table_name):
     flash_drive_path = get_flash_drive_path()
     if not flash_drive_path:
         messagebox.showerror("Error", "Please insert a flash drive to extract.")
         return
 
     current_date_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    file_name = f"medicine_inventory_{current_date_time}.csv"
+    file_name = f"{table_name}_{current_date_time}.csv"  # Use table name in file name
     file_path = os.path.join(flash_drive_path, file_name)
 
     try:
@@ -84,24 +85,30 @@ def export_to_csv():
         )
         cursor = conn.cursor()
 
-        query = "SELECT name, type, quantity, unit, date_stored, expiration_date FROM medicine_inventory"
+        # Use the passed table_name to query the correct table
+        query = f"SELECT * FROM {table_name}"
         cursor.execute(query)
         rows = cursor.fetchall()
+
+        # Get column names dynamically from the cursor description
+        column_names = [i[0] for i in cursor.description]
 
         # Write the data to a CSV file on the flash drive
         with open(file_path, mode='w', newline='') as file:
             writer = csv.writer(file)
-            writer.writerow(["Name", "Type", "Quantity", "Unit", "Date Stored", "Expiration Date"])
+            writer.writerow(column_names)  # Write column headers
             for row in rows:
-                date_stored_str = row[4].strftime("%b %d, %Y") if row[4] else "N/A"
-                expiration_date_str = row[5].strftime("%b %d, %Y") if row[5] else "N/A"
-                writer.writerow([row[0], row[1], row[2], row[3], date_stored_str, expiration_date_str])
+                writer.writerow(row)
 
         messagebox.showinfo("Success", f"CSV file has been created successfully at {file_path}!")
 
-        # Safely eject the flash drive after successful export
-        drive_letter = flash_drive_path[0]  # Extract drive letter (e.g., 'E' from 'E:/')
-        safely_eject_drive(drive_letter)
+        # Ask the user if they want to eject the flash drive
+        eject_choice = messagebox.askyesno("Eject Flash Drive", "Do you want to safely eject the flash drive?")
+
+        if eject_choice:
+            # Safely eject the flash drive after successful export
+            drive_letter = flash_drive_path[0]  # Extract drive letter (e.g., 'E' from 'E:/')
+            safely_eject_drive(drive_letter)
 
     except mysql.connector.Error as err:
         messagebox.showerror("Database Error", f"Error: {err}")
