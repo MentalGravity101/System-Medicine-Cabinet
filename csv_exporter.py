@@ -2,11 +2,10 @@ import os
 import mysql.connector
 import csv
 from datetime import datetime
-from tkinter import messagebox
+from custom_messagebox import *
 import win32file
 import win32con
 import ctypes
-from custom_messagebox import *
 
 # Define constants
 FSCTL_LOCK_VOLUME = 0x00090018
@@ -28,7 +27,7 @@ def flush_volume_buffers(drive_letter):
         )
         win32file.FlushFileBuffers(handle)
         win32file.CloseHandle(handle)
-        print(f"File buffers flushed for drive {drive_letter}:.")
+        print(f"File buffers flushed for drive {drive_letter}:")
     except Exception as e:
         print(f"Failed to flush file buffers for drive {drive_letter}: {e}")
 
@@ -66,10 +65,15 @@ def get_flash_drive_path():
     return "E:/"
 
 # CSV export function
-def export_to_csv(table_name):
+def export_to_csv(root, table_name):
     flash_drive_path = get_flash_drive_path()
     if not flash_drive_path:
-        messagebox.showerror("Error", "Please insert a flash drive to extract.")
+        CustomMessageBox(
+            root, 
+            title="Error", 
+            message="Please insert a flash drive to extract.", 
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey.png')
+        )
         return
 
     current_date_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -100,20 +104,52 @@ def export_to_csv(table_name):
             for row in rows:
                 writer.writerow(row)
 
-        messagebox.showinfo("Success", f"CSV file has been created successfully at {file_path}!")
+        # Function to show the ejection confirmation after success message
+        def show_eject_confirmation():
+            def eject_yes_callback():
+                drive_letter = flash_drive_path[0]  # Extract drive letter (e.g., 'E' from 'E:/')
+                safely_eject_drive(drive_letter)
+                return
 
-        # Ask the user if they want to eject the flash drive
-        eject_choice = messagebox.askyesno("Eject Flash Drive", "Do you want to safely eject the flash drive?")
+            def eject_no_callback():
+                print("Flash drive not ejected.")
 
-        if eject_choice:
-            # Safely eject the flash drive after successful export
-            drive_letter = flash_drive_path[0]  # Extract drive letter (e.g., 'E' from 'E:/')
-            safely_eject_drive(drive_letter)
+            # Close the success message before showing the eject confirmation
+            if success_message_box:
+                success_message_box.destroy()
+
+            CustomMessageBox(
+                root,
+                title="Eject Flash Drive",
+                message="Do you want to safely eject the flash drive?",
+                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'ejectFlashdrive_icon.png'),  # Add your icon path
+                yes_callback=eject_yes_callback,
+                no_callback=eject_no_callback
+            )
+
+        # Show the success message first, then the eject confirmation
+        success_message_box = CustomMessageBox(
+            root, 
+            title="Success", 
+            message=f"CSV file has been created successfully at \n{file_path}!",
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'okGrey_icon.png'),
+            ok_callback=show_eject_confirmation  # Trigger ejection confirmation after clicking "OK"
+        )
 
     except mysql.connector.Error as err:
-        messagebox.showerror("Database Error", f"Error: {err}")
+        CustomMessageBox(
+            root, 
+            title="Database Error", 
+            message=f"Error: {err}",
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+        )
     except Exception as e:
-        messagebox.showerror("Error", f"An error occurred: {e}")
+        CustomMessageBox(
+            root, 
+            title="Error", 
+            message=f"An error occurred: {e}",
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+        )
     finally:
         if conn:
             cursor.close()

@@ -14,6 +14,10 @@ class CustomMessageBox:
         self.window.overrideredirect(True)  # Remove the title bar
         self.window.resizable(width=False, height=False)
 
+        self.window.attributes('-topmost', True)
+        self.window.focus_set()
+        self.window.grab_set()  # Prevent interaction with the main window
+
         # Set title and color
         self.title = title
         self.message = message
@@ -117,4 +121,7 @@ class CustomMessageBox:
 
     def _default_ok_callback(self):
         """Default OK action to just close the window."""
+        self.window.destroy()
+        
+    def destroy(self):
         self.window.destroy()
