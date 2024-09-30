@@ -7,7 +7,7 @@ import win32file
 import win32con
 import ctypes
 
-# Define constants
+# Define constants for volume control
 FSCTL_LOCK_VOLUME = 0x00090018
 FSCTL_DISMOUNT_VOLUME = 0x00090020
 IOCTL_STORAGE_EJECT_MEDIA = 0x002D4808
@@ -60,9 +60,29 @@ def safely_eject_drive(drive_letter):
     except Exception as e:
         print(f"Failed to eject flash drive: {e}")
 
-# Function to get the flash drive path
+# Function to detect removable flash drives
+def get_removable_flash_drives():
+    drives = []
+    drive_bits = win32file.GetLogicalDrives()
+    for letter in range(26):  # Iterate over A-Z (0-25 represents letters A-Z)
+        mask = 1 << letter
+        if drive_bits & mask:
+            drive_letter = f"{chr(65 + letter)}:/"
+            drive_type = win32file.GetDriveType(drive_letter)
+            
+            # Check if the drive type is removable (like a flash drive)
+            if drive_type == win32file.DRIVE_REMOVABLE:
+                drives.append(drive_letter)
+    
+    return drives
+
+# Function to get the path of a removable flash drive
 def get_flash_drive_path():
-    return "E:/"
+    removable_drives = get_removable_flash_drives()
+    if removable_drives:
+        # If there's at least one removable drive, return the first one found
+        return removable_drives[0]
+    return None
 
 # CSV export function
 def export_to_csv(root, table_name):
