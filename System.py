@@ -631,11 +631,6 @@ def show_medicine_supply():
 
     tree.pack(side=tk.LEFT, fill="both", expand=True)
 
-    # Clear search button
-    clear_button = tk.Button(header_frame, text="Clear Search", bg=motif_color, fg="white", padx=10, pady=5,
-                             command=clear_search, relief="raised", bd=4, font=(font_style, font_size))
-    clear_button.grid(row=0, column=1, padx=(10, 0), pady=10, sticky="w")
-
     # Create a frame for the buttons below the Treeview
     button_frame = tk.Frame(content_frame, bg='white', padx=30)
     button_frame.pack(fill="x", anchor='e')  # Align to the right
@@ -666,7 +661,7 @@ def show_medicine_supply():
 
     # Reload All button
     refresh_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'refresh_icon.png')).resize((25, 25), Image.LANCZOS))
-    refresh_button = tk.Button(button_frame, text="Reload All", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=refresh_img, command=populate_treeview)
+    refresh_button = tk.Button(button_frame, text="Reload All", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=refresh_img, command=clear_search)
     refresh_button.image = refresh_img
     refresh_button.grid(row=0, column=3, padx=20, pady=(12, 7), sticky='ew')
 
@@ -800,9 +795,14 @@ def show_doorLog():
             active_column = column
             sort_order = "ASC"
 
-        # Repopulate the treeview with the current search term and sort order
-        populate_treeview(order_by=active_column, sort=sort_order)
-        # Frame for the treeview
+        # Modify the column to handle combined Date & Time sorting
+        if column == "date_time":
+            # Sort by both date and time
+            populate_treeview(order_by="date, time", sort=sort_order)
+        else:
+            # Regular sorting by a single column
+            populate_treeview(order_by=active_column, sort=sort_order)
+
 
     # Header frame for sorting buttons and search bar
     header_frame = tk.Frame(content_frame, bg=motif_color)
@@ -853,35 +853,30 @@ def show_doorLog():
 
     buttons = []
 
-    # Sorting buttons
-    sort_button_5 = tk.Button(header_frame, text="Sort by Date", bg="white", fg='black', padx=10, pady=5,
-                              command=lambda: sort_treeview("date", sort_button_5), relief="raised", bd=4, font=(font_style, font_size))
-    sort_button_5.grid(row=0, column=2, padx=(110, 0), pady=10, sticky="e")
-    buttons.append(sort_button_5)
-
-    sort_button_4 = tk.Button(header_frame, text="Sort by Time", bg=motif_color, fg="white", padx=10, pady=5,
-                              command=lambda: sort_treeview("time", sort_button_4), relief="raised", bd=4, font=(font_style, font_size))
-    sort_button_4.grid(row=0, column=3, padx=5, pady=10, sticky="e")
-    buttons.append(sort_button_4)
+    # Combined Sorting Button for Date & Time
+    sort_button_date_time = tk.Button(header_frame, text="Sort by Date & Time", bg="white", fg='black', padx=10, pady=5,
+                                    command=lambda: sort_treeview("date_time", sort_button_date_time), relief="raised", bd=4, font=(font_style, font_size))
+    sort_button_date_time.grid(row=0, column=2, padx=(110, 0), pady=10, sticky="e")
+    buttons.append(sort_button_date_time)
 
     sort_button_1 = tk.Button(header_frame, text="Sort by Username", bg=motif_color, fg="white", padx=10, pady=5,
                               command=lambda: sort_treeview("username", sort_button_1), relief="raised", bd=4, font=(font_style, font_size))
-    sort_button_1.grid(row=0, column=4, padx=5, pady=10, sticky="e")
+    sort_button_1.grid(row=0, column=3, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_1)
 
     sort_button_2 = tk.Button(header_frame, text="Sort by Account Type", bg=motif_color, fg="white", padx=10, pady=5,
                               command=lambda: sort_treeview("accountType", sort_button_2), relief="raised", bd=4, font=(font_style, font_size))
-    sort_button_2.grid(row=0, column=5, padx=5, pady=10, sticky="e")
+    sort_button_2.grid(row=0, column=4, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_2)
 
     sort_button_3 = tk.Button(header_frame, text="Sort by Position", bg=motif_color, fg="white", padx=10, pady=5,
                               command=lambda: sort_treeview("position", sort_button_3), relief="raised", bd=4, font=(font_style, font_size))
-    sort_button_3.grid(row=0, column=6, padx=5, pady=10, sticky="e")
+    sort_button_3.grid(row=0, column=5, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_3)
 
     sort_button_6 = tk.Button(header_frame, text="Sort by Action Taken", bg=motif_color, fg='white', padx=10, pady=5,
                               command=lambda: sort_treeview("action_taken", sort_button_6), relief="raised", bd=4, font=(font_style, font_size))
-    sort_button_6.grid(row=0, column=7, padx=5, pady=10, sticky="e")
+    sort_button_6.grid(row=0, column=6, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_6)
 
     tree_frame = tk.Frame(content_frame, bg="#f0f0f0")
@@ -935,11 +930,6 @@ def show_doorLog():
 
     tree.pack(side=tk.LEFT, fill="both", expand=True)
 
-    # Clear search button
-    clear_button = tk.Button(header_frame, text="Clear Search", bg=motif_color, fg="white", padx=10, pady=5,
-                             command=clear_search, relief="raised", bd=4)
-    clear_button.grid(row=0, column=1, padx=(10, 0), pady=10, sticky="w")
-
     # Create a frame for the buttons below the Treeview
     button_frame = tk.Frame(content_frame, bg='white', padx=30)
     button_frame.pack(fill="x", anchor='e')  # Align to the right
@@ -970,7 +960,7 @@ def show_doorLog():
 
     # Reload All button
     refresh_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'refresh_icon.png')).resize((25, 25), Image.LANCZOS))
-    refresh_button = tk.Button(button_frame, text="Reload All", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=refresh_img, command=populate_treeview)
+    refresh_button = tk.Button(button_frame, text="Reload All", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=refresh_img, command=clear_search)
     refresh_button.image = refresh_img
     refresh_button.grid(row=0, column=3, padx=20, pady=(12, 7), sticky='ew')
 
@@ -1395,7 +1385,7 @@ def edit_user(username):
         new_position = position_combobox.get()
         new_accountType = accountType_combobox.get()
 
-        if validate_user_info('edit', new_username, new_password, new_position, new_accountType):
+        if validate_user_info('edit', new_username, new_password, new_password, new_position, new_accountType):
             cursor = conn.cursor()
             cursor.execute("""
                 UPDATE users

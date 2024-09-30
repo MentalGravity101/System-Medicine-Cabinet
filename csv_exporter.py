@@ -92,7 +92,7 @@ def export_to_csv(root, table_name):
             root, 
             title="Error", 
             message="Please insert a flash drive to extract.", 
-            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey.png')
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
         )
         return
 
@@ -129,6 +129,7 @@ def export_to_csv(root, table_name):
             def eject_yes_callback():
                 drive_letter = flash_drive_path[0]  # Extract drive letter (e.g., 'E' from 'E:/')
                 safely_eject_drive(drive_letter)
+                CustomMessageBox(root=root, title="Success", message=f"Flash Drive {drive_letter} safely ejected.", ok_callback=success_message_box.destroy(), icon_path=os.path.join(os.path.dirname(__file__), 'images', 'okGrey_icon.png'))
                 return
 
             def eject_no_callback():
