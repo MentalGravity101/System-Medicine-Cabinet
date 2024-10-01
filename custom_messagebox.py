@@ -8,7 +8,7 @@ import pygame
 motif_color = '#42a7f5'
 
 class CustomMessageBox:
-    def __init__(self, root, title, message, color=motif_color, icon_path=None, sound_file=None, ok_callback=None, yes_callback=None, no_callback=None, close_icon_path=None):
+    def __init__(self, root, title, message, color=motif_color, icon_path=None, sound_file=None, ok_callback=None, yes_callback=None, no_callback=None, close_icon_path=None, page='Home'):
         self.window = tk.Toplevel(root, relief='raised', bd=5)
         self.window.overrideredirect(True)  # Remove the title bar
         self.window.resizable(width=False, height=False)
@@ -29,6 +29,7 @@ class CustomMessageBox:
         self.ok_callback = ok_callback if ok_callback else self._default_ok_callback
         self.yes_callback = yes_callback
         self.no_callback = no_callback
+        self.page = page
 
         # Initialize pygame mixer
         if self.sound_file:
@@ -143,17 +144,24 @@ class CustomMessageBox:
         if self.yes_callback:
             self.yes_callback()
         self.window.destroy()
+        
 
     def _no_action(self):
         """Trigger the no callback and close the window."""
         if self.no_callback:
             self.no_callback()
         self.window.destroy()
+        
 
     def _default_ok_callback(self):
         """Default OK action to just close the window."""
         self.window.destroy()
+        
 
     def destroy(self):
         """Close the window."""
         self.window.destroy()
+    
+            
+
+    

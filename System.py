@@ -37,7 +37,7 @@ def establish_connection():
         print(f"Error: {err}")
         conn = None  # Set to None if connection fails
 
-INACTIVITY_PERIOD = 30000 #automatic logout timer in milliseconds
+INACTIVITY_PERIOD = 10000 #automatic logout timer in milliseconds
 inactivity_timer = None #initialization of idle timer
 root = None  # Global variable for root window
 login_frame = None
@@ -73,12 +73,13 @@ def authenticate_user(username, password):
         notification_manager.check_soon_to_expire()  # Automatically check and pop-up notifications
     else:
         message_box = CustomMessageBox(
-            root=root,
+            root=login_frame,
             title="Login Error",
             message="Invalid username or password.",
             color="red",  # Background color for warning
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
-            sound_file="sounds/invalidLogin.mp3"
+            sound_file="sounds/invalidLogin.mp3",
+            page='Login'
         )
 
 # Function that creates the UI for login frame
@@ -260,14 +261,15 @@ def logout(reason):
     account_setting_button = None
     if reason == 'inactivity':
         message_box = CustomMessageBox(
-            root=root,
+            root=login_frame,
             title="Automatic Logout",
             message="You have been logged-out due to inactivity.",
             color=motif_color,  # Background color for warning
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'logout_icon.png'),
-            sound_file ="sounds/automaticLogout.mp3"
+            sound_file ="sounds/automaticLogout.mp3",
         )
         OnScreenKeyboard(content_frame).hide_keyboard()
+
 def on_ok_pressed():
     print("Custom OK action triggered!")
 
@@ -405,9 +407,6 @@ def deposit_window():
     save_button = tk.Button(input_frame, text="Save", font=("Arial", 16), bg=motif_color, fg='white', width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=save_img, pady=5, command=save_medicine_data)
     save_button.image = save_img
     save_button.grid(row=5, column=1, columnspan=3, padx=(60, 40), pady=(50, 0))
-
-
-
 
 
 # Function that creates the UI for medicine inventory in the content_frame

@@ -40,14 +40,26 @@ class NotificationManager:
                          icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'))
 
     def log_notification(self, medicine_name, expiration_date, days_left):
-        """Log the notification in the database."""
+        """Log the notification in the database only if it hasn't been logged yet."""
         notification_date = datetime.now().date()
+
+        # Check if this notification already exists in the logs
         self.cursor.execute(
-            "INSERT INTO notification_logs (medicine_name, expiration_date, notification_date, days_until_expiration) "
-            "VALUES (%s, %s, %s, %s)", 
-            (medicine_name, expiration_date, notification_date, days_left)
+            "SELECT COUNT(*) FROM notification_logs WHERE medicine_name = %s AND expiration_date = %s AND notification_date = %s",
+            (medicine_name, expiration_date, notification_date)
         )
-        self.conn.commit()
+        already_logged = self.cursor.fetchone()[0]
+
+        if already_logged == 0:
+            # If not logged yet, insert the new log entry
+            self.cursor.execute(
+                "INSERT INTO notification_logs (medicine_name, expiration_date, notification_date, days_until_expiration) "
+                "VALUES (%s, %s, %s, %s)", 
+                (medicine_name, expiration_date, notification_date, days_left)
+            )
+            self.conn.commit()
+        else:
+            print(f"Notification for {medicine_name} (expiring on {expiration_date}) has already been logged today.")
 
     def close(self):
         """Close the database connection."""

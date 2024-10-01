@@ -90,7 +90,8 @@ def export_to_csv(root, table_name):
     if not flash_drive_path:
         CustomMessageBox(
             root, 
-            title="Error", 
+            title="Warning", 
+            color='red',
             message="Please insert a flash drive to extract.", 
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
         )
@@ -160,14 +161,16 @@ def export_to_csv(root, table_name):
     except mysql.connector.Error as err:
         CustomMessageBox(
             root, 
-            title="Database Error", 
+            title="Database Error",
+            color='red', 
             message=f"Error: {err}",
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
         )
     except Exception as e:
         CustomMessageBox(
             root, 
-            title="Error", 
+            title="Error",
+            message='red', 
             message=f"An error occurred: {e}",
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
         )
