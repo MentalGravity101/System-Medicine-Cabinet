@@ -74,7 +74,7 @@ def authenticate_user(username, password):
     else:
         message_box = CustomMessageBox(
             root=root,
-            title="WARNING",
+            title="Login Error",
             message="Invalid username or password.",
             color="red",  # Background color for warning
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
@@ -212,10 +212,6 @@ def create_main_ui_frame(container):
     content_frame.pack(expand=True, fill='both', side='top')
     main_ui_frame.grid(row=0, column=0, sticky='nsew')
     show_medicine_supply()
-
-    # Check for soon-to-expire medicines on home page load
-    notification_manager = NotificationManager(root, conn)
-    notification_manager.check_soon_to_expire()  # Automatically check and pop-up notifications
     return main_ui_frame
 
 #Function to handle the background colors of sidebar buttons

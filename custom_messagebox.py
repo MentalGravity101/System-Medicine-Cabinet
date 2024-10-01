@@ -23,7 +23,7 @@ class CustomMessageBox:
         self.color = color
         self.icon_path = icon_path
         self.sound_file = sound_file  # New parameter for sound file
-        self.close_icon_path = os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')
+        self.close_icon_path = os.path.join(os.path.dirname(__file__), 'images', 'cancel_icon.png')
 
         # Default behavior for callbacks
         self.ok_callback = ok_callback if ok_callback else self._default_ok_callback
@@ -43,7 +43,7 @@ class CustomMessageBox:
         # Play sound if a sound file is provided
         if self.sound_file:
             self.play_sound()
-            
+
     def play_sound(self):
         """Play the sound file."""
         try:
