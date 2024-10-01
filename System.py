@@ -13,6 +13,7 @@ from custom_messagebox import CustomMessageBox
 from medicine_manager import MedicineDeposit
 import datetime
 from csv_exporter import *
+from notification import *
 
 
 conn = mysql.connector.connect(
@@ -21,6 +22,20 @@ conn = mysql.connector.connect(
   password="",
   database="db_medicine_cabinet"
 )
+# Function to establish/re-establish MySQL connection
+def establish_connection():
+    global conn
+    try:
+        conn = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="",
+            database="db_medicine_cabinet"
+        )
+        print("MySQL connection established.")
+    except mysql.connector.Error as err:
+        print(f"Error: {err}")
+        conn = None  # Set to None if connection fails
 
 INACTIVITY_PERIOD = 30000 #automatic logout timer in milliseconds
 inactivity_timer = None #initialization of idle timer
@@ -38,6 +53,7 @@ active_fg_color ='#000000' # Active foreground color
 default_fg_color="#fff" # Default foreground color
 
 
+
 #----------------------------------------------------LOGIN WINDOW--------------------------------------------------------
 
 #function for authentication during the login frame
@@ -52,6 +68,9 @@ def authenticate_user(username, password):
         bind_activity_events()
         show_medicine_supply()
         configure_sidebar(user_role)
+        # Check for soon-to-expire medicines on home page load
+        notification_manager = NotificationManager(root, conn)
+        notification_manager.check_soon_to_expire()  # Automatically check and pop-up notifications
     else:
         message_box = CustomMessageBox(
             root=root,
@@ -193,6 +212,10 @@ def create_main_ui_frame(container):
     content_frame.pack(expand=True, fill='both', side='top')
     main_ui_frame.grid(row=0, column=0, sticky='nsew')
     show_medicine_supply()
+
+    # Check for soon-to-expire medicines on home page load
+    notification_manager = NotificationManager(root, conn)
+    notification_manager.check_soon_to_expire()  # Automatically check and pop-up notifications
     return main_ui_frame
 
 #Function to handle the background colors of sidebar buttons
@@ -967,14 +990,44 @@ def show_doorLog():
 
 #--------------------------------------------------------- NOTIFICATION -----------------------------------------------------------       
 
-#Function that creates the UI for notification in the content_frame
+# Function that creates the UI for notification logs in the content_frame
 def show_notification():
     clear_frame()
     reset_button_colors()
     notification_button.config(bg=active_bg_color)
     notification_button.config(fg=active_fg_color)
 
+    # Add a header
     tk.Label(content_frame, text="NOTIFICATION LOGS", bg=motif_color, fg="white", font=('Arial', 25, 'bold'), height=2, relief='groove', bd=1).pack(fill='x')
+
+    # Create a Treeview to display the logs
+    columns = ("Medicine Name", "Expiration Date", "Notification Date", "Days Until Expiration")
+    tree = ttk.Treeview(content_frame, columns=columns, show="headings")
+
+    # Define headings for the columns
+    for col in columns:
+        tree.heading(col, text=col)
+        tree.column(col, anchor='center')
+
+    tree.pack(fill="both", expand=True, padx=20, pady=10)
+
+    # Create an instance of NotificationManager
+    notification_manager = NotificationManager(root, conn)
+
+    # Fetch notification logs from the database
+    notification_manager.cursor.execute("SELECT medicine_name, expiration_date, notification_date, days_until_expiration FROM notification_logs")
+    logs = notification_manager.cursor.fetchall()
+
+    # Insert the logs into the Treeview
+    if logs:
+        for log in logs:
+            tree.insert("", tk.END, values=log)
+    else:
+        # Display a message if there are no logs
+        tk.Label(content_frame, text="No notifications found.", font=('Arial', 14), pady=10).pack()
+
+    # Close the database connection
+    notification_manager.close()
 
 
 #------------------------------------------------------ACCOUNT SETTINGS FRAME----------------------------------------------------------------------

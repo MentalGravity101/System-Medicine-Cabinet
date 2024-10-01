@@ -1,5 +1,4 @@
 # custom_messagebox.py
-
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
@@ -34,33 +33,38 @@ class CustomMessageBox:
         if self.sound_file:
             pygame.mixer.init()
 
-        # Get the window dimensions and center the window
-        self._set_window_position()
-
         # Create the UI components
         self._create_ui()
-        
+
+        # Adjust only the height based on the message length
+        self._adjust_window_height()
+
         # Play sound if a sound file is provided
         if self.sound_file:
             self.play_sound()
 
-    def play_sound(self):
-        """Play the sound file."""
-        try:
-            pygame.mixer.music.load(self.sound_file)
-            pygame.mixer.music.play()
-        except Exception as e:
-            print(f"Sound Error: {str(e)}")
+    def _adjust_window_height(self):
+        """Adjust window height based on the message length while keeping the width fixed."""
+        # Fixed width, dynamic height
+        window_width = 620  # Default width
+        max_label_width = 550  # Maximum width for the message label
 
-    def _set_window_position(self):
-        """Set the window dimensions and center it on the screen."""
-        window_width = 620
-        window_height = 385
+        # Allow widgets to calculate their required dimensions
+        self.window.update_idletasks()
+
+        # Calculate the required height of the message label
+        required_height = self.window.winfo_reqheight()
+
+        # Center the window on the screen with the new height
         screen_width = self.window.winfo_screenwidth()
         screen_height = self.window.winfo_screenheight()
+
+        # Calculate the position to center the window
         position_x = int((screen_width / 2) - (window_width / 2))
-        position_y = int((screen_height / 2) - (window_height / 2))
-        self.window.geometry(f"{window_width}x{window_height}+{position_x}+{position_y}")
+        position_y = int((screen_height / 2) - (required_height / 2))
+
+        # Set the new geometry with fixed width and dynamic height
+        self.window.geometry(f"{window_width}x{required_height}+{position_x}+{position_y}")
 
     def _create_ui(self):
         """Create UI components for the messagebox."""
@@ -73,8 +77,11 @@ class CustomMessageBox:
         else:
             status_img = None
 
-        # Message label
-        logo_label = tk.Label(self.window, text=self.message, image=status_img, compound=tk.TOP, font=('Arial', 18))
+        # Message label (with wrapping to fit within a max width)
+        logo_label = tk.Label(
+            self.window, text=self.message, image=status_img, compound=tk.TOP,
+            font=('Arial', 18), wraplength=550  # Adjust wrap length to prevent expanding horizontally
+        )
         logo_label.image = status_img  # Keep a reference to avoid garbage collection
         logo_label.pack(pady=(10, 20))
 
@@ -122,6 +129,6 @@ class CustomMessageBox:
     def _default_ok_callback(self):
         """Default OK action to just close the window."""
         self.window.destroy()
-        
+
     def destroy(self):
         self.window.destroy()
