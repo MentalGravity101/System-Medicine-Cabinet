@@ -8,7 +8,7 @@ import pygame
 motif_color = '#42a7f5'
 
 class CustomMessageBox:
-    def __init__(self, root, title, message, color=motif_color, icon_path=None, sound_file=None, ok_callback=None, yes_callback=None, no_callback=None):
+    def __init__(self, root, title, message, color=motif_color, icon_path=None, sound_file=None, ok_callback=None, yes_callback=None, no_callback=None, close_icon_path=None):
         self.window = tk.Toplevel(root, relief='raised', bd=5)
         self.window.overrideredirect(True)  # Remove the title bar
         self.window.resizable(width=False, height=False)
@@ -23,6 +23,7 @@ class CustomMessageBox:
         self.color = color
         self.icon_path = icon_path
         self.sound_file = sound_file  # New parameter for sound file
+        self.close_icon_path = os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')
 
         # Default behavior for callbacks
         self.ok_callback = ok_callback if ok_callback else self._default_ok_callback
@@ -42,6 +43,14 @@ class CustomMessageBox:
         # Play sound if a sound file is provided
         if self.sound_file:
             self.play_sound()
+            
+    def play_sound(self):
+        """Play the sound file."""
+        try:
+            pygame.mixer.music.load(self.sound_file)
+            pygame.mixer.music.play()
+        except Exception as e:
+            print(f"Sound Error: {str(e)}")
 
     def _adjust_window_height(self):
         """Adjust window height based on the message length while keeping the width fixed."""
@@ -68,8 +77,23 @@ class CustomMessageBox:
 
     def _create_ui(self):
         """Create UI components for the messagebox."""
+        # Title frame
+        title_frame = tk.Frame(self.window, bg=self.color)
+        title_frame.pack(fill=tk.X)
+
         # Title label
-        tk.Label(self.window, text=self.title, font=('Arial', 25, 'bold'), bg=self.color, fg='white', pady=12).pack(fill=tk.X)
+        title_label = tk.Label(title_frame, text=self.title, font=('Arial', 25, 'bold'), bg=self.color, fg='white', pady=12)
+        title_label.pack(side=tk.LEFT, padx=(10, 0))
+
+        # Add the close button icon at the top-right corner
+        if self.close_icon_path:
+            close_img = ImageTk.PhotoImage(Image.open(self.close_icon_path).resize((25, 25), Image.LANCZOS))
+        else:
+            close_img = None
+
+        close_button = tk.Button(title_frame, image=close_img, command=self.destroy, bg=self.color, relief=tk.FLAT, bd=0)
+        close_button.image = close_img  # Keep a reference to avoid garbage collection
+        close_button.pack(side=tk.RIGHT, padx=(0, 10), pady=(0, 5))
 
         # Add the icon if provided
         if self.icon_path:
@@ -131,4 +155,5 @@ class CustomMessageBox:
         self.window.destroy()
 
     def destroy(self):
+        """Close the window."""
         self.window.destroy()

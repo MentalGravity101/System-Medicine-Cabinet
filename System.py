@@ -1026,9 +1026,6 @@ def show_notification():
         # Display a message if there are no logs
         tk.Label(content_frame, text="No notifications found.", font=('Arial', 14), pady=10).pack()
 
-    # Close the database connection
-    notification_manager.close()
-
 
 #------------------------------------------------------ACCOUNT SETTINGS FRAME----------------------------------------------------------------------
 image_refs = []
@@ -1095,7 +1092,6 @@ def show_account_setting():
     
     cursor.execute("SELECT username, position, accountType FROM users ORDER BY accountType ASC")
     users = cursor.fetchall()
-    # conn.close()
 
     for i, user in enumerate(users):
         username, position, accountType = user
