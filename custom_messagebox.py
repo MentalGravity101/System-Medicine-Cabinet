@@ -15,7 +15,8 @@ class CustomMessageBox:
 
         self.window.attributes('-topmost', True)
         self.window.focus_set()
-        self.window.grab_set()  # Prevent interaction with the main window
+
+
 
         # Set title and color
         self.title = title
@@ -88,26 +89,26 @@ class CustomMessageBox:
 
         # Add the close button icon at the top-right corner
         if self.close_icon_path:
-            close_img = ImageTk.PhotoImage(Image.open(self.close_icon_path).resize((25, 25), Image.LANCZOS))
+            self.close_img = ImageTk.PhotoImage(Image.open(self.close_icon_path).resize((14, 14), Image.LANCZOS))
         else:
-            close_img = None
+            self.close_img = None
 
-        close_button = tk.Button(title_frame, image=close_img, command=self.destroy, bg=self.color, relief=tk.FLAT, bd=0)
-        close_button.image = close_img  # Keep a reference to avoid garbage collection
+        close_button = tk.Button(title_frame, image=self.close_img, command=self.destroy, bg=self.color, relief=tk.FLAT, bd=0)
+        close_button.image = self.close_img  # Keep a reference to avoid garbage collection
         close_button.pack(side=tk.RIGHT, padx=(0, 10), pady=(0, 5))
 
         # Add the icon if provided
         if self.icon_path:
-            status_img = ImageTk.PhotoImage(Image.open(self.icon_path).resize((150, 150), Image.LANCZOS))
+            self.status_img = ImageTk.PhotoImage(Image.open(self.icon_path).resize((150, 150), Image.LANCZOS))
         else:
-            status_img = None
+            self.status_img = None
 
         # Message label (with wrapping to fit within a max width)
         logo_label = tk.Label(
-            self.window, text=self.message, image=status_img, compound=tk.TOP,
+            self.window, text=self.message, image=self.status_img, compound=tk.TOP,
             font=('Arial', 18), wraplength=550  # Adjust wrap length to prevent expanding horizontally
         )
-        logo_label.image = status_img  # Keep a reference to avoid garbage collection
+        logo_label.image = self.status_img  # Keep a reference to avoid garbage collection
         logo_label.pack(pady=(10, 20))
 
         # Button Frame
@@ -119,6 +120,8 @@ class CustomMessageBox:
             self._create_yes_no_buttons(button_frame)
         else:
             self._create_ok_button(button_frame)
+
+
 
     def _create_yes_no_buttons(self, button_frame):
         """Create Yes/No buttons for confirmation dialogs."""

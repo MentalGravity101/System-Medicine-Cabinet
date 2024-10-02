@@ -171,7 +171,6 @@ def export_to_csv(root, table_name):
             root, 
             title="Error",
             message='red', 
-            message=f"An error occurred: {e}",
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
         )
     finally:
