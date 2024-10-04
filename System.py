@@ -10,11 +10,12 @@ import mysql.connector
 from keyboard import *
 from autocomplete import AutocompleteCombobox
 from custom_messagebox import CustomMessageBox
-from medicine_manager import MedicineDeposit
 import datetime
 from csv_exporter import *
 from notification import *
-from qr_code_scanner import QRCodeScanner  # Import the QRCodeScanner class
+from MedicineDeposit import MedicineDeposit
+from withdrawal import QRCodeScanner
+
 
 
 conn = mysql.connector.connect(
@@ -262,7 +263,7 @@ def logout(reason):
     account_setting_button = None
     if reason == 'inactivity':
         message_box = CustomMessageBox(
-            root=login_frame,
+            root=root,
             title="Automatic Logout",
             message="You have been logged-out due to inactivity.",
             color=motif_color,  # Background color for warning
@@ -307,18 +308,18 @@ def unbind_activity_events():
 
 def deposit_window():
     clear_frame()
-    
+
     # Ensure content_frame expands to fill the available width
     content_frame.grid_columnconfigure(0, weight=1)
-    
+
     title_label = tk.Label(content_frame, text="DEPOSIT MEDICINE", bg=motif_color, fg="white", font=('Arial', 25, 'bold'), height=2, relief='groove', bd=1)
     title_label.pack(fill='both')
 
     # Create input frame and ensure it expands horizontally
     input_frame = tk.LabelFrame(content_frame, text='Fill out all the necessary information below', font=('Arial', 14), pady=20, padx=5, relief='raised', bd=5)
-    input_frame.pack(fill='x', pady=30, padx=300)  # Sticky set to 'ew' for full width
+    input_frame.pack(fill='x', pady=30, padx=300)
 
-    # Instantiate OnScreenKeyboard
+    # Instantiate OnScreenKeyboard and NumericKeyboard
     keyboard = OnScreenKeyboard(content_frame)
     keyboard.create_keyboard()
     keyboard.hide_keyboard()  # Initially hide the keyboard
@@ -329,13 +330,14 @@ def deposit_window():
 
     tk.Label(input_frame, text="Medicines' QR Code below:", font=('Arial', 16)).grid(row=0, column=3, columnspan=2, sticky='news')
 
-    # Display QR code if it exists
-    qr_image = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'image_icon.png')).resize((250, 250), Image.LANCZOS))
+    # Display QR code if it exists or show a default image
+    default_image_path = os.path.join(os.path.dirname(__file__), 'images', 'image_icon.png')
+    qr_image = ImageTk.PhotoImage(Image.open(default_image_path).resize((250, 250), Image.LANCZOS))
     qr_code_image_label = tk.Label(input_frame, image=qr_image)
     qr_code_image_label.image = qr_image
-    qr_code_image_label.grid(row=1, column=3, rowspan=4, columnspan=2, pady=(2,10), padx=40, sticky='nsew')  # Sticky set to 'nsew' for proper positioning
+    qr_code_image_label.grid(row=1, column=3, rowspan=4, columnspan=2, pady=(2, 10), padx=40, sticky='nsew')
 
-    # Labels and AutocompleteComboboxes for the form
+    # Labels and input widgets for the form
     tk.Label(input_frame, text="Name of Medicine", font=("Arial", 16)).grid(row=0, column=0, padx=(30, 10), pady=10, sticky='w')
     name_combobox = ttk.Combobox(input_frame, font=("Arial", 16), width=20)
     name_combobox.grid(row=0, column=1, padx=10, pady=10, sticky='ew')
@@ -356,47 +358,25 @@ def deposit_window():
     expiration_date_entry = DateEntry(input_frame, font=("Arial", 16), date_pattern='mm-dd-y', width=20)
     expiration_date_entry.grid(row=4, column=1, padx=10, pady=10, sticky='ew')
 
-    # Bind the focus events to show/hide the keyboard for each widget
+    # Bind focus events to show/hide the keyboard for each widget
     for widget in [name_combobox, type_combobox, unit_combobox, expiration_date_entry]:
         widget.bind("<FocusIn>", lambda e: keyboard.show_keyboard())
         widget.bind("<FocusOut>", lambda e: keyboard.hide_keyboard())
     quantity_spinbox.bind("<FocusIn>", lambda e: numKeyboard.show())
     quantity_spinbox.bind("<FocusOut>", lambda e: numKeyboard.hide())
 
-
-    # Function to generate QR code and display it
-    def generate_and_show_qr_code():
-        name = name_combobox.get()
-        expiration_date = expiration_date_entry.get_date().strftime('%m-%d-%Y')
-
-        if name and expiration_date:
-            # Generate the QR code
-            qr_filepath = MedicineDeposit(name, "", 0, "", expiration_date).generate_qr_code()
-
-            if qr_filepath:
-                # Display the generated QR code image
-                qr_image = ImageTk.PhotoImage(Image.open(qr_filepath).resize((250, 250), Image.LANCZOS))
-                qr_code_image_label.config(image=qr_image, text="")  # Remove the text when image is loaded
-                qr_code_image_label.image = qr_image  # Prevent garbage collection
-
-    # Bind the name and expiration date inputs to trigger QR code generation
-    name_combobox.bind("<FocusOut>", lambda e: generate_and_show_qr_code())
-    expiration_date_entry.bind("<FocusOut>", lambda e: generate_and_show_qr_code())
-
-    # Save button logic to validate and process the medicine data
-    def save_medicine_data():
+    # Save button logic
+    def save_medicine():
         name = name_combobox.get()
         type_ = type_combobox.get()
-        quantity = int(quantity_spinbox.get())
+        quantity = quantity_spinbox.get()
         unit = unit_combobox.get()
-        expiration_date = expiration_date_entry.get_date().strftime('%Y-%m-%d')
+        expiration_date = expiration_date_entry.get_date()
 
+        deposit = MedicineDeposit(name, type_, quantity, unit, expiration_date, conn, qr_code_image_label)
 
-        # Create a MedicineDeposit object and process it
-        medicine = MedicineDeposit(name, type_, quantity, unit, expiration_date)
-
-        if medicine.process_medicine():
-            show_medicine_supply()  # Assuming this refreshes or clears the form after saving
+        if deposit.validate_inputs():
+            deposit.save_to_database()
 
     # Cancel and Save buttons
     cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
@@ -405,9 +385,10 @@ def deposit_window():
     cancel_button.grid(row=5, column=0, columnspan=3, padx=(40, 60), pady=(50, 0))
 
     save_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'saveBlack_icon.png')).resize((25, 25), Image.LANCZOS))
-    save_button = tk.Button(input_frame, text="Save", font=("Arial", 16), bg=motif_color, fg='white', width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=save_img, pady=5, command=save_medicine_data)
+    save_button = tk.Button(input_frame, text="Save", font=("Arial", 16), bg=motif_color, fg='white', width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=save_img, pady=5, command=save_medicine)
     save_button.image = save_img
     save_button.grid(row=5, column=1, columnspan=3, padx=(60, 40), pady=(50, 0))
+
 
 
 # Function that creates the UI for medicine inventory in the content_frame
@@ -660,13 +641,13 @@ def show_medicine_supply():
     button_frame.columnconfigure(2, weight=1)
     button_frame.columnconfigure(3, weight=1)
 
-    # Add the first new button (e.g., 'Button 1')
+
     widthdraw_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'minus_icon.png')).resize((25, 25), Image.LANCZOS))
     withdraw_button = tk.Button(button_frame, text="Withdraw", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=widthdraw_icon, command=lambda: QRCodeScanner(main_ui_frame))
     withdraw_button.image = widthdraw_icon
     withdraw_button.grid(row=0, column=0, padx=20, pady=(12, ), sticky='ew')
 
-    # Add the second new button (e.g., 'Button 2')
+
     deposit_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'add_icon.png')).resize((25, 25), Image.LANCZOS))
     deposit_button = tk.Button(button_frame, text="Deposit", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=deposit_icon,command=deposit_window)
     deposit_button.image = deposit_icon
