@@ -328,15 +328,6 @@ def deposit_window():
     numKeyboard.create_keyboard()
     numKeyboard.hide()
 
-    tk.Label(input_frame, text="Medicines' QR Code below:", font=('Arial', 16)).grid(row=0, column=3, columnspan=2, sticky='news')
-
-    # Display QR code if it exists or show a default image
-    default_image_path = os.path.join(os.path.dirname(__file__), 'images', 'image_icon.png')
-    qr_image = ImageTk.PhotoImage(Image.open(default_image_path).resize((250, 250), Image.LANCZOS))
-    qr_code_image_label = tk.Label(input_frame, image=qr_image)
-    qr_code_image_label.image = qr_image
-    qr_code_image_label.grid(row=1, column=3, rowspan=4, columnspan=2, pady=(2, 10), padx=40, sticky='nsew')
-
     # Labels and input widgets for the form
     tk.Label(input_frame, text="Name of Medicine", font=("Arial", 16)).grid(row=0, column=0, padx=(30, 10), pady=10, sticky='w')
     name_combobox = ttk.Combobox(input_frame, font=("Arial", 16), width=20)
@@ -373,7 +364,7 @@ def deposit_window():
         unit = unit_combobox.get()
         expiration_date = expiration_date_entry.get_date()
 
-        deposit = MedicineDeposit(name, type_, quantity, unit, expiration_date, conn, qr_code_image_label)
+        deposit = MedicineDeposit(name, type_, quantity, unit, expiration_date, conn, main_ui_frame)
 
         if deposit.validate_inputs():
             deposit.save_to_database()
@@ -382,12 +373,12 @@ def deposit_window():
     cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
     cancel_button = tk.Button(input_frame, text="Cancel", font=("Arial", 16), bg=motif_color, fg='white', command=show_medicine_supply, width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=cancel_img, pady=5)
     cancel_button.image = cancel_img
-    cancel_button.grid(row=5, column=0, columnspan=3, padx=(40, 60), pady=(50, 0))
+    cancel_button.grid(row=5, column=0, padx=(40, 60), pady=(50, 0))
 
     save_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'saveBlack_icon.png')).resize((25, 25), Image.LANCZOS))
     save_button = tk.Button(input_frame, text="Save", font=("Arial", 16), bg=motif_color, fg='white', width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=save_img, pady=5, command=save_medicine)
     save_button.image = save_img
-    save_button.grid(row=5, column=1, columnspan=3, padx=(60, 40), pady=(50, 0))
+    save_button.grid(row=5, column=1, padx=(60, 40), pady=(50, 0))
 
 
 

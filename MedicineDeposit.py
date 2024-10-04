@@ -5,16 +5,17 @@ import os
 import mysql.connector
 import tkinter as tk
 from tkinter import messagebox
+from custom_messagebox import CustomMessageBox
 
 class MedicineDeposit:
-    def __init__(self, name, type_, quantity, unit, expiration_date, db_connection, qr_code_label):
+    def __init__(self, name, type_, quantity, unit, expiration_date, db_connection, root):
+        self.root = root
         self.name = name
         self.type = type_
         self.quantity = quantity
         self.unit = unit
         self.expiration_date = expiration_date
         self.db_connection = db_connection
-        self.qr_code_label = qr_code_label
 
     def validate_inputs(self):
         # Check if all fields are filled
@@ -51,15 +52,13 @@ class MedicineDeposit:
     def update_qr_code_image(self, qr_code_filepath):
         # Load the new QR code image
         qr_image = Image.open(qr_code_filepath)
-        qr_image_resized = qr_image.resize((250, 250), Image.LANCZOS)
+        qr_image_resized = qr_image.resize((400, 400), Image.LANCZOS)
         qr_image_tk = ImageTk.PhotoImage(qr_image_resized)
 
-        # Update the label with the new QR code
-        self.qr_code_label.config(image=qr_image_tk)
-        self.qr_code_label.image = qr_image_tk  # Keep a reference to avoid garbage collection
 
     def save_to_database(self):
-        # Generate QR code and get the data string
+        # Generate QR code and get the image file path
+        qr_code_filepath = self.generate_qr_code()  # Now returns the file path of the QR code image
         qr_code_data = f"{self.name}_{self.expiration_date}"  # Store data string in the database
 
         # Save the medicine data to the database
@@ -72,9 +71,24 @@ class MedicineDeposit:
             cursor.execute(insert_query, (self.name, self.type, self.quantity, self.unit, self.expiration_date,
                                         datetime.now().date(), qr_code_data))
             self.db_connection.commit()
-            messagebox.showinfo("Success", "Medicine successfully deposited!")
+
+            # Show success message and QR code in a custom message box
+            self.show_success_message(qr_code_filepath)
+
         except mysql.connector.Error as err:
             messagebox.showerror("Error", f"Database error: {err}")
         finally:
             cursor.close()
+
+    def show_success_message(self, qr_code_filepath):
+        """Display the custom messagebox after successfully adding the medicine."""
+
+        # Initialize the CustomMessageBox with QR code icon
+        CustomMessageBox(
+            root=self.root,
+            title="Medicine Deposited",
+            message=f"Medicine '{self.name}' has been successfully added!",
+            icon_path=qr_code_filepath,  # Pass the QR code image path here
+            sound_file="success_sound.mp3",  # Optional sound file for added effect
+        )
 

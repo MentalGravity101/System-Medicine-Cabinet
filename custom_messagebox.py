@@ -84,7 +84,7 @@ class CustomMessageBox:
         title_frame.pack(fill=tk.X)
 
         # Title label
-        title_label = tk.Label(title_frame, text=self.title, font=('Arial', 25, 'bold'), bg=self.color, fg='white', pady=12)
+        title_label = tk.Label(title_frame, text=self.title, font=('Arial', 15, 'bold'), bg=self.color, fg='white', pady=12)
         title_label.pack(side=tk.LEFT, padx=(10, 0))
 
         # Add the close button icon at the top-right corner
