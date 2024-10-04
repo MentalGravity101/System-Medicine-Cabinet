@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 import mysql.connector
 import os
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageSequence
 
 motif_color = '#42a7f5'  # Primary color used for the theme
 
@@ -19,10 +19,10 @@ class QRCodeScanner:
 
         # Title Frame
         self.title_frame = tk.Frame(self.top, bg=motif_color)
-        self.title_frame.pack(fill=tk.X, expand=True, padx=10, pady=10)
+        self.title_frame.pack(fill=tk.X, expand=True, pady=(0, 10))
 
         # Title Label
-        title_label = tk.Label(self.title_frame, text="Withdraw Medicine", font=('Arial', 15, 'bold'), fg='black')
+        title_label = tk.Label(self.title_frame, text="  Withdraw Medicine", font=('Arial', 15, 'bold'), fg='white', bg=motif_color, pady=12)
         title_label.pack(side=tk.LEFT)
 
         # Add the close button icon at the top-right corner
@@ -36,30 +36,36 @@ class QRCodeScanner:
         close_button.image = self.close_img  # Keep a reference to avoid garbage collection
         close_button.pack(side=tk.RIGHT, padx=(0, 5))
 
-        # Message Frame for user instruction
-        message_frame = tk.Frame(self.top, bg='white')
-        message_frame.pack(pady=10)
+        # Content Frame
+        content_frame = tk.Frame(self.top)
+        content_frame.pack(pady=(10, 2))
+
+        # QR Code Scanner Icon
+        original_logo_img = Image.open(os.path.join(os.path.dirname(__file__), 'images', 'scanning_icon.png')).resize((170, 170), Image.LANCZOS)
+        logo_img = ImageTk.PhotoImage(original_logo_img)
+        logo_label = tk.Label(content_frame, image=logo_img)
+        logo_label.image = logo_img  # Keep reference to avoid garbage collection
+        logo_label.pack(side=tk.TOP, pady=(10, 10))
 
         # Instruction Message
-        instruction_label = tk.Label(message_frame, text="Please scan the medicine QR code to withdraw", font=("Arial", 14), fg='black')
+        instruction_label = tk.Label(content_frame, text="Please scan the medicine QR code to withdraw", font=("Arial", 14), fg='black')
         instruction_label.pack(pady=10)
 
         # QR Code Entry Frame
         entry_frame = tk.Frame(self.top)
-        entry_frame.pack(pady=5)
+        entry_frame.pack(pady=(5, 3))
 
         # Entry widget to capture QR code input
-        self.qr_entry = tk.Entry(entry_frame, font=("Arial", 14), justify='center', width=35, relief='sunken', bd=3)
-        self.qr_entry.pack(pady=10)
+        self.qr_entry = tk.Entry(content_frame, font=("Arial", 14), justify='center', width=35, relief='sunken', bd=3)
+        self.qr_entry.pack(pady=(10, 5))
         self.qr_entry.focus_set()
+
+        # Label to display the medicine withdrawn
+        self.result_label = tk.Label(self.top, text="", font=("Arial", 15), fg='green', pady=2, height=5)
+        self.result_label.pack()
 
         # Bind the Enter key to process the QR code when scanned
         self.qr_entry.bind("<Return>", self.process_qrcode)
-
-        # Confirm Button to allow manual QR code processing
-        confirm_button = tk.Button(self.top, text="Confirm", font=("Arial", 12, "bold"), command=lambda: self.process_qrcode(None),
-                                   bg='white', fg='black', activebackground='#fff', activeforeground=motif_color, relief=tk.RAISED)
-        confirm_button.pack(pady=(10, 20))
 
         self._adjust_window_height()
 
@@ -92,11 +98,7 @@ class QRCodeScanner:
                 # Proceed with withdrawal process if the QR code is scanned
                 self.withdraw_medicine(scanned_qr_code)
             else:
-                messagebox.showerror("Error", "No QR code data scanned.")
-
-            # Destroy the Toplevel window after clearing the entry
-            self.top.destroy()
-
+                self.result_label.config(text="No QR code data scanned.", fg="red")
 
     def withdraw_medicine(self, qr_code):
         print(f"Withdrawing medicine with QR code: {qr_code}")
@@ -111,27 +113,27 @@ class QRCodeScanner:
             )
             cursor = conn.cursor()
 
-            # Query to check if the medicine exists
-            cursor.execute("SELECT name, quantity FROM medicine_inventory WHERE qr_code = %s", (qr_code,))
+            # Query to check if the medicine exists and retrieve name, quantity, type, and unit
+            cursor.execute("SELECT name, quantity, type, unit FROM medicine_inventory WHERE qr_code = %s", (qr_code,))
             result = cursor.fetchone()
 
             if result:
-                medicine_name, current_quantity = result
+                medicine_name, current_quantity, medicine_type, medicine_unit = result
                 if current_quantity > 0:
                     # Deduct 1 from quantity
                     new_quantity = current_quantity - 1
                     cursor.execute("UPDATE medicine_inventory SET quantity = %s WHERE qr_code = %s", (new_quantity, qr_code))
                     conn.commit()
 
-                    # Show success message
-                    messagebox.showinfo("Success", f"Withdrawn 1 unit of {medicine_name}. New quantity: {new_quantity}")
+                    # Update the result label with the new multi-line format
+                    self.result_label.config(text=f"You Withdrawn:\nMedicine: {medicine_name}\nType: {medicine_type}\nNew Quantity: {new_quantity}\nUnit: {medicine_unit}", fg="green", height=20, pady=2)
                 else:
-                    messagebox.showerror("Error", f"No more {medicine_name} available to withdraw.")
+                    self.result_label.config(text=f"No more {medicine_name} ({medicine_type})\navailable to withdraw.", fg="red", height=5)
             else:
-                messagebox.showerror("Error", "QR code not found in the database.")
+                self.result_label.config(text="QR code not found in the database.", fg="red")
 
         except mysql.connector.Error as err:
-            messagebox.showerror("Database Error", f"Error: {err}")
+            self.result_label.config(text=f"Database Error: {err}", fg="red")
 
         finally:
             # Close cursor and connection

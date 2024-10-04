@@ -16,8 +16,6 @@ class CustomMessageBox:
         self.window.attributes('-topmost', True)
         self.window.focus_set()
 
-
-
         # Set title and color
         self.title = title
         self.message = message
