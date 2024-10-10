@@ -1,6 +1,5 @@
 import mysql.connector
 from datetime import datetime, timedelta
-from tkinter import Toplevel, Label, Button
 from custom_messagebox import CustomMessageBox
 import os
 
@@ -22,22 +21,35 @@ class NotificationManager:
         )
         soon_to_expire_meds = self.cursor.fetchall()
 
-        for med in soon_to_expire_meds:
+        # Sort the results by expiration date (ascending order, soonest expiration first)
+        sorted_meds = sorted(soon_to_expire_meds, key=lambda x: x[1])
+
+        # Initialize notification count starting from 0
+        notification_count = 0
+
+        # If there are soon-to-expire medicines, process notifications
+        for med in sorted_meds:
             med_name, exp_date = med
             days_left = (exp_date - today).days
 
-            # Show a notification pop-up
-            self.create_notification_popup(med_name, exp_date, days_left)
+            # Show a notification pop-up with the count in the title
+            self.create_notification_popup(med_name, exp_date, days_left, notification_count)
 
             # Log the notification to the notification_logs table
             self.log_notification(med_name, exp_date, days_left)
 
-    def create_notification_popup(self, medicine_name, expiration_date, days_left):
-        CustomMessageBox(root=self.root, 
-                         title="Notification Alert", 
-                         message=f"The medicine '{medicine_name}' is expiring soon!\nExpiration Date: {expiration_date}\nDays left: {days_left}",
-                         color='red',
-                         icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'))
+            # Increment the notification count after the pop-up
+            notification_count += 1
+
+    def create_notification_popup(self, medicine_name, expiration_date, days_left, notification_count):
+        """Create a notification popup with the notification count in the title."""
+        CustomMessageBox(
+            root=self.root,
+            title=f"Notification ({notification_count})",
+            message=f"The medicine '{medicine_name}' is expiring soon!\nExpiration Date: {expiration_date}\nDays left: {days_left}",
+            color='red',
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+        )
 
     def log_notification(self, medicine_name, expiration_date, days_left):
         """Log the notification in the database only if it hasn't been logged yet."""
@@ -64,3 +76,4 @@ class NotificationManager:
     def close(self):
         """Close the database connection."""
         self.conn.close()
+

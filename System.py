@@ -13,8 +13,9 @@ from custom_messagebox import CustomMessageBox
 import datetime
 from csv_exporter import *
 from notification import *
-from MedicineDeposit import MedicineDeposit
+from deposit import MedicineDeposit
 from withdrawal import QRCodeScanner
+from wifi_connect import WiFiConnectUI
 
 
 
@@ -157,11 +158,9 @@ def create_login_frame(container):
     username_entry.bind("<FocusOut>", hide_keyboard)
     password_entry.bind("<FocusOut>", hide_keyboard)
 
+    WiFiConnectUI(login_frame)
+
     return login_frame
-
-
-    
-
 
 # -----------------------------------------------MAIN UI (Sidebar)------------------------------------------------------
 
@@ -368,6 +367,7 @@ def deposit_window():
 
         if deposit.validate_inputs():
             deposit.save_to_database()
+            show_medicine_supply()
 
     # Cancel and Save buttons
     cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
@@ -436,6 +436,7 @@ def show_medicine_supply():
         populate_treeview()
 
     def populate_treeview(order_by="date_stored", sort="ASC"):
+        global latest_timestamp
         # Clear the Treeview
         for row in tree.get_children():
             tree.delete(row)
