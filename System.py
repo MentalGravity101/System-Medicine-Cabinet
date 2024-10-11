@@ -103,7 +103,7 @@ def create_login_frame(container):
     global login_frame
     login_frame = tk.Frame(container, bg=motif_color)
     box_frame = tk.Frame(login_frame, bg='#ffffff', bd=5, relief="ridge", padx=50, pady=30)
-    box_frame.pack(expand=True, fill='x', padx=730)
+    box_frame.pack(expand=True, anchor='center')
 
     logo_path = os.path.join(os.path.dirname(__file__), 'images', 'SanMateoLogo.png')
     original_logo_img = Image.open(logo_path)
