@@ -3,13 +3,21 @@ from tkinter import ttk, messagebox
 import pywifi
 from pywifi import const
 import time
+from keyboard import OnScreenKeyboard
+from custom_messagebox import CustomMessageBox
 
 class WiFiConnectUI(tk.Toplevel):
     def __init__(self, parent):
         super().__init__(parent)
         self.title("Connect to Wi-Fi")
-        self.geometry("300x320")  # Adjusted height to accommodate new checkbox
         self.configure(bg='#f7f7f7')
+
+        # Set window size and disable resizing
+        self.geometry("300x320")
+        self.resizable(False, False)
+
+        # Center the window on the screen
+        self.center_window(300, 320)
 
         # Initialize PyWiFi and get the first wireless interface
         self.wifi = pywifi.PyWiFi()
@@ -20,19 +28,43 @@ class WiFiConnectUI(tk.Toplevel):
             self.iface.disconnect()
             time.sleep(1)  # Allow some time for disconnection
 
-        self.create_widgets()
+        # Check if Wi-Fi interface is active
+        if self.iface.status() == const.IFACE_INACTIVE:
+            messagebox.showerror("Wi-Fi Error", "No active Wi-Fi interface found.")
+            return
 
-    def create_widgets(self):
+        # Show a "Loading..." message initially
+        self.loading_label = tk.Label(self, text="Scanning Available Wi-Fi...", font=("Arial", 16), bg='#f7f7f7')
+        self.loading_label.pack(pady=100)
+
+        # Automatically scan for Wi-Fi networks when the Toplevel opens
+        self.after(100, self.scan_wifi)  # Delay the scan to allow UI to update with the loading message
+
+    def center_window(self, width, height):
+        """Centers the window on the screen."""
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+
+        # Calculate coordinates for centering
+        x = (screen_width // 2) - (width // 2)
+        y = (screen_height // 2) - (height // 2)
+
+        # Set the window geometry to the calculated coordinates
+        self.geometry(f"{width}x{height}+{x}+{y}")
+
+    def create_widgets(self, networks):
+        """Creates the actual UI after scanning is complete."""
+        # Remove the loading message
+        self.loading_label.pack_forget()
+
         # Label for Wi-Fi networks
         tk.Label(self, text="Select Wi-Fi Network", font=("Arial", 14), bg='#f7f7f7').pack(pady=10)
 
         # Dropdown (Combobox) to select a Wi-Fi network
-        self.network_combobox = ttk.Combobox(self, state="readonly", font=("Arial", 12))
+        self.network_combobox = ttk.Combobox(self, values=networks, state="readonly", font=("Arial", 12))
         self.network_combobox.pack(pady=10)
-
-        # Button to scan and populate Wi-Fi networks
-        scan_button = tk.Button(self, text="Scan Networks", font=("Arial", 12), command=self.scan_wifi)
-        scan_button.pack(pady=5)
+        if networks:
+            self.network_combobox.current(0)  # Set default selection
 
         # Label and Entry for Wi-Fi password
         tk.Label(self, text="Wi-Fi Password", font=("Arial", 14), bg='#f7f7f7').pack(pady=10)
@@ -41,7 +73,7 @@ class WiFiConnectUI(tk.Toplevel):
 
         # Checkbutton to show/hide password
         self.show_password_var = tk.IntVar()
-        self.show_password_check = tk.Checkbutton(self, text="Show Password", variable=self.show_password_var, 
+        self.show_password_check = tk.Checkbutton(self, text="Show Password", variable=self.show_password_var,
                                                   command=self.toggle_password_visibility, bg='#f7f7f7', font=("Arial", 10))
         self.show_password_check.pack(pady=5)
 
@@ -49,31 +81,40 @@ class WiFiConnectUI(tk.Toplevel):
         self.connect_button = tk.Button(self, text="Connect", font=("Arial", 14), command=self.connect_to_wifi)
         self.connect_button.pack(pady=20)
 
+
+    def scan_wifi(self):
+        """Scans for available Wi-Fi networks and updates the dropdown list."""
+        # Start scanning for networks
+        try:
+            self.iface.scan()
+            self.after(10000, self.update_wifi_results)  # Wait 10 seconds for scan results and then update the UI
+        except Exception as e:
+            messagebox.showerror("Scan Error", f"Error scanning for networks: {e}")
+            print(f"Scan Error: {e}")
+
+    def update_wifi_results(self):
+        """Updates the UI with the Wi-Fi scan results after the scan is complete."""
+        # Get the scan results
+        scan_results = self.iface.scan_results()
+
+        # Extract SSID names
+        networks = [result.ssid for result in scan_results if result.ssid]
+
+        # Debug: Print scan results to console for troubleshooting
+        print("Found networks:", networks)
+
+        if networks:
+            self.create_widgets(networks)  # Call the function to create the actual UI with found networks
+        else:
+            messagebox.showinfo("Wi-Fi Scan", "No networks found!")
+            self.create_widgets([])  # Call the function with an empty list if no networks are found
+
     def toggle_password_visibility(self):
         """Toggles the visibility of the password in the password entry field."""
         if self.show_password_var.get():
             self.password_entry.config(show="")  # Show password
         else:
             self.password_entry.config(show="*")  # Hide password
-
-    def scan_wifi(self):
-        """Scans for available Wi-Fi networks and updates the dropdown list."""
-        # Start scanning for networks
-        self.iface.scan()
-        time.sleep(5)  # Wait for scan results (increased to 5 seconds for better reliability)
-
-        # Get the scan results
-        scan_results = self.iface.scan_results()
-        networks = [result.ssid for result in scan_results if result.ssid]  # Extract SSID names
-        
-        # Debug: Print scan results to console
-        print("Found networks:", networks)
-
-        if networks:
-            self.network_combobox['values'] = networks  # Populate the combobox
-            self.network_combobox.current(0)  # Set default selection
-        else:
-            messagebox.showinfo("Wi-Fi Scan", "No networks found!")
 
     def connect_to_wifi(self):
         """Attempts to connect to the selected Wi-Fi network using the provided password."""

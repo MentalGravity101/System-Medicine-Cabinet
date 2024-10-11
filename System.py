@@ -16,6 +16,7 @@ from notification import *
 from deposit import MedicineDeposit
 from withdrawal import QRCodeScanner
 from wifi_connect import WiFiConnectUI
+import socket
 
 
 
@@ -57,10 +58,22 @@ default_fg_color="#fff" # Default foreground color
 
 
 
+
 #----------------------------------------------------LOGIN WINDOW--------------------------------------------------------
 
 #function for authentication during the login frame
 def authenticate_user(username, password):
+    # Check for internet connection
+    if not check_internet():
+        message_box = CustomMessageBox(
+            root=login_frame,
+            title="Error",
+            message="No internet connection.",
+            color="red",  # Background color for warning
+            ok_callback=lambda: show_wifi_connect(message_box),  # Open the WiFiConnect UI for network selection
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'noInternet_icon.png')  # Path to your icon
+        )
+        return  # Exit from login attempt until internet is available
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE username = %s AND password = %s", [username, password])
     user = cursor.fetchone()
@@ -157,8 +170,6 @@ def create_login_frame(container):
     # Optional: Bind FocusOut to hide the keyboard when losing focus (optional, can be removed if not needed)
     username_entry.bind("<FocusOut>", hide_keyboard)
     password_entry.bind("<FocusOut>", hide_keyboard)
-
-    WiFiConnectUI(login_frame)
 
     return login_frame
 
@@ -1451,6 +1462,21 @@ def validate_combobox_input(action, value_if_allowed):
 def clear_frame():
     for widget in content_frame.winfo_children():
         widget.destroy()
+
+# Function to check for active internet connection
+def check_internet(host="8.8.8.8", port=53, timeout=3):
+    try:
+        socket.setdefaulttimeout(timeout)
+        socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect((host, port))
+        return True
+    except socket.error:
+        return False
+def show_wifi_connect(message_box):
+    # Destroy the message box first
+    message_box.destroy()
+    
+    # Then, open the WiFi connection UI
+    WiFiConnectUI(root)
 
 
 #-----------------------------------------------MAIN------------------------------------------------------
