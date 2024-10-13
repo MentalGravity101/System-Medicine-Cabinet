@@ -56,9 +56,6 @@ default_bg_color = motif_color  # Default background color
 active_fg_color ='#000000' # Active foreground color
 default_fg_color="#fff" # Default foreground color
 
-
-
-
 #----------------------------------------------------LOGIN WINDOW--------------------------------------------------------
 
 #function for authentication during the login frame
@@ -114,7 +111,7 @@ def create_login_frame(container):
     logo_label.image = logo_img
     logo_label.pack(pady=(5, 10))
 
-    title = tk.Label(box_frame, text='ELECTRONIC \n MEDICINE CABINET', font=('Arial', 23, 'bold'), bg='white')
+    title = tk.Label(box_frame, text='ELECTRONIC\nMEDICINE CABINET', font=('Arial', 23, 'bold'), bg='white')
     title.pack()
 
     username_label = tk.Label(box_frame, text="Username", font=("Arial", 18), bg='#ffffff')
@@ -1165,22 +1162,13 @@ def add_user():
     title_label.pack(fill='both')
 
     # Create input frame and ensure it expands horizontally
-    input_frame = tk.LabelFrame(content_frame, text='ADD NEW USER ACCOUNT', font=('Arial', 14), pady=20, padx=5, relief='raised', bd=5)
-    input_frame.pack(fill='x', pady=30, padx=300)  # Sticky set to 'ew' for full width
+    input_frame = tk.LabelFrame(content_frame, text='ADD NEW USER ACCOUNT', font=('Arial', 14), pady=20, padx=15, relief='raised', bd=5)
+    input_frame.pack(pady=30, padx=20, anchor='center')  # Sticky set to 'ew' for full width
 
     # Instantiate OnScreenKeyboard
     keyboard = OnScreenKeyboard(content_frame)
     keyboard.create_keyboard()
     keyboard.hide_keyboard()  # Initially hide the keyboard
-
-    default_image_path = os.path.join(os.path.dirname(__file__), 'images', 'image_icon.png')
-    try:
-        default_photo = ImageTk.PhotoImage(Image.open(default_image_path).resize((250, 250), Image.LANCZOS))
-        image_label = tk.Label(input_frame, image=default_photo)
-        image_label.image = default_photo
-        image_label.grid(row=0, column=2, columnspan=2, rowspan=5, pady=10, padx=40, sticky='nsew')
-    except Exception as e:
-        print(f"Error loading default image: {e}")
 
     tk.Label(input_frame, text="Username", font=("Arial", 14)).grid(row=1, column=0, padx=10, pady=10)
     username_entry = tk.Entry(input_frame, font=("Arial", 14), width=20)
@@ -1207,32 +1195,6 @@ def add_user():
         widget.bind("<FocusIn>", lambda e: keyboard.show_keyboard())
         widget.bind("<FocusOut>", lambda e: keyboard.hide_keyboard())
 
-    def generate_qr_code():
-        new_username = username_entry.get().strip()
-        new_position = position_combobox.get().strip()
-        new_accountType = accountType_combobox.get().strip()
-
-        if new_username and new_position and new_accountType:
-            qr = qrcode.make(new_username)
-
-            # Resize the QR code to match the default image size (220x220)
-            qr = qr.resize((220, 220), Image.LANCZOS)
-            qr_image = ImageTk.PhotoImage(qr)
-
-            # Update the image label with the resized QR code image
-            image_label.config(image=qr_image)
-            image_label.image = qr_image
-        else:
-            # Reset to the default image if any field is empty
-            image_label.config(image=default_photo)
-            image_label.image = default_photo
-
-    def on_field_update(event):
-        generate_qr_code()
-
-    username_entry.bind("<KeyRelease>", on_field_update)
-    position_combobox.bind("<<ComboboxSelected>>", on_field_update)
-    accountType_combobox.bind("<<ComboboxSelected>>", on_field_update)
 
     def add_new_user():
         new_username = username_entry.get()
@@ -1240,22 +1202,23 @@ def add_user():
         confirm_password = confirm_password_entry.get()
         new_position = position_combobox.get()
         new_accountType = accountType_combobox.get()
-        qr_code = None
 
         if validate_all_fields_filled(username_entry, password_entry, confirm_password_entry, position_combobox, accountType_combobox):
             if validate_user_info('add', new_username, new_password, confirm_password, new_position, new_accountType):
-                qr = qrcode.make(new_username)
-                qr_bytes = io.BytesIO()
-                qr.save(qr_bytes)
-                qr_code = qr_bytes.getvalue()
 
                 cursor = conn.cursor()
-                cursor.execute("INSERT INTO users (username, password, position, accountType, qr_code) VALUES (%s, %s, %s, %s, %s)",
-                            (new_username, new_password, new_position, new_accountType, qr_code))
+                cursor.execute("INSERT INTO users (username, password, position, accountType) VALUES (%s, %s, %s, %s)",
+                            (new_username, new_password, new_position, new_accountType))
                 conn.commit()
                 conn.close()
                 
                 show_account_setting()  # Refresh Treeview with updated user data
+                message_box = CustomMessageBox(
+                    root=root,
+                    title="SUCCESS",
+                    message=f'Successfully added new user {new_username}',
+                    icon_path=os.path.join(os.path.dirname(__file__), 'images', 'accountSetting_Icon.png')
+                )
             else:
                 message_box = CustomMessageBox(
                     root=root,
@@ -1270,12 +1233,12 @@ def add_user():
     cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
     cancel_button = tk.Button(input_frame, text="Cancel", font=("Arial", 16), bg=motif_color, fg='white', command=show_account_setting, width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=cancel_img, pady=5)
     cancel_button.image = cancel_img
-    cancel_button.grid(row=7, column=0, columnspan=3, padx=(40, 60), pady=(50, 0))
+    cancel_button.grid(row=7, column=0, padx=(40, 60), pady=(50, 0))
 
     save_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'saveBlack_icon.png')).resize((25, 25), Image.LANCZOS))
     save_button = tk.Button(input_frame, text="Save", font=("Arial", 16), bg=motif_color, fg='white', width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=save_img, pady=5, command=add_new_user)
     save_button.image = save_img
-    save_button.grid(row=7, column=1, columnspan=3, padx=(60, 40), pady=(50, 0))    
+    save_button.grid(row=7, column=1, padx=(60, 40), pady=(50, 0))    
 
 def on_tree_select(tree):
     selected_item = tree.selection()  # Get selected item
@@ -1365,21 +1328,13 @@ def edit_user(username):
 
     # Create input frame and ensure it expands horizontally
     input_frame = tk.LabelFrame(content_frame, text='Edit User Account', font=('Arial', 14), pady=20, padx=10, relief='raised', bd=5)
-    input_frame.pack(fill='x', pady=30, padx=300)  # Sticky set to 'ew' for full width
+    input_frame.pack(pady=30, padx=20, anchor='center')
 
     # Instantiate OnScreenKeyboard
     keyboard = OnScreenKeyboard(content_frame)
     keyboard.create_keyboard()
     keyboard.hide_keyboard()  # Initially hide the keyboard
-
-    # Display QR code if it exists
-    qr_code_image_label = tk.Label(input_frame)
-    qr_code_image_label.grid(row=0, column=2, columnspan=2, rowspan=5, pady=10, padx=40, sticky='nsew')
-
-    if user[3]:  # Check if qr_code is not None
-        qr_image = ImageTk.PhotoImage(Image.open(io.BytesIO(user[3])))
-        qr_code_image_label.config(image=qr_image)
-        qr_code_image_label.image = qr_image    
+  
 
     # Username entry
     tk.Label(input_frame, text="Username", font=("Arial", 14)).grid(row=0, column=0, padx=10, pady=10)
@@ -1436,12 +1391,12 @@ def edit_user(username):
     cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
     cancel_button = tk.Button(input_frame, text="Cancel", font=("Arial", 16), bg=motif_color, fg='white', command=show_account_setting, width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=cancel_img, pady=5)
     cancel_button.image = cancel_img
-    cancel_button.grid(row=5, column=0, columnspan=3, padx=(40, 60), pady=(50, 0))
+    cancel_button.grid(row=5, column=0, padx=(40, 60), pady=(50, 0))
 
     save_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'saveBlack_icon.png')).resize((25, 25), Image.LANCZOS))
     save_button = tk.Button(input_frame, text="Save", font=("Arial", 16), bg=motif_color, fg='white', width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=save_img, pady=5, command=save_changes)
     save_button.image = save_img
-    save_button.grid(row=5, column=1, columnspan=3, padx=(60, 40), pady=(50, 0))
+    save_button.grid(row=5, column=1, padx=(60, 40), pady=(50, 0))
 
     # Bind the focus events to show/hide the keyboard for each widget
     for widget in [username_entry, password_entry, position_combobox, accountType_combobox]:
