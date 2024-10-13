@@ -2,9 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
 import os
-import qrcode
 from tkinter import messagebox
-import io
 from tkcalendar import DateEntry
 import mysql.connector
 from keyboard import *
@@ -457,7 +455,7 @@ def show_medicine_supply():
             database="db_medicine_cabinet"
         )
         cursor = conn.cursor()
-        query = f"SELECT name, type, quantity, unit, date_stored, expiration_date FROM medicine_inventory ORDER BY {order_by} {sort}"
+        query = f"SELECT name, type, quantity, unit, date_stored, expiration_date FROM medicine_inventory WHERE quantity <> 0 ORDER BY {order_by} {sort}"
         cursor.execute(query)
         medicine = cursor.fetchall()
 
