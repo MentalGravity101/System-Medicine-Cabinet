@@ -17,7 +17,6 @@ from wifi_connect import WiFiConnectUI
 import socket
 
 
-
 conn = mysql.connector.connect(
   host="localhost",
   user="root",
@@ -95,9 +94,9 @@ def authenticate_user(username, password):
 
 # Function that creates the UI for login frame
 def create_login_frame(container):
-    global login_frame
+    global login_frame0
     login_frame = tk.Frame(container, bg=motif_color)
-    box_frame = tk.Frame(login_frame, bg='#ffffff', bd=5, relief="ridge", padx=50, pady=30)
+    box_frame = tk.Frame(login_frame, bg='#ffffff', bd=5, relief="ridge", padx=70, pady=30)
     box_frame.pack(expand=True, anchor='center')
 
     logo_path = os.path.join(os.path.dirname(__file__), 'images', 'SanMateoLogo.png')
@@ -107,7 +106,7 @@ def create_login_frame(container):
 
     logo_label = tk.Label(box_frame, image=logo_img, bg='#ffffff')
     logo_label.image = logo_img
-    logo_label.pack(pady=(5, 10))
+    logo_label.pack(pady=(0, 10))
 
     title = tk.Label(box_frame, text='ELECTRONIC\nMEDICINE CABINET', font=('Arial', 23, 'bold'), bg='white')
     title.pack()
@@ -144,9 +143,12 @@ def create_login_frame(container):
     login_button = tk.Button(box_frame, text="Login", font=("Arial", 16), 
                              command=lambda: authenticate_user(username_entry.get(), password_entry.get()), 
                              fg='#ffffff', bg='#2c3e50', width=20)
-    login_button.pack(pady=20)
+    login_button.pack(pady=(20, 10))
 
     login_frame.grid(row=0, column=0, sticky='news')
+
+    qrlogin= tk.Label(box_frame, text="or Login using QR code", fg="black", cursor="hand2", bg='white', font=('Arial', 13))
+    qrlogin.pack()
 
     # Create an instance of OnScreenKeyboard and bind it to entry widgets
     on_screen_keyboard = OnScreenKeyboard(login_frame)
@@ -1416,14 +1418,33 @@ def clear_frame():
     for widget in content_frame.winfo_children():
         widget.destroy()
 
-# Function to check for active internet connection
+CHECK_INTERVAL = 15000  # Interval for checking the internet in milliseconds (e.g., 15000ms = 15 seconds)
+
 def check_internet(host="8.8.8.8", port=53, timeout=3):
+    """Check if the system has an internet connection."""
     try:
         socket.setdefaulttimeout(timeout)
         socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect((host, port))
         return True
     except socket.error:
         return False
+
+def periodic_internet_check(root):
+    """Periodically checks for an internet connection and opens WiFiConnectUI if no connection is found."""
+    if not check_internet():
+        # If the internet is lost, open WiFiConnectUI
+        message_box = CustomMessageBox(
+            root=root,
+            title="Error",
+            message="No internet connection.",
+            color="red",  # Background color for warning
+            ok_callback=lambda: show_wifi_connect(message_box),  # Open the WiFiConnect UI for network selection
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'noInternet_icon.png')  # Path to your icon
+        )
+    
+    # Re-schedule the next check after the specified interval
+    root.after(CHECK_INTERVAL, lambda: periodic_internet_check(root))
+    
 def show_wifi_connect(message_box):
     # Destroy the message box first
     message_box.destroy()
@@ -1446,10 +1467,19 @@ def main():
     container.grid_rowconfigure(0, weight=1)
     container.grid_columnconfigure(0, weight=1)
 
+    # Initial internet check before showing any UI
+    if not check_internet():
+        wifi_window = WiFiConnectUI(root)
+        root.wait_window(wifi_window)  # Pause the main UI until WiFi window is closed
+
+    # Start periodic internet checking
+    root.after(CHECK_INTERVAL, lambda: periodic_internet_check(root))
+
+    # Create and show the rest of the frames (e.g., login_frame, main_ui_frame)
     login_frame = create_login_frame(container)
     main_ui_frame = create_main_ui_frame(container)
 
-    login_frame.tkraise()
+    login_frame.tkraise()  # Show the login frame first
 
     root.mainloop()
 
