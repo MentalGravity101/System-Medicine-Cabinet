@@ -57,17 +57,6 @@ default_fg_color="#fff" # Default foreground color
 
 #function for authentication during the login frame
 def authenticate_user(username, password):
-    # Check for internet connection
-    if not check_internet():
-        message_box = CustomMessageBox(
-            root=login_frame,
-            title="Error",
-            message="No internet connection.",
-            color="red",  # Background color for warning
-            ok_callback=lambda: show_wifi_connect(message_box),  # Open the WiFiConnect UI for network selection
-            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'noInternet_icon.png')  # Path to your icon
-        )
-        return  # Exit from login attempt until internet is available
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE username = %s AND password = %s", [username, password])
     user = cursor.fetchone()
@@ -1403,10 +1392,6 @@ def edit_user(username):
         widget.bind("<FocusIn>", lambda e: keyboard.show_keyboard())
         widget.bind("<FocusOut>", lambda e: keyboard.hide_keyboard())
 
-
-
-
-
 #-----------------------------------------------OTHER FUNCTIONS------------------------------------------------------
 # Function that ensures users cannot type into the combobox  
 def validate_combobox_input(action, value_if_allowed):
@@ -1492,6 +1477,12 @@ def main():
     container.grid_rowconfigure(0, weight=1)
     container.grid_columnconfigure(0, weight=1)
 
+    # Create and show the rest of the frames (e.g., login_frame, main_ui_frame)
+    login_frame = create_login_frame(container)
+    main_ui_frame = create_main_ui_frame(container)
+
+    login_frame.tkraise()  # Show the login frame first
+
     # Initial internet check before showing any UI
     if not check_internet():
         wifi_window = WiFiConnectUI(root)
@@ -1499,12 +1490,6 @@ def main():
 
     # Start periodic internet checking
     root.after(CHECK_INTERVAL, lambda: periodic_internet_check(root))
-
-    # Create and show the rest of the frames (e.g., login_frame, main_ui_frame)
-    login_frame = create_login_frame(container)
-    main_ui_frame = create_main_ui_frame(container)
-
-    login_frame.tkraise()  # Show the login frame first
 
     root.mainloop()
 
