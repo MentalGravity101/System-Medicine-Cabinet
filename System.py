@@ -1419,6 +1419,7 @@ def clear_frame():
         widget.destroy()
 
 CHECK_INTERVAL = 15000  # Interval for checking the internet in milliseconds (e.g., 15000ms = 15 seconds)
+wifi_ui_open = False  # Flag to track if the WiFiConnectUI is open
 
 def check_internet(host="8.8.8.8", port=53, timeout=3):
     """Check if the system has an internet connection."""
@@ -1431,26 +1432,50 @@ def check_internet(host="8.8.8.8", port=53, timeout=3):
 
 def periodic_internet_check(root):
     """Periodically checks for an internet connection and opens WiFiConnectUI if no connection is found."""
-    if not check_internet():
-        # If the internet is lost, open WiFiConnectUI
-        message_box = CustomMessageBox(
-            root=root,
-            title="Error",
-            message="No internet connection.",
-            color="red",  # Background color for warning
-            ok_callback=lambda: show_wifi_connect(message_box),  # Open the WiFiConnect UI for network selection
-            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'noInternet_icon.png')  # Path to your icon
-        )
-    
-    # Re-schedule the next check after the specified interval
-    root.after(CHECK_INTERVAL, lambda: periodic_internet_check(root))
-    
+    global wifi_ui_open  # We use this flag to control the periodic check
+
+    # Only run if WiFiConnectUI is not open
+    if not wifi_ui_open:
+        if not check_internet():
+            # If the internet is lost, open WiFiConnectUI
+            message_box = CustomMessageBox(
+                root=root,
+                title="Error",
+                message="No internet connection.",
+                color="red",  # Background color for warning
+                ok_callback=lambda: show_wifi_connect(message_box),  # Open the WiFiConnect UI for network selection
+                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'noInternet_icon.png')  # Path to your icon
+            )
+
+    # Schedule the next check only if the WiFi UI is not open
+    if not wifi_ui_open:
+        root.after(CHECK_INTERVAL, lambda: periodic_internet_check(root))
+
 def show_wifi_connect(message_box):
+    """Opens the WiFi connection UI and pauses periodic checks."""
+    global wifi_ui_open
+
+    # Set flag to indicate WiFiConnectUI is open
+    wifi_ui_open = True
+
     # Destroy the message box first
     message_box.destroy()
-    
-    # Then, open the WiFi connection UI
-    WiFiConnectUI(root)
+
+    # Open the WiFi connection UI
+    wifi_ui = WiFiConnectUI(root)
+
+    # When WiFiConnectUI is closed, resume the periodic check
+    wifi_ui.protocol("WM_DELETE_WINDOW", on_wifi_ui_close)
+
+def on_wifi_ui_close():
+    """Callback to handle the closing of WiFiConnectUI and resume the periodic checks."""
+    global wifi_ui_open
+
+    # Reset the flag when WiFiConnectUI is closed
+    wifi_ui_open = False
+
+    # Restart the periodic check after WiFi UI is closed
+    periodic_internet_check(root)
 
 
 #-----------------------------------------------MAIN------------------------------------------------------
