@@ -15,6 +15,7 @@ from deposit import MedicineDeposit
 from withdrawal import QRCodeScanner
 from wifi_connect import WiFiConnectUI
 import socket
+import qrcode
 
 
 conn = mysql.connector.connect(
@@ -41,7 +42,6 @@ def establish_connection():
 INACTIVITY_PERIOD = 60000 #automatic logout timer in milliseconds
 inactivity_timer = None #initialization of idle timer
 root = None  # Global variable for root window
-login_frame = None
 
 motif_color = '#42a7f5'
 font_style = 'Arial'
@@ -1199,24 +1199,50 @@ def add_user():
                 cursor.execute("INSERT INTO users (username, password, position, accountType) VALUES (%s, %s, %s, %s)",
                             (new_username, new_password, new_position, new_accountType))
                 conn.commit()
-                conn.close()
-                
-                show_account_setting()  # Refresh Treeview with updated user data
+
+                # Generate QR code from username and position
+                qr_path = generate_qrcode(new_username, new_position)
+
+                # Show the QR code in the message box
                 message_box = CustomMessageBox(
                     root=root,
                     title="SUCCESS",
                     message=f'Successfully added new user {new_username}',
-                    icon_path=os.path.join(os.path.dirname(__file__), 'images', 'accountSetting_Icon.png')
+                    icon_path=qr_path,
                 )
+
+                conn.close()
+                show_account_setting()  # Refresh Treeview with updated user data
+
             else:
                 message_box = CustomMessageBox(
                     root=root,
                     title="ERROR",
                     message="Please fill in all the fields.",
                     color="red",  # Background color for warning,
-                    icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
+                    icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
                     sound_file="sounds/FillAllFields.mp3"
                 )
+
+    def generate_qrcode(username, position):
+        qr_data = f"{username} - {position}"  # Combine username and position
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(qr_data)
+        qr.make(fit=True)
+
+        qr_img = qr.make_image(fill='black', back_color='white')
+        
+        # Save the QR code image temporarily (or use in-memory option with BytesIO)
+        qr_path = os.path.join(os.path.dirname(__file__), 'images', f"{username}_qrcode.png")
+        qr_img.save(qr_path)
+        
+        return qr_path
+
 
     # Cancel and Save buttons
     cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
@@ -1476,6 +1502,8 @@ def main():
     container.pack(fill="both", expand=True)
     container.grid_rowconfigure(0, weight=1)
     container.grid_columnconfigure(0, weight=1)
+
+    global login_frame
 
     # Create and show the rest of the frames (e.g., login_frame, main_ui_frame)
     login_frame = create_login_frame(container)
