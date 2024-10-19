@@ -2,6 +2,7 @@ import os
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
+from _tkinter import TclError
 
 motif_color = '#42a7f5'
 font_style = 'Helvetica'
@@ -12,6 +13,7 @@ class OnScreenKeyboard:
         self.parent_frame = parent_frame
         self.keyboard_frame = None
         self.capslock_on = False  # Ensure CapsLock is off by default (lowercase)
+        self.symbols_on = False   # To track whether symbols are being displayed
         self.keys_buttons = {}  # Store button references for updating keys dynamically
 
         # Load and resize images for CapsLock button
@@ -21,7 +23,7 @@ class OnScreenKeyboard:
             Image.open(os.path.join(os.path.dirname(__file__), 'images', 'capsOff_icon.png')).resize((30, 30), Image.LANCZOS))
         self.close_image = ImageTk.PhotoImage(
             Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((30, 30), Image.LANCZOS))
-        
+
     def bind_widgets(self):
         """Bind all entry and combobox widgets to show the keyboard on focus."""
         for widget in self.parent_frame.winfo_children():
@@ -34,65 +36,7 @@ class OnScreenKeyboard:
 
         self.keyboard_frame = tk.Frame(self.parent_frame, bg='lightgrey', relief='sunken', bd=3)
 
-        keys = [
-            ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'Backspace'],
-            ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '[', ']', '\\'],
-            ['CapsLock', 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ';', "'", 'Enter'],
-            ['Z', 'X', 'C', 'V', 'B', 'N', 'M', ',', '.', '/'],
-            ['Space']
-        ]
-        
-        for row in keys:
-            row_frame = tk.Frame(self.keyboard_frame)
-            row_frame.pack(pady=5, padx=3)
-
-            for key in row:
-                # Existing key creation logic...
-                if key == "CapsLock":
-                    button = tk.Button(
-                        row_frame,
-                        image=self.capslock_image_off,
-                        width=55, height=55,
-                        command=self.toggle_capslock,
-                        borderwidth=0, padx=5, pady=5,
-                        font=(font_style, font_size),
-                        relief='raised', bd=4
-                    )
-                elif key == "Enter":
-                    button = tk.Button(
-                        row_frame,
-                        text=key, width=10, height=3,
-                        command=lambda: self.on_key_press("Enter"),
-                        font=(font_style, font_size),
-                        relief='raised', bd=3
-                    )
-                elif key == "Backspace":
-                    button = tk.Button(
-                        row_frame,
-                        text=key, width=10, height=3,
-                        font=(font_style, font_size),
-                        command=self.handle_backspace
-                    )
-                elif key == "Space":
-                    button = tk.Button(
-                        row_frame,
-                        text=key, width=35, height=3,
-                        font=(font_style, font_size),
-                        command=lambda: self.on_key_press(" "),
-                        relief='raised', bd=3
-                    )
-                else:
-                    button = tk.Button(
-                        row_frame,
-                        text=key.lower(),
-                        width=6, height=3,
-                        command=lambda key=key: self.on_key_press(key),
-                        font=(font_style, font_size),
-                        relief='raised', bd=3
-                    )
-                    self.keys_buttons[key] = button  # Save reference to button for updates
-
-                button.pack(side="left", padx=3)
+        self.show_letter_keys()  # Show the letter keys initially
 
         self.keyboard_frame.pack(side="bottom", fill="x")
 
@@ -113,8 +57,6 @@ class OnScreenKeyboard:
 
         # Place the close button at the top-right corner
         close_button.place(x=frame_width - 60, y=5)  # Adjust 'x' to the right edge minus button width
-
-
 
     def on_key_press(self, key):
         """Handle key press event, supporting CapsLock functionality."""
@@ -143,7 +85,7 @@ class OnScreenKeyboard:
 
         # Handle all other keys (alphabetic and others)
         # Toggle case based on CapsLock state for alphabetic characters
-        if key.isalpha():
+        if key.isalpha() and not self.symbols_on:
             key = key.upper() if self.capslock_on else key.lower()
 
         # Insert the key into the currently focused widget
@@ -184,34 +126,145 @@ class OnScreenKeyboard:
         for row in self.keyboard_frame.winfo_children():
             for button in row.winfo_children():
                 if isinstance(button, tk.Button) and button.cget("image") != "":
-                    if self.capslock_on:
-                        button.config(image=self.capslock_image_on)
-                    else:
-                        button.config(image=self.capslock_image_off)
+                    try:
+                        if self.capslock_on:
+                            button.config(image=self.capslock_image_on)
+                        else:
+                            button.config(image=self.capslock_image_off)
+                    except TclError as e:
+                        print(f"Error updating CapsLock button: {e}")
 
     def update_keys(self):
-        """Update displayed keys to reflect current CapsLock state (uppercase/lowercase)."""
+        """Update the keys based on the caps lock state."""
+        special_keys = ['Backspace', 'Enter', 'Space']  # Special keys that shouldn't change
         for key, button in self.keys_buttons.items():
-            if key.isalpha():
-                if self.capslock_on:
-                    button.config(text=key.upper())
+            try:
+                if button.winfo_exists():  # Check if the button widget still exists
+                    if key not in special_keys:  # Exclude special keys from being affected by Caps Lock
+                        if self.capslock_on:
+                            button.config(text=key.upper())  # Update to uppercase
+                        else:
+                            button.config(text=key.lower())  # Update to lowercase
                 else:
-                    button.config(text=key.lower())
+                    print(f"Button for key '{key}' no longer exists.")
+            except TclError as e:
+                print(f"Error updating button for key '{key}': {e}")
 
-    def toggle_keyboard(self):
-        if self.keyboard_frame.winfo_ismapped():
-            self.hide_keyboard()
+
+    def toggle_symbols(self):
+        """Toggle between symbols and alphabetic keys."""
+        self.symbols_on = not self.symbols_on
+        if self.symbols_on:
+            self.show_symbol_keys()
         else:
-            self.show_keyboard()
+            self.show_letter_keys()
 
-    def show_keyboard(self):
-        if not self.keyboard_frame:
-            self.create_keyboard()
-        self.keyboard_frame.pack(side="bottom", fill="x")
+    def show_letter_keys(self):
+        """Display the letter keys on the keyboard."""
+        keys = [
+            ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 'Backspace'],
+            ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\\'],
+            ['CapsLock', 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', "'", 'Enter'],
+            ['!@#', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/'],
+            ['Space']
+        ]
+        self.populate_keyboard(keys)
+
+    def show_symbol_keys(self):
+        """Display the symbol keys on the keyboard."""
+        keys = [
+            ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+', 'Backspace'],
+            ['~', '`', '|', '{', '}', '[', ']', ':', ';', '"', "'", '<', '>'],
+            ['CapsLock', '\\', '/', '?', '.', ',', '=', '-', 'Enter'],
+            ['ABC', '*', '&', '^', '%', '$', '#', '!', '?', '/', '.'],
+            ['Space']
+        ]
+        self.populate_keyboard(keys)
+
+    def populate_keyboard(self, keys):
+        """Helper function to create keyboard buttons dynamically."""
+        for widget in self.keyboard_frame.winfo_children():
+            widget.destroy()  # Remove previous buttons
+
+        for row in keys:
+            row_frame = tk.Frame(self.keyboard_frame)
+            row_frame.pack(padx=3)
+
+            for key in row:
+                if key == "CapsLock":
+                    button = tk.Button(
+                        row_frame,
+                        image=self.capslock_image_off,
+                        width=55, height=55,
+                        command=self.toggle_capslock,
+                        borderwidth=0, padx=5, pady=5,
+                        font=(font_style, font_size),
+                        relief='raised', bd=4
+                    )
+                elif key == "Enter":
+                    button = tk.Button(
+                        row_frame,
+                        text=key, width=10, height=3,
+                        command=lambda: self.on_key_press("Enter"),
+                        font=(font_style, font_size),
+                        relief='raised', bd=3
+                    )
+                elif key == "Backspace":
+                    button = tk.Button(
+                        row_frame,
+                        text=key, width=10, height=3,
+                        font=(font_style, font_size),
+                        relief='raised', bd=3,
+                        command=self.handle_backspace
+                    )
+                elif key == "Space":
+                    button = tk.Button(
+                        row_frame,
+                        text="Space", width=35, height=3,
+                        command=lambda: self.on_key_press(" "),
+                        font=(font_style, font_size),
+                        relief='raised', bd=3
+                    )
+                elif key == "!@#":
+                    button = tk.Button(
+                        row_frame,
+                        text=key, width=10, height=3,
+                        font=(font_style, font_size),
+                        relief='raised', bd=3,
+                        command=self.toggle_symbols
+                    )
+                elif key == "ABC":
+                    button = tk.Button(
+                        row_frame,
+                        text=key, width=10, height=3,
+                        font=(font_style, font_size),
+                        relief='raised', bd=3,
+                        command=self.toggle_symbols
+                    )
+                else:
+                    button = tk.Button(
+                        row_frame,
+                        text=key, width=5, height=3,
+                        command=lambda k=key: self.on_key_press(k),
+                        font=(font_style, font_size),
+                        relief='raised', bd=3,
+                        padx=5
+                    )
+
+                button.pack(side="left", padx=5, pady=5)
+
+                if key.isalpha():
+                    self.keys_buttons[key] = button  # Store alphabet buttons for case update
+
+    def show_keyboard(self, event=None):
+        self.create_keyboard()
 
     def hide_keyboard(self):
+        """Hide the keyboard and remove the frame."""
         if self.keyboard_frame:
-            self.keyboard_frame.pack_forget()
+            self.keyboard_frame.destroy()
+            self.keyboard_frame = None
+
 
 
 class NumericKeyboard:

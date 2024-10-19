@@ -16,6 +16,7 @@ from withdrawal import QRCodeScanner
 from wifi_connect import WiFiConnectUI
 import socket
 import qrcode
+import tkinter.font as tkFont
 
 
 conn = mysql.connector.connect(
@@ -810,7 +811,7 @@ def show_doorLog():
     search_entry.insert(0, 'Search here')
 
     # Add the search icon next to the Entry widget
-    search_icon_label = tk.Label(search_frame, image=search_img, bg='white')
+    search_icon_label = tk.Button(search_frame, image=search_img, bg='white', command=search_treeview)
     search_icon_label.image = search_img  # Keep a reference to avoid garbage collection
     search_icon_label.pack(side=tk.RIGHT, padx=(0, 5))
 
@@ -839,6 +840,8 @@ def show_doorLog():
     # Bind events to the search_entry to show/hide the keyboard
     search_entry.bind("<KeyPress>", clear_placeholder)
     search_entry.bind("<FocusOut>", lambda event: (keyboard.hide_keyboard(), add_placeholder(None)))
+
+    search_icon_label.bind("<KeyPress>", search_treeview)
 
     buttons = []
 
@@ -877,8 +880,9 @@ def show_doorLog():
 
     # Treeview styling
     style = ttk.Style()
-    style.configure("Treeview", rowheight=40, borderwidth=2, relief="solid")
-    style.configure("Treeview.Heading", font=("Helvetica", 13, "bold"))
+    # Define a new font for Treeview rows
+    style.configure("Treeview", font=("Helvetica", 17, "bold"), rowheight=40, borderwidth=2, relief="solid")
+    style.configure("Treeview.Heading", font=("Helvetica", 17, "bold"))
     style.map('Treeview', 
               background=[('selected', motif_color)],
               foreground=[('selected', 'white')])
