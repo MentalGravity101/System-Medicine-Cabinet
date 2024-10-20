@@ -17,7 +17,7 @@ from wifi_connect import WiFiConnectUI
 import socket
 import qrcode
 import tkinter.font as tkFont
-
+from treeviewStyling import table_style
 
 conn = mysql.connector.connect(
   host="localhost",
@@ -84,7 +84,7 @@ def authenticate_user(username, password):
 
 # Function that creates the UI for login frame
 def create_login_frame(container):
-    global login_frame0
+    global login_frame
     login_frame = tk.Frame(container, bg=motif_color)
     box_frame = tk.Frame(login_frame, bg='#ffffff', bd=5, relief="ridge", padx=70, pady=30)
     box_frame.pack(expand=True, anchor='center')
@@ -577,20 +577,7 @@ def show_medicine_supply():
     tree_scroll = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL)
     tree_scroll.pack(side=tk.RIGHT, fill=tk.Y)
 
-    # Treeview styling
-    style = ttk.Style()
-    style.configure("Treeview", rowheight=40, borderwidth=2, relief="solid")
-    style.configure("Treeview.Heading", font=(font_style, font_size))
-    style.map('Treeview', 
-              background=[('selected', motif_color)],
-              foreground=[('selected', 'white')])
-
-    # Customize scrollbar
-    style.configure("Vertical.TScrollbar", 
-                    gripcolor=motif_color,  # Color of the grip
-                    background="#f0f0f0",  # Background color of scrollbar
-                    troughcolor=motif_color,  # Background color of the trough
-                    arrowcolor=motif_color)  # Color of the arrows
+    table_style()
 
     # Define columns
     columns = ("name", "type", "quantity", "unit", "date stored", "expiration date")
@@ -882,7 +869,7 @@ def show_doorLog():
     style = ttk.Style()
     # Define a new font for Treeview rows
     style.configure("Treeview", font=("Helvetica", 17, "bold"), rowheight=40, borderwidth=2, relief="solid")
-    style.configure("Treeview.Heading", font=("Helvetica", 17, "bold"))
+    style.configure("Treeview.Heading", font=("Helvetica", 17))
     style.map('Treeview', 
               background=[('selected', motif_color)],
               foreground=[('selected', 'white')])
@@ -1035,12 +1022,7 @@ def show_account_setting():
     tree_frame = tk.Frame(content_frame)
     tree_frame.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
 
-    # Add styling for the treeview
-    style = ttk.Style()
-    style.configure("Treeview", rowheight=40, borderwidth=2, relief="solid")
-    style.map('Treeview', 
-              background=[('selected', motif_color)],
-              foreground=[('selected', 'white')])
+    table_style() #Call the function for styling the treeview
 
     # Define the treeview with a maximum height of 7 rows
     columns = ("username", "position", "accountType")
@@ -1339,7 +1321,7 @@ def edit_user(username):
 
     # Retrieve the user information from the database
     cursor = conn.cursor()
-    cursor.execute("SELECT position, accountType, password, qr_code FROM users WHERE username = %s", [username])
+    cursor.execute("SELECT position, accountType, password, qrcode_data FROM users WHERE username = %s", [username])
     user = cursor.fetchone()
 
     title_label = tk.Label(content_frame, text="ACCOUNT SETTINGS", bg=motif_color, fg="white", font=('Arial', 25, 'bold'), height=2, relief='groove', bd=1)

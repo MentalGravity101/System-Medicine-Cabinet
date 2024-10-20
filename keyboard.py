@@ -43,7 +43,11 @@ class OnScreenKeyboard:
         self.parent_frame.update_idletasks()
         self.keyboard_frame.update_idletasks()
 
-        # Place the close "X" button at the top-right corner
+        self.create_close_button()
+
+    def create_close_button(self):
+        """Create and place the close button on the top-right corner."""
+        frame_width = self.keyboard_frame.winfo_width()  # Get the actual width of the frame
         close_button = tk.Button(
             self.keyboard_frame,
             image=self.close_image,
@@ -52,11 +56,9 @@ class OnScreenKeyboard:
             command=lambda: (self.hide_keyboard(), self.parent_frame.focus_set()),  # Ensure hide_keyboard is called correctly
             borderwidth=0, padx=0, pady=0  # Set padding to zero for tighter fit
         )
-
-        frame_width = self.keyboard_frame.winfo_width()  # Get the actual width of the frame
-
         # Place the close button at the top-right corner
         close_button.place(x=frame_width - 60, y=5)  # Adjust 'x' to the right edge minus button width
+
 
     def on_key_press(self, key):
         """Handle key press event, supporting CapsLock functionality."""
@@ -255,6 +257,8 @@ class OnScreenKeyboard:
 
                 if key.isalpha():
                     self.keys_buttons[key] = button  # Store alphabet buttons for case update
+
+        self.create_close_button()
 
     def show_keyboard(self, event=None):
         self.create_keyboard()
