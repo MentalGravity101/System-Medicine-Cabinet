@@ -129,6 +129,8 @@ class QRCodeScanner:
                     self.result_label.config(text=f"You Withdrawn:\nMedicine: {medicine_name}\nType: {medicine_type}\nNew Quantity: {new_quantity}\nUnit: {medicine_unit}", fg="green", height=20, pady=2)
                 else:
                     self.result_label.config(text=f"No more {medicine_name} ({medicine_type})\navailable to withdraw.", fg="red", height=5)
+                    cursor.execute("DELETE FROM medicine_inventory WHERE qr_code = %s", (qr_code,))
+                    conn.commit()
             else:
                 self.result_label.config(text="QR code not found in the database.", fg="red")
 
