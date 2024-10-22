@@ -947,6 +947,22 @@ def show_doorLog():
 
 #--------------------------------------------------------- NOTIFICATION -----------------------------------------------------------       
 
+# Function to display selected row's data in a Toplevel window
+def on_row_select(event):
+    # Get the selected item
+    selected_item = tree.focus()
+    row_data = tree.item(selected_item, 'values')
+    
+    # Create a new Toplevel window to show the selected row's data
+    if row_data:  # Only if a row is selected
+        text=f"A medicine is about to expire!\n\nMedicine Name: {row_data[0]}\nExpiration Date: {row_data[1]}\nNotification Date: {row_data[2]}\nDays Until Expiration: {row_data[3]}"
+        CustomMessageBox(root=content_frame,
+                        title="Medicine Expiration",
+                        color='red',
+                        message=text,
+                        icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'))
+
+
 # Function that creates the UI for notification logs in the content_frame
 def show_notification():
     clear_frame()
@@ -959,6 +975,7 @@ def show_notification():
 
     # Create a Treeview to display the logs
     columns = ("Medicine Name", "Expiration Date", "Notification Date", "Days Until Expiration")
+    global tree  # Make the tree global so it can be accessed in the on_row_select function
     tree = ttk.Treeview(content_frame, columns=columns, show="headings")
 
     # Define headings for the columns
@@ -982,6 +999,9 @@ def show_notification():
     else:
         # Display a message if there are no logs
         tk.Label(content_frame, text="No notifications found.", font=('Arial', 14), pady=10).pack()
+
+    # Bind the <<TreeviewSelect>> event to trigger the on_row_select function
+    tree.bind('<<TreeviewSelect>>', on_row_select)
 
 
 #------------------------------------------------------ACCOUNT SETTINGS FRAME----------------------------------------------------------------------
