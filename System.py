@@ -18,6 +18,8 @@ import socket
 import qrcode
 import tkinter.font as tkFont
 from treeviewStyling import table_style
+import serial
+import time
 
 conn = mysql.connector.connect(
   host="localhost",
@@ -920,17 +922,27 @@ def show_doorLog():
     button_frame.columnconfigure(2, weight=1)
     button_frame.columnconfigure(3, weight=1)
 
+    # Function to send the lock command
+    def lock_door():
+        ser.write(b'lock\n')  # Send the "lock" command to the Arduino
+        print("Lock command sent")
+
+    # Function to send the unlock command
+    def unlock_door():
+        ser.write(b'unlock\n')  # Send the "unlock" command to the Arduino
+        print("Unlock command sent")
+
     # Add the first new button (e.g., 'Button 1')
-    widthdraw_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'minus_icon.png')).resize((25, 25), Image.LANCZOS))
-    withdraw_button = tk.Button(button_frame, text="Withdraw", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=widthdraw_icon)
-    withdraw_button.image = widthdraw_icon
-    withdraw_button.grid(row=0, column=0, padx=20, pady=(12, ), sticky='ew')
+    lock_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'minus_icon.png')).resize((25, 25), Image.LANCZOS))
+    lock_button = tk.Button(button_frame, text="Lock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=lock_icon, command=lock_door)
+    lock_button.image = lock_icon
+    lock_button.grid(row=0, column=0, padx=20, pady=(12, ), sticky='ew')
 
     # Add the second new button (e.g., 'Button 2')
-    deposit_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'add_icon.png')).resize((25, 25), Image.LANCZOS))
-    deposit_button = tk.Button(button_frame, text="Deposit", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=deposit_icon,command=deposit_window)
-    deposit_button.image = deposit_icon
-    deposit_button.grid(row=0, column=1, padx=20, pady=(12, 7), sticky='ew')
+    unlock_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'add_icon.png')).resize((25, 25), Image.LANCZOS))
+    unlock_button = tk.Button(button_frame, text="Unlock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=unlock_icon, command=unlock_door)
+    unlock_button.image = unlock_icon
+    unlock_button.grid(row=0, column=1, padx=20, pady=(12, 7), sticky='ew')
 
     # Extract CSV button
     extract_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'extract_icon.png')).resize((25, 25), Image.LANCZOS))
@@ -1497,7 +1509,7 @@ def on_wifi_ui_close():
 
 #-----------------------------------------------MAIN------------------------------------------------------
 def main():
-    global root
+    global root, ser
 
     root = tk.Tk()
     root.resizable(width=False, height=False)
@@ -1515,6 +1527,15 @@ def main():
     login_frame = create_login_frame(container)
     main_ui_frame = create_main_ui_frame(container)
 
+    # Try to initialize the serial connection to the Arduino with error handling
+    try:
+        ser = serial.Serial('COM5', 9600)  # Replace 'COM5' with the correct port for your Arduino
+        time.sleep(2)  # Wait for the connection to establish
+        print("Serial connection established")
+    except serial.SerialException as e:
+        print(f"Error opening serial port: {e}")
+        ser = None  # Set to None if the connection fails
+
     login_frame.tkraise()  # Show the login frame first
 
     # Initial internet check before showing any UI
@@ -1526,6 +1547,11 @@ def main():
     root.after(CHECK_INTERVAL, lambda: periodic_internet_check(root))
 
     root.mainloop()
+
+    # Close the serial connection when the application exits, if it's open
+    if ser is not None:
+        ser.close()
+        print("Serial connection closed")
 
 if __name__ == "__main__":
     main()

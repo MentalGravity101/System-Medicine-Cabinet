@@ -52,27 +52,36 @@ class NotificationManager:
         )
 
     def log_notification(self, medicine_name, expiration_date, days_left):
-        """Log the notification in the database only if it hasn't been logged yet."""
+        """Log the notification in the database only if it hasn't been logged yet and the medicine still exists."""
         notification_date = datetime.now().date()
 
-        # Check if this notification already exists in the logs
+        # Fetch the medicine_id based on the medicine name and expiration date
         self.cursor.execute(
-            "SELECT COUNT(*) FROM notification_logs WHERE medicine_name = %s AND expiration_date = %s AND notification_date = %s",
-            (medicine_name, expiration_date, notification_date)
+            "SELECT id FROM medicine_inventory WHERE name = %s AND expiration_date = %s",
+            (medicine_name, expiration_date)
         )
-        already_logged = self.cursor.fetchone()[0]
+        result = self.cursor.fetchone()
 
-        if already_logged == 0:
-            # If not logged yet, insert the new log entry
+        if result:
+            medicine_id = result[0]  # Get the id (medicine_id)
+
+            # Check if this notification already exists in the logs
             self.cursor.execute(
-                "INSERT INTO notification_logs (medicine_name, expiration_date, notification_date, days_until_expiration) "
-                "VALUES (%s, %s, %s, %s)", 
-                (medicine_name, expiration_date, notification_date, days_left)
+                "SELECT COUNT(*) FROM notification_logs WHERE medicine_id = %s AND notification_date = %s",
+                (medicine_id, notification_date)
             )
-            self.conn.commit()
-        else:
-            print(f"Notification for {medicine_name} (expiring on {expiration_date}) has already been logged today.")
+            already_logged = self.cursor.fetchone()[0]
 
+            if already_logged == 0:
+                # If not logged yet, insert the new log entry
+                self.cursor.execute(
+                    "INSERT INTO notification_logs (medicine_id, medicine_name, expiration_date, notification_date, days_until_expiration) "
+                    "VALUES (%s, %s, %s, %s, %s)", 
+                    (medicine_id, medicine_name, expiration_date, notification_date, days_left)
+                )
+                self.conn.commit()
+        else:
+            print(f"Medicine '{medicine_name}' no longer exists in inventory.")
     def close(self):
         """Close the database connection."""
         self.conn.close()
