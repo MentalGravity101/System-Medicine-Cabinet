@@ -64,7 +64,8 @@ def authenticate_user(username, password):
     cursor.execute("SELECT * FROM users WHERE username = %s AND password = %s", [username, password])
     user = cursor.fetchone()
     if user:
-        user_role = user[2] 
+        user_role = user[2]
+        main_ui_frame = create_main_ui_frame(container) 
         main_ui_frame.tkraise()
         reset_timer()
         bind_activity_events()
@@ -144,6 +145,7 @@ def create_login_frame(container):
 
     # Create an instance of OnScreenKeyboard and bind it to entry widgets
     on_screen_keyboard = OnScreenKeyboard(login_frame)
+    on_screen_keyboard.hide_keyboard()
 
     # Bind focus events to show/hide the on-screen keyboard
     def show_keyboard(event):
@@ -867,21 +869,7 @@ def show_doorLog():
     tree_scroll = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL)
     tree_scroll.pack(side=tk.RIGHT, fill=tk.Y)
 
-    # Treeview styling
-    style = ttk.Style()
-    # Define a new font for Treeview rows
-    style.configure("Treeview", font=("Helvetica", 17, "bold"), rowheight=40, borderwidth=2, relief="solid")
-    style.configure("Treeview.Heading", font=("Helvetica", 17))
-    style.map('Treeview', 
-              background=[('selected', motif_color)],
-              foreground=[('selected', 'white')])
-
-    # Customize scrollbar
-    style.configure("Vertical.TScrollbar", 
-                    gripcolor=motif_color,  # Color of the grip
-                    background="#f0f0f0",  # Background color of scrollbar
-                    troughcolor=motif_color,  # Background color of the trough
-                    arrowcolor=motif_color)  # Color of the arrows
+    table_style()
 
      # Create the Treeview to display the door logs
     columns = ("Date", "Time", "Username", "Account Type", "Position", "Action Taken")
@@ -989,6 +977,8 @@ def show_notification():
     columns = ("Medicine Name", "Expiration Date", "Notification Date", "Days Until Expiration")
     global tree  # Make the tree global so it can be accessed in the on_row_select function
     tree = ttk.Treeview(content_frame, columns=columns, show="headings")
+
+    table_style('Notification')
 
     # Define headings for the columns
     for col in columns:
@@ -1509,7 +1499,7 @@ def on_wifi_ui_close():
 
 #-----------------------------------------------MAIN------------------------------------------------------
 def main():
-    global root, ser
+    global root, ser, container
 
     root = tk.Tk()
     root.resizable(width=False, height=False)
@@ -1521,22 +1511,52 @@ def main():
     container.grid_rowconfigure(0, weight=1)
     container.grid_columnconfigure(0, weight=1)
 
-    global login_frame
+    global login_frame, loading_frame
 
-    # Create and show the rest of the frames (e.g., login_frame, main_ui_frame)
-    login_frame = create_login_frame(container)
-    main_ui_frame = create_main_ui_frame(container)
+    # Create a "Loading" frame
+    loading_frame = tk.Frame(container, bg=motif_color)
+    loading_label = tk.Label(loading_frame, text="Loading...", font=("Arial", 24), fg='white', bg=motif_color)
+    loading_label.pack(expand=True)  # Center the "Loading" message
+    loading_frame.grid(row=0, column=0, sticky="nsew")  # Fill the container
 
-    # Try to initialize the serial connection to the Arduino with error handling
-    try:
-        ser = serial.Serial('COM5', 9600)  # Replace 'COM5' with the correct port for your Arduino
-        time.sleep(2)  # Wait for the connection to establish
-        print("Serial connection established")
-    except serial.SerialException as e:
-        print(f"Error opening serial port: {e}")
-        ser = None  # Set to None if the connection fails
+    # Show the loading frame initially
+    loading_frame.tkraise()
 
-    login_frame.tkraise()  # Show the login frame first
+    # Delay creation of login and main UI frames until Arduino connection is done
+    def connect_to_arduino():
+        global ser
+        try:
+            ser = serial.Serial('COM5', 9600)  # Port of the Arduino
+            time.sleep(2)  # Wait for the connection to establish
+            print("Serial connection established")
+            # Once connected, proceed to show login_frame
+            login_frame = create_login_frame(container)
+        
+            login_frame.tkraise()
+        except serial.SerialException as e:
+            print(f"Error opening serial port: {e}")
+            ser = None  # Set to None if the connection fails
+            show_retry_window()  # Show retry window if connection fails
+
+    # Create a Toplevel window for retrying the connection
+    def show_retry_window():
+        message_box = CustomMessageBox(
+            root=loading_frame,
+            title="Connection Error",
+            message="Failed to connect to Arduino.\nPlease retry.",
+            color="red",  # Background color for warning
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
+            ok_callback=lambda: retry_connection(message_box)
+        )
+
+    # Retry the connection when the button is clicked
+    def retry_connection(frame):
+        frame.destroy()
+        loading_frame.tkraise()  # Show the loading frame again while retrying
+        root.after(100, connect_to_arduino)  # Retry the connection
+
+    # Call the function to connect to Arduino after showing the "Loading" screen
+    root.after(100, connect_to_arduino)  # Introduce a slight delay before connecting
 
     # Initial internet check before showing any UI
     if not check_internet():
@@ -1555,3 +1575,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

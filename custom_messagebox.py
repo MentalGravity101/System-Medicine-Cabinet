@@ -16,6 +16,9 @@ class CustomMessageBox:
         self.window.attributes('-topmost', True)
         self.window.focus_set()
 
+        # Make the window modal (prevents interaction with other windows)
+        self.window.grab_set()
+
         # Set title and color
         self.title = title
         self.message = message
