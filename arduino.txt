@@ -1,0 +1,48 @@
+// Define pins for the relay inputs
+int relay1 = 7;  // Pin for Relay 1 (IN1) COM = BLUE
+int relay2 = 8;  // Pin for Relay 2 (IN2) COM = GREEN
+
+// Duration of pulse in milliseconds
+int pulseDuration = 50;  // 500ms pulse to trigger lock/unlock
+
+void setup() {
+  // Set relay pins as output
+  Serial.begin(9600);
+
+  pinMode(relay1, OUTPUT);
+  pinMode(relay2, OUTPUT);
+
+  // Initialize relays to be off (NC position - locked), which means HIGH for low-triggered relays
+  digitalWrite(relay1, HIGH);  // Relay 1 in NC position (HIGH = not triggered)
+  digitalWrite(relay2, HIGH);  // Relay 2 in NC position (HIGH = not triggered)
+}
+
+void loop() {
+  if (Serial.available() > 0) {
+    String command = Serial.readStringUntil('\n');
+
+    if (command == "lock") {
+      lockDoor();
+    } else if (command == "unlock") {
+      unlockDoor();
+    }
+  }
+}
+
+// Function to unlock the door with a momentary pulse (LOW triggers the relay)
+void lockDoor() {
+  digitalWrite(relay1, LOW);   // Relay 1 in NO position (LOW = triggered, unlock)
+  digitalWrite(relay2, HIGH);   // Relay 2 in NO position (LOW = triggered, unlock)
+  delay(pulseDuration);        // Wait for the pulse duration
+  digitalWrite(relay1, HIGH);  // Turn off the relays (back to NC)
+  digitalWrite(relay2, HIGH);  // Turn off the relays (back to NC)
+}
+
+// Function to lock the door with a momentary pulse (LOW triggers the relay)
+void unlockDoor() {
+  digitalWrite(relay1, HIGH);   // Relay 1 in NC position (LOW = triggered, lock)
+  digitalWrite(relay2, LOW);   // Relay 2 in NC position (LOW = triggered, lock)
+  delay(pulseDuration);        // Wait for the pulse duration
+  digitalWrite(relay1, HIGH);  // Turn off the relays (back to NC)
+  digitalWrite(relay2, HIGH);  // Turn off the relays (back to NC)
+}
