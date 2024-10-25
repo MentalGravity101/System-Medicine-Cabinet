@@ -6,9 +6,7 @@ from tkinter import messagebox
 from tkcalendar import DateEntry
 import mysql.connector
 from keyboard import *
-from autocomplete import AutocompleteCombobox
 from custom_messagebox import CustomMessageBox
-import datetime
 from csv_exporter import *
 from notification import *
 from deposit import MedicineDeposit
@@ -16,10 +14,11 @@ from withdrawal import QRCodeScanner
 from wifi_connect import WiFiConnectUI
 import socket
 import qrcode
-import tkinter.font as tkFont
 from treeviewStyling import table_style
 import serial
 import time
+from loginQrCode import QRLogin
+from manualLockUnlock import ManualCabinet
 
 conn = mysql.connector.connect(
   host="localhost",
@@ -132,6 +131,10 @@ def create_login_frame(container):
     show_password_checkbutton = tk.Checkbutton(box_frame, text="Show Password", variable=show_password_var,
                                                 command=toggle_password_visibility, bg='#ffffff', font=("Arial", 14))
     show_password_checkbutton.pack(anchor='w', padx=(5, 0), pady=(5, 10))  # Align to the left with padding
+
+    global username, password
+    username = username_entry.get()
+    password = password_entry.get()
 
     login_button = tk.Button(box_frame, text="Login", font=("Arial", 16), 
                              command=lambda: authenticate_user(username_entry.get(), password_entry.get()), 
@@ -922,13 +925,13 @@ def show_doorLog():
 
     # Add the first new button (e.g., 'Button 1')
     lock_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'minus_icon.png')).resize((25, 25), Image.LANCZOS))
-    lock_button = tk.Button(button_frame, text="Lock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=lock_icon, command=lock_door)
+    lock_button = tk.Button(button_frame, text="Lock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=lock_icon, command=lambda: ManualCabinet(root=content_frame, keyboardframe=content_frame))
     lock_button.image = lock_icon
     lock_button.grid(row=0, column=0, padx=20, pady=(12, ), sticky='ew')
 
     # Add the second new button (e.g., 'Button 2')
     unlock_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'add_icon.png')).resize((25, 25), Image.LANCZOS))
-    unlock_button = tk.Button(button_frame, text="Unlock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=unlock_icon, command=unlock_door)
+    unlock_button = tk.Button(button_frame, text="Unlock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=unlock_icon, command=lambda: ManualCabinet(content_frame, content_frame))
     unlock_button.image = unlock_icon
     unlock_button.grid(row=0, column=1, padx=20, pady=(12, 7), sticky='ew')
 

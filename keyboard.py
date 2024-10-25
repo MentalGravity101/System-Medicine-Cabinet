@@ -53,7 +53,7 @@ class OnScreenKeyboard:
             image=self.close_image,
             width=55, height=55,
             bg=self.keyboard_frame['bg'],
-            command=lambda: (self.hide_keyboard(), self.parent_frame.focus_set()),  # Ensure hide_keyboard is called correctly
+            command=lambda: (self.hide_keyboard(), self.parent_frame.focus_set(), returnClose()),  # Ensure hide_keyboard is called correctly
             borderwidth=0, padx=0, pady=0  # Set padding to zero for tighter fit
         )
         # Place the close button at the top-right corner
@@ -269,6 +269,9 @@ class OnScreenKeyboard:
             self.keyboard_frame.destroy()
             self.keyboard_frame = None
 
+    def returnClose():
+        return "Closed"
+
 
 
 class NumericKeyboard:
@@ -291,7 +294,7 @@ class NumericKeyboard:
             ['4', '5', '6', 'Enter'],
             ['1', '2', '3', '0']
         ]
-
+        
         # Load Backspace image
         backspace_image_path = os.path.join(os.path.dirname(__file__), "images", "backspace_icon.png")
         self.backspace_image = ImageTk.PhotoImage(Image.open(backspace_image_path).resize((30, 30), Image.LANCZOS))
@@ -380,3 +383,6 @@ class NumericKeyboard:
             if isinstance(widget, tk.Spinbox):
                 widget.bind("<FocusIn>", show_keyboard)
                 widget.bind("<FocusOut>", hide_keyboard)
+        
+    def returnClose():
+        return "Closed"
