@@ -627,7 +627,7 @@ def show_medicine_supply():
 
 
     widthdraw_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'minus_icon.png')).resize((25, 25), Image.LANCZOS))
-    withdraw_button = tk.Button(button_frame, text="Withdraw", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=widthdraw_icon, command=lambda: QRCodeScanner(content_frame))
+    withdraw_button = tk.Button(button_frame, text="Withdraw", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=widthdraw_icon, command=lambda: LockUnlock(content_frame, content_frame, Username, Password, ser, "withdraw"))
     withdraw_button.image = widthdraw_icon
     withdraw_button.grid(row=0, column=0, padx=20, pady=(12, ), sticky='ew')
 
@@ -913,25 +913,15 @@ def show_doorLog():
     button_frame.columnconfigure(2, weight=1)
     button_frame.columnconfigure(3, weight=1)
 
-    # Function to send the lock command
-    def lock_door():
-        ser.write(b'lock\n')  # Send the "lock" command to the Arduino
-        print("Lock command sent")
-
-    # Function to send the unlock command
-    def unlock_door():
-        ser.write(b'unlock\n')  # Send the "unlock" command to the Arduino
-        print("Unlock command sent")
-
     # Add the first new button (e.g., 'Button 1')
     lock_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'minus_icon.png')).resize((25, 25), Image.LANCZOS))
-    lock_button = tk.Button(button_frame, text="Lock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=lock_icon, command=lambda: LockUnlock(content_frame, content_frame, Username, Password))
+    lock_button = tk.Button(button_frame, text="Lock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=lock_icon, command=lambda: LockUnlock(content_frame, content_frame, Username, Password, ser, "lock"))
     lock_button.image = lock_icon
     lock_button.grid(row=0, column=0, padx=20, pady=(12, ), sticky='ew')
 
     # Add the second new button (e.g., 'Button 2')
     unlock_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'add_icon.png')).resize((25, 25), Image.LANCZOS))
-    unlock_button = tk.Button(button_frame, text="Unlock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=unlock_icon, command=lambda: LockUnlock(content_frame, content_frame, Username, Password))
+    unlock_button = tk.Button(button_frame, text="Unlock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=unlock_icon, command=lambda: LockUnlock(content_frame, content_frame, Username, Password, ser, "unlock"))
     unlock_button.image = unlock_icon
     unlock_button.grid(row=0, column=1, padx=20, pady=(12, 7), sticky='ew')
 
@@ -1498,6 +1488,16 @@ def on_wifi_ui_close():
 
     # Restart the periodic check after WiFi UI is closed
     periodic_internet_check(root)
+
+# Function to send the lock command
+def lock_door():
+    ser.write(b'lock\n')  # Send the "lock" command to the Arduino
+    print("Lock command sent")
+
+# Function to send the unlock command
+def unlock_door():
+    ser.write(b'unlock\n')  # Send the "unlock" command to the Arduino
+    print("Unlock command sent")
 
 
 #-----------------------------------------------MAIN------------------------------------------------------

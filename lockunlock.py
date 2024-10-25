@@ -4,16 +4,23 @@ from tkinter import messagebox
 import mysql.connector
 import os
 from PIL import Image, ImageTk, ImageSequence
-from keyboard import OnScreenKeyboard\
+from keyboard import OnScreenKeyboard
+from custom_messagebox import CustomMessageBox
+import serial
+from withdrawal import QRCodeScanner
+import mysql.connector
 
 
 motif_color = '#42a7f5'
 
 class LockUnlock:
-    def __init__(self, root, keyboardframe, userName, passWord):
+    def __init__(self, root, keyboardframe, userName, passWord, arduino, action):
 
         self.user_Username = userName
         self.user_Password = passWord
+
+        self.arduino = arduino
+        self.action = action
 
         self.window = tk.Toplevel(root, relief='raised', bd=5)
         self.window.overrideredirect(True)  # Remove the title bar
@@ -109,21 +116,21 @@ class LockUnlock:
         username_label = tk.Label(tab1, text="Username", font=("Arial", 18))
         username_label.pack(pady=10)
 
-        username_entry = tk.Entry(tab1, font=("Arial", 16), relief='sunken', bd=3)
-        username_entry.pack(pady=5, fill='x', padx=20)
+        self.username_entry = tk.Entry(tab1, font=("Arial", 16), relief='sunken', bd=3)
+        self.username_entry.pack(pady=5, fill='x', padx=20)
 
         password_label = tk.Label(tab1, text="Password", font=("Arial", 18))
         password_label.pack(pady=10)
 
-        password_entry = tk.Entry(tab1, show="*", font=("Arial", 16), relief='sunken', bd=3)
-        password_entry.pack(pady=5, fill='x', padx=20)
+        self.password_entry = tk.Entry(tab1, show="*", font=("Arial", 16), relief='sunken', bd=3)
+        self.password_entry.pack(pady=5, fill='x', padx=20)
 
         # Function to show/hide password based on Checkbutton state
         def toggle_password_visibility():
             if show_password_var.get():
-                password_entry.config(show='')
+                self.password_entry.config(show='')
             else:
-                password_entry.config(show='*')
+                self.password_entry.config(show='*')
 
         # Variable to track the state of the Checkbutton
         show_password_var = tk.BooleanVar()
@@ -131,12 +138,12 @@ class LockUnlock:
                                                     command=toggle_password_visibility, font=("Arial", 14))
         show_password_checkbutton.pack(anchor='w', padx=20, pady=(5, 10))  # Align to the left with padding
 
-        enter_button = tk.Button(tab1, text="Enter", font=("Arial", 18, 'bold'), bg=motif_color, fg='white', relief="raised", bd=3, pady=7, padx=40)
+        enter_button = tk.Button(tab1, text="Enter", font=("Arial", 18, 'bold'), bg=motif_color, fg='white', relief="raised", bd=3, pady=7, padx=40, command=self._validate_credentials)
         enter_button.pack(anchor='center', pady=(0, 10))
 
         # Bind the FocusIn event to show the keyboard when focused
-        username_entry.bind("<FocusIn>", lambda event: self._show_keyboard())
-        password_entry.bind("<FocusIn>", lambda event: self._show_keyboard())
+        self.username_entry.bind("<FocusIn>", lambda event: self._show_keyboard())
+        self.password_entry.bind("<FocusIn>", lambda event: self._show_keyboard())
 
 
 
@@ -166,11 +173,46 @@ class LockUnlock:
         self.result_label = tk.Label(tab2, text="", font=("Arial", 15), fg='green', pady=2, height=5)
         self.result_label.pack()
 
+        # Bind the Enter key to process the QR code when scanned
+        self.qr_entry.bind("<Return>", self._process_qrcode)
+
         # Bind the tab change event
         notebook.bind("<<NotebookTabChanged>>", self._on_tab_change)
 
-        # # Bind the Enter key to process the QR code when scanned
-        # self.qr_entry.bind("<Return>", self.process_qrcode)
+    def _validate_credentials(self):
+        username = self.username_entry.get()
+        password = self.password_entry.get()
+
+        if username == self.user_Username and password == self.user_Password:
+            self.window.destroy()
+            if self.action == "unlock":
+                self._unlock_door()
+                message_box = CustomMessageBox(
+                    root=self.keyboardFrame,
+                    title="Success",
+                    message="Door lock is now unlock.",
+                    icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
+                    ok_callback=message_box.destroy
+                )
+            elif self.action == "withdraw":
+                self._unlock_door()
+                message_box = CustomMessageBox(
+                    root=self.keyboardFrame,
+                    title="Success",
+                    message="Door lock is now unlock\nYou may now proceed to withdraw medicine.",
+                    icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
+                    ok_callback= lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame))
+                )
+        else:
+            message_box = CustomMessageBox(
+            root=self.keyboardFrame,
+            title="Error",
+            message="Invalid username or password.",
+            color="red",  # Background color for warning
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
+            sound_file="sounds/invalidLogin.mp3"
+        )
+
 
     def _on_tab_change(self, event):
         # Check if the selected tab is tab2 and hide the keyboard
@@ -203,4 +245,74 @@ class LockUnlock:
             # Restore to the original position
             self.window.geometry(f"+{self.original_position[0]}+{self.original_position[1]}")
             self.is_moved_up = False
+
+    def _process_qrcode(self, event):
+        if self.qr_entry.winfo_exists():
+            scanned_qr_code = self.qr_entry.get().strip()
+            print(f"Final scanned QR code: {scanned_qr_code}")  # Debugging statement
+
+            if scanned_qr_code:
+                # Clear the Entry widget for the next scan
+                self.qr_entry.delete(0, tk.END)
+
+                # Connect to the MySQL database
+                try:
+                    conn = mysql.connector.connect(
+                        host="localhost",
+                        user="root",
+                        password="",  # Adjust according to your MySQL setup
+                        database="db_medicine_cabinet"
+                    )
+                    cursor = conn.cursor()
+
+                    # Check if the scanned QR code matches any user in the database
+                    query = "SELECT username, password FROM users WHERE username = %s AND password = %s"
+                    cursor.execute(query, (self.user_Username, self.user_Password))
+                    result = cursor.fetchone()
+
+                    if result:
+                        self.window.destroy()
+                        if self.action == "unlock":
+                            self._unlock_door()
+                            message_box = CustomMessageBox(
+                                root=self.keyboardFrame,
+                                title="Success",
+                                message="Door lock is now unlock.",
+                                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
+                                ok_callback=message_box.destroy
+                            )
+                        elif self.action == "withdraw":
+                            self._unlock_door()
+                            message_box = CustomMessageBox(
+                                root=self.keyboardFrame,
+                                title="Success",
+                                message="Door lock is now unlock\nYou may now proceed to withdraw medicine.",
+                                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
+                                ok_callback= lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame))
+                            )
+                    else:
+                        # If no match found, show an error
+                        self.result_label.config(text="Invalid QR code or credentials.", fg="red")
+
+                except mysql.connector.Error as err:
+                    print(f"Error: {err}")
+                    messagebox.showerror("Database Error", "Could not connect to the database.")
+
+                finally:
+                    # Close the cursor and connection
+                    cursor.close()
+                    conn.close()
+            else:
+                self.result_label.config(text="No QR code data scanned.", fg="red")
+
+    # Function to send the lock command
+    def _lock_door(self):
+        self.arduino.write(b'lock\n')  # Send the "lock" command to the Arduino
+        print("Lock command sent")
+
+    # Function to send the unlock command
+    def _unlock_door(self):
+        print("Unlock command sent")
+        self.arduino.write(b'unlock\n')  # Send the "unlock" command to the Arduino
+        
 
