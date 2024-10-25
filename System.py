@@ -18,7 +18,7 @@ from treeviewStyling import table_style
 import serial
 import time
 from loginQrCode import QRLogin
-from manualLockUnlock import ManualCabinet
+from lockunlock import LockUnlock
 
 conn = mysql.connector.connect(
   host="localhost",
@@ -163,6 +163,7 @@ def create_login_frame(container):
     # Optional: Bind FocusOut to hide the keyboard when losing focus (optional, can be removed if not needed)
     username_entry.bind("<FocusOut>", hide_keyboard)
     password_entry.bind("<FocusOut>", hide_keyboard)
+
 
     return login_frame
 
@@ -924,13 +925,13 @@ def show_doorLog():
 
     # Add the first new button (e.g., 'Button 1')
     lock_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'minus_icon.png')).resize((25, 25), Image.LANCZOS))
-    lock_button = tk.Button(button_frame, text="Lock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=lock_icon, command=lambda: ManualCabinet(root=content_frame, keyboardframe=content_frame, userName=Username, passWord=Password))
+    lock_button = tk.Button(button_frame, text="Lock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=lock_icon, command=lambda: LockUnlock(content_frame, content_frame, Username, Password))
     lock_button.image = lock_icon
     lock_button.grid(row=0, column=0, padx=20, pady=(12, ), sticky='ew')
 
     # Add the second new button (e.g., 'Button 2')
     unlock_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'add_icon.png')).resize((25, 25), Image.LANCZOS))
-    unlock_button = tk.Button(button_frame, text="Unlock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=unlock_icon, command=lambda: ManualCabinet(content_frame, content_frame, userName=Username, passWord=Password))
+    unlock_button = tk.Button(button_frame, text="Unlock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=unlock_icon, command=lambda: LockUnlock(content_frame, content_frame, Username, Password))
     unlock_button.image = unlock_icon
     unlock_button.grid(row=0, column=1, padx=20, pady=(12, 7), sticky='ew')
 

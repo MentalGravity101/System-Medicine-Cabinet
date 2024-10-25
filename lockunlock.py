@@ -1,13 +1,15 @@
 import tkinter as tk
+from tkinter import ttk
 from tkinter import messagebox
 import mysql.connector
 import os
 from PIL import Image, ImageTk, ImageSequence
-from keyboard import OnScreenKeyboard
+from keyboard import OnScreenKeyboard\
+
 
 motif_color = '#42a7f5'
 
-class ManualCabinet:
+class LockUnlock:
     def __init__(self, root, keyboardframe, userName, passWord):
 
         self.user_Username = userName
@@ -36,9 +38,6 @@ class ManualCabinet:
             self.close_img = ImageTk.PhotoImage(Image.open(self.close_icon_path).resize((14, 14), Image.LANCZOS))
         else:
             self.close_img = None
-
-        print("Username: ", self.user_Username)
-        print("Password: ", self.user_Password)
 
         # Create the UI components
         self._create_ui()
@@ -87,19 +86,36 @@ class ManualCabinet:
         close_button.image = self.close_img  # Keep a reference to avoid garbage collection
         close_button.pack(side=tk.RIGHT, padx=(0, 10), pady=(0, 5))
 
-        title = tk.Label(self.window, text='ELECTRONIC\nMEDICINE CABINET', font=('Arial', 23, 'bold'))
-        title.pack()
 
-        username_label = tk.Label(self.window, text="Username", font=("Arial", 18))
+        # Create a Notebook widget
+        notebook = ttk.Notebook(self.window)
+        notebook.pack(fill="both", expand=True)
+        
+         # Create a custom style for the Notebook tabs
+        style = ttk.Style()
+        style.configure("TNotebook.Tab", font=("Arial", 18, 'bold'), padding=[20, 17])  # Adjust font size and padding
+
+        # Create frames for each tab
+        tab1 = ttk.Frame(notebook)
+        tab2 = ttk.Frame(notebook)
+
+        # Add frames to the notebook with titles
+        notebook.add(tab1, text="Manual")
+        notebook.add(tab2, text="QR Code")
+
+        manual_instruction = tk.Label(tab1, text='Enter your login credentials manually\nto lock or unlock the door.', font=('Arial', 18))
+        manual_instruction.pack(pady=10, anchor='center')
+
+        username_label = tk.Label(tab1, text="Username", font=("Arial", 18))
         username_label.pack(pady=10)
 
-        username_entry = tk.Entry(self.window, font=("Arial", 16), relief='sunken', bd=3)
+        username_entry = tk.Entry(tab1, font=("Arial", 16), relief='sunken', bd=3)
         username_entry.pack(pady=5, fill='x', padx=20)
 
-        password_label = tk.Label(self.window, text="Password", font=("Arial", 18))
+        password_label = tk.Label(tab1, text="Password", font=("Arial", 18))
         password_label.pack(pady=10)
 
-        password_entry = tk.Entry(self.window, show="*", font=("Arial", 16), relief='sunken', bd=3)
+        password_entry = tk.Entry(tab1, show="*", font=("Arial", 16), relief='sunken', bd=3)
         password_entry.pack(pady=5, fill='x', padx=20)
 
         # Function to show/hide password based on Checkbutton state
@@ -111,17 +127,56 @@ class ManualCabinet:
 
         # Variable to track the state of the Checkbutton
         show_password_var = tk.BooleanVar()
-        show_password_checkbutton = tk.Checkbutton(self.window, text="Show Password", variable=show_password_var,
+        show_password_checkbutton = tk.Checkbutton(tab1, text="Show Password", variable=show_password_var,
                                                     command=toggle_password_visibility, font=("Arial", 14))
         show_password_checkbutton.pack(anchor='w', padx=20, pady=(5, 10))  # Align to the left with padding
 
-        enter_button = tk.Button(self.window, text="Enter", font=("Arial", 17), bg=motif_color, fg='white', relief="raised", bd=3, pady=7)
+        enter_button = tk.Button(tab1, text="Enter", font=("Arial", 18, 'bold'), bg=motif_color, fg='white', relief="raised", bd=3, pady=7, padx=40)
         enter_button.pack(anchor='center', pady=(0, 10))
-
 
         # Bind the FocusIn event to show the keyboard when focused
         username_entry.bind("<FocusIn>", lambda event: self._show_keyboard())
         password_entry.bind("<FocusIn>", lambda event: self._show_keyboard())
+
+
+
+        #TAB 2 - QR SCANNING TO LOCK OUR UNLOCK THE DOOR
+
+        # QR Code Scanner Icon
+        original_logo_img = Image.open(os.path.join(os.path.dirname(__file__), 'images', 'scanning_icon.png')).resize((170, 170), Image.LANCZOS)
+        logo_img = ImageTk.PhotoImage(original_logo_img)
+        logo_label = tk.Label(tab2, image=logo_img)
+        logo_label.image = logo_img  # Keep reference to avoid garbage collection
+        logo_label.pack(side=tk.TOP, pady=(10, 10))
+
+        # Instruction Message
+        instruction_label = tk.Label(tab2, text=f"Please scan your qrcode\nto lock or unlock the door", font=("Arial", 18), fg='black')
+        instruction_label.pack(pady=10)
+
+        # QR Code Entry Frame
+        entry_frame = tk.Frame(tab2)
+        entry_frame.pack(pady=(5, 3))
+
+        # Entry widget to capture QR code input
+        self.qr_entry = tk.Entry(tab2, font=("Arial", 14), justify='center', width=35, relief='flat', bd=3)
+        self.qr_entry.pack(pady=(10, 5))
+        self.qr_entry.focus_set()
+
+        # Label to display the contents corresponding to qrcode
+        self.result_label = tk.Label(tab2, text="", font=("Arial", 15), fg='green', pady=2, height=5)
+        self.result_label.pack()
+
+        # Bind the tab change event
+        notebook.bind("<<NotebookTabChanged>>", self._on_tab_change)
+
+        # # Bind the Enter key to process the QR code when scanned
+        # self.qr_entry.bind("<Return>", self.process_qrcode)
+
+    def _on_tab_change(self, event):
+        # Check if the selected tab is tab2 and hide the keyboard
+        notebook = event.widget
+        if notebook.index(notebook.select()) == 1:  # Index 1 for tab2
+            self._hide_keyboard()
 
 
     def _show_keyboard(self):
