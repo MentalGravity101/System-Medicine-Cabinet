@@ -9,12 +9,13 @@ font_style = 'Helvetica'
 font_size = 13
 
 class OnScreenKeyboard:
-    def __init__(self, parent_frame):
+    def __init__(self, parent_frame, on_close_callback=None):
         self.parent_frame = parent_frame
         self.keyboard_frame = None
         self.capslock_on = False  # Ensure CapsLock is off by default (lowercase)
         self.symbols_on = False   # To track whether symbols are being displayed
         self.keys_buttons = {}  # Store button references for updating keys dynamically
+        self.on_close_callback = on_close_callback  # Callback for close button
 
         # Load and resize images for CapsLock button
         self.capslock_image_on = ImageTk.PhotoImage(
@@ -53,11 +54,16 @@ class OnScreenKeyboard:
             image=self.close_image,
             width=55, height=55,
             bg=self.keyboard_frame['bg'],
-            command=lambda: (self.hide_keyboard(), self.parent_frame.focus_set(), returnClose()),  # Ensure hide_keyboard is called correctly
+            command=lambda: (self.hide_keyboard(), self.parent_frame.focus_set(), self._returnClose()),  # Ensure hide_keyboard is called correctly
             borderwidth=0, padx=0, pady=0  # Set padding to zero for tighter fit
         )
         # Place the close button at the top-right corner
         close_button.place(x=frame_width - 60, y=5)  # Adjust 'x' to the right edge minus button width
+
+    def _returnClose(self):
+        """Close the keyboard and return a value via callback if provided."""
+        if self.on_close_callback:
+            self.on_close_callback() 
 
 
     def on_key_press(self, key):
@@ -269,9 +275,6 @@ class OnScreenKeyboard:
             self.keyboard_frame.destroy()
             self.keyboard_frame = None
 
-    def returnClose():
-        return "Closed"
-
 
 
 class NumericKeyboard:
@@ -384,5 +387,5 @@ class NumericKeyboard:
                 widget.bind("<FocusIn>", show_keyboard)
                 widget.bind("<FocusOut>", hide_keyboard)
         
-    def returnClose():
+    def _returnClose():
         return "Closed"

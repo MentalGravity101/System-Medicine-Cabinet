@@ -59,6 +59,9 @@ default_fg_color="#fff" # Default foreground color
 
 #function for authentication during the login frame
 def authenticate_user(username, password):
+    global Username, Password
+    Username = username
+    Password = password
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE username = %s AND password = %s", [username, password])
     user = cursor.fetchone()
@@ -131,10 +134,6 @@ def create_login_frame(container):
     show_password_checkbutton = tk.Checkbutton(box_frame, text="Show Password", variable=show_password_var,
                                                 command=toggle_password_visibility, bg='#ffffff', font=("Arial", 14))
     show_password_checkbutton.pack(anchor='w', padx=(5, 0), pady=(5, 10))  # Align to the left with padding
-
-    global username, password
-    username = username_entry.get()
-    password = password_entry.get()
 
     login_button = tk.Button(box_frame, text="Login", font=("Arial", 16), 
                              command=lambda: authenticate_user(username_entry.get(), password_entry.get()), 
@@ -925,13 +924,13 @@ def show_doorLog():
 
     # Add the first new button (e.g., 'Button 1')
     lock_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'minus_icon.png')).resize((25, 25), Image.LANCZOS))
-    lock_button = tk.Button(button_frame, text="Lock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=lock_icon, command=lambda: ManualCabinet(root=content_frame, keyboardframe=content_frame))
+    lock_button = tk.Button(button_frame, text="Lock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=lock_icon, command=lambda: ManualCabinet(root=content_frame, keyboardframe=content_frame, userName=Username, passWord=Password))
     lock_button.image = lock_icon
     lock_button.grid(row=0, column=0, padx=20, pady=(12, ), sticky='ew')
 
     # Add the second new button (e.g., 'Button 2')
     unlock_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'add_icon.png')).resize((25, 25), Image.LANCZOS))
-    unlock_button = tk.Button(button_frame, text="Unlock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=unlock_icon, command=lambda: ManualCabinet(content_frame, content_frame))
+    unlock_button = tk.Button(button_frame, text="Unlock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=unlock_icon, command=lambda: ManualCabinet(content_frame, content_frame, userName=Username, passWord=Password))
     unlock_button.image = unlock_icon
     unlock_button.grid(row=0, column=1, padx=20, pady=(12, 7), sticky='ew')
 

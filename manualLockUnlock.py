@@ -8,14 +8,18 @@ from keyboard import OnScreenKeyboard
 motif_color = '#42a7f5'
 
 class ManualCabinet:
-    def __init__(self, root, keyboardframe):
+    def __init__(self, root, keyboardframe, userName, passWord):
+
+        self.user_Username = userName
+        self.user_Password = passWord
+
         self.window = tk.Toplevel(root, relief='raised', bd=5)
         self.window.overrideredirect(True)  # Remove the title bar
         self.window.resizable(width=False, height=False)
 
         self.keyboardFrame = keyboardframe
         # Instantiate OnScreenKeyboard
-        self.keyboard = OnScreenKeyboard(self.keyboardFrame)
+        self.keyboard = OnScreenKeyboard(self.keyboardFrame, on_close_callback=self._restore_window)
         self.keyboard.create_keyboard()
         self.keyboard.hide_keyboard()  # Initially hide the keyboard
 
@@ -33,11 +37,15 @@ class ManualCabinet:
         else:
             self.close_img = None
 
+        print("Username: ", self.user_Username)
+        print("Password: ", self.user_Password)
+
         # Create the UI components
         self._create_ui()
 
         # Adjust only the height based on the message length
         self._adjust_window_height()
+
 
 
     def _adjust_window_height(self):
@@ -107,39 +115,14 @@ class ManualCabinet:
                                                     command=toggle_password_visibility, font=("Arial", 14))
         show_password_checkbutton.pack(anchor='w', padx=20, pady=(5, 10))  # Align to the left with padding
 
-        # Button Frame
-        button_frame = tk.Frame(self.window)
-        button_frame.pack(fill=tk.X)
-        button_frame.grid_columnconfigure(0, weight=1)  # Center buttons
+        enter_button = tk.Button(self.window, text="Enter", font=("Arial", 17), bg=motif_color, fg='white', relief="raised", bd=3, pady=7)
+        enter_button.pack(anchor='center', pady=(0, 10))
 
-        enter_button = tk.Button(button_frame, text="Enter", font=("Arial", 20), bg='white', fg='black', relief="raised", bd=3, padx=20, pady=7)
-        enter_button.pack()
-
-        qr_button = tk.Button(button_frame, text="QR Code", font=("Arial", 20), bg='white', fg='black', relief="raised", bd=3, padx=20, pady=7)
-        qr_button.pack()
 
         # Bind the FocusIn event to show the keyboard when focused
         username_entry.bind("<FocusIn>", lambda event: self._show_keyboard())
         password_entry.bind("<FocusIn>", lambda event: self._show_keyboard())
 
-        # Bind FocusOut to hide the keyboard when losing focus (optional)
-        username_entry.bind("<FocusOut>", lambda event: self._hide_keyboard())
-        password_entry.bind("<FocusOut>", lambda event: self._hide_keyboard())
-
-        if self.keyboard.returnClose == "Closed":
-            self._restore_window()
-
-    # def _monitor_keyboard(self):
-    #     """Monitor the existence of the keyboard frame and adjust the Toplevel window position accordingly."""
-    #     if self.keyboard.winfo_exists():
-    #         # Move the window up when keyboard exists
-    #         self._move_window_up()
-    #     else:
-    #         # Restore the window to its original position
-    #         self._restore_window()
-
-    #     # Continue monitoring every 100 milliseconds
-    #     self.window.after(100, self._monitor_keyboard)
 
     def _show_keyboard(self):
         """Show the keyboard and move the window up."""
