@@ -142,7 +142,8 @@ def create_login_frame(container):
 
     login_frame.grid(row=0, column=0, sticky='news')
 
-    qrlogin= tk.Label(box_frame, text="or Login using QR code", fg="black", cursor="hand2", bg='white', font=('Arial', 13))
+
+    qrlogin= tk.Button(box_frame, text="or Login using QR code", fg="black", cursor="hand2", bg='white', relief="flat", font=('Arial', 13), command=lambda: QRLogin(login_frame, callback=authenticate_user))
     qrlogin.pack()
 
     # Create an instance of OnScreenKeyboard and bind it to entry widgets
@@ -1124,8 +1125,7 @@ def delete_selected_user(tree):
 def add_user():
     global conn
     try:
-        # Ensure the connection is active
-        if conn.is_connected() == False:
+        if not conn.is_connected():
             conn = mysql.connector.connect(
                 host="localhost",
                 user="root",
@@ -1144,21 +1144,17 @@ def add_user():
         return
     
     clear_frame()
-
-    # Ensure content_frame expands to fill the available width
     content_frame.grid_columnconfigure(0, weight=1)
 
     title_label = tk.Label(content_frame, text="ACCOUNT SETTINGS", bg=motif_color, fg="white", font=('Arial', 25, 'bold'), height=2, relief='groove', bd=1)
     title_label.pack(fill='both')
 
-    # Create input frame and ensure it expands horizontally
     input_frame = tk.LabelFrame(content_frame, text='ADD NEW USER ACCOUNT', font=('Arial', 14), pady=20, padx=15, relief='raised', bd=5)
-    input_frame.pack(pady=30, padx=20, anchor='center')  # Sticky set to 'ew' for full width
+    input_frame.pack(pady=30, padx=20, anchor='center')
 
-    # Instantiate OnScreenKeyboard
     keyboard = OnScreenKeyboard(content_frame)
     keyboard.create_keyboard()
-    keyboard.hide_keyboard()  # Initially hide the keyboard
+    keyboard.hide_keyboard()
 
     tk.Label(input_frame, text="Username", font=("Arial", 14)).grid(row=1, column=0, padx=10, pady=10)
     username_entry = tk.Entry(input_frame, font=("Arial", 14), width=20)
@@ -1180,53 +1176,64 @@ def add_user():
     accountType_combobox = ttk.Combobox(input_frame, font=("Arial", 14), values=["Admin", "Staff"], width=20)
     accountType_combobox.grid(row=5, column=1, padx=10, pady=10)
 
-    # Bind the focus events to show/hide the keyboard for each widget
     for widget in [username_entry, password_entry, confirm_password_entry, position_combobox, accountType_combobox]:
         widget.bind("<FocusIn>", lambda e: keyboard.show_keyboard())
         widget.bind("<FocusOut>", lambda e: keyboard.hide_keyboard())
 
-
     def add_new_user():
-        new_username = username_entry.get()
-        new_password = password_entry.get()
-        confirm_password = confirm_password_entry.get()
-        new_position = position_combobox.get()
-        new_accountType = accountType_combobox.get()
+        try:
+            new_username = username_entry.get()
+            new_password = password_entry.get()
+            confirm_password = confirm_password_entry.get()
+            new_position = position_combobox.get()
+            new_accountType = accountType_combobox.get()
 
-        if validate_all_fields_filled(username_entry, password_entry, confirm_password_entry, position_combobox, accountType_combobox):
-            if validate_user_info('add', new_username, new_password, confirm_password, new_position, new_accountType):
+            if validate_all_fields_filled(username_entry, password_entry, confirm_password_entry, position_combobox, accountType_combobox):
+                if validate_user_info('add', new_username, new_password, confirm_password, new_position, new_accountType):
 
-                cursor = conn.cursor()
-                cursor.execute("INSERT INTO users (username, password, position, accountType) VALUES (%s, %s, %s, %s)",
-                            (new_username, new_password, new_position, new_accountType))
-                conn.commit()
+                    # Generate the QR code data string
+                    qr_code_data = f"{new_username} - {new_position}"
 
-                # Generate QR code from username and position
-                qr_path = generate_qrcode(new_username, new_position)
+                    # Insert the user into the database with qrcode_data
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        INSERT INTO users (username, password, position, accountType, qrcode_data)
+                        VALUES (%s, %s, %s, %s, %s)
+                    """, (new_username, new_password, new_position, new_accountType, qr_code_data))
+                    conn.commit()
 
-                # Show the QR code in the message box
-                message_box = CustomMessageBox(
-                    root=root,
-                    title="SUCCESS",
-                    message=f'Successfully added new user {new_username}',
-                    icon_path=qr_path,
-                )
+                    # Generate and save QR code image temporarily
+                    qr_path = generate_qrcode(qr_code_data)
 
-                conn.close()
-                show_account_setting()  # Refresh Treeview with updated user data
+                    # Display success message with QR code
+                    message_box = CustomMessageBox(
+                        root=root,
+                        title="SUCCESS",
+                        message=f'Successfully added new user {new_username}',
+                        icon_path=qr_path,
+                    )
+                    show_account_setting()
 
-            else:
-                message_box = CustomMessageBox(
-                    root=root,
-                    title="ERROR",
-                    message="Please fill in all the fields.",
-                    color="red",  # Background color for warning,
-                    icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
-                    sound_file="sounds/FillAllFields.mp3"
-                )
+                else:
+                    message_box = CustomMessageBox(
+                        root=root,
+                        title="ERROR",
+                        message="Please fill in all the fields.",
+                        color="red",
+                        icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
+                        sound_file="sounds/FillAllFields.mp3"
+                    )
+        except mysql.connector.Error as err:
+            messagebox.showerror("Database Error", f"Error: {err}")
+        finally:
+            # Always close the database connection
+            conn.close()
 
-    def generate_qrcode(username, position):
-        qr_data = f"{username} - {position}"  # Combine username and position
+    def generate_qrcode(qr_data):
+        # Ensure the 'users' directory exists
+        qr_dir = os.path.join(os.path.dirname(__file__), 'users')
+        os.makedirs(qr_dir, exist_ok=True)
+        
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -1238,14 +1245,12 @@ def add_user():
 
         qr_img = qr.make_image(fill='black', back_color='white')
         
-        # Save the QR code image temporarily (or use in-memory option with BytesIO)
-        qr_path = os.path.join(os.path.dirname(__file__), 'images', f"{username}_qrcode.png")
+        # Save the QR code image temporarily for display
+        qr_path = os.path.join(qr_dir, f"{qr_data.split(' - ')[0]}_qrcode.png")
         qr_img.save(qr_path)
         
         return qr_path
 
-
-    # Cancel and Save buttons
     cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
     cancel_button = tk.Button(input_frame, text="Cancel", font=("Arial", 16), bg=motif_color, fg='white', command=show_account_setting, width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=cancel_img, pady=5)
     cancel_button.image = cancel_img

@@ -179,6 +179,7 @@ class LockUnlock:
         # Bind the tab change event
         notebook.bind("<<NotebookTabChanged>>", self._on_tab_change)
 
+    #Function that validates user login credentials manually
     def _validate_credentials(self):
         username = self.username_entry.get()
         password = self.password_entry.get()
@@ -246,6 +247,7 @@ class LockUnlock:
             self.window.geometry(f"+{self.original_position[0]}+{self.original_position[1]}")
             self.is_moved_up = False
 
+    #Function that validates user login credentials via QR code
     def _process_qrcode(self, event):
         if self.qr_entry.winfo_exists():
             scanned_qr_code = self.qr_entry.get().strip()
