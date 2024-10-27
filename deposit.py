@@ -10,10 +10,10 @@ from custom_messagebox import CustomMessageBox
 class MedicineDeposit:
     def __init__(self, name, type_, quantity, unit, expiration_date, db_connection, root):
         self.root = root
-        self.name = name
-        self.type = type_
+        self.name = name.lower()
+        self.type = type_.lower()
         self.quantity = quantity
-        self.unit = unit
+        self.unit = unit.lower()
         self.expiration_date = expiration_date
         self.db_connection = db_connection
 
@@ -61,6 +61,10 @@ class MedicineDeposit:
         qr_code_filepath = self.generate_qr_code()  # Now returns the file path of the QR code image
         qr_code_data = f"{self.name}_{self.expiration_date}"  # Store data string in the database
 
+        # Convert name and type to Title Case for database insertion
+        name_for_db = self.name.capitalize()
+        type_for_db = self.type.capitalize()
+
         # Save the medicine data to the database
         try:
             cursor = self.db_connection.cursor()
@@ -68,8 +72,8 @@ class MedicineDeposit:
                 INSERT INTO medicine_inventory (name, type, quantity, unit, expiration_date, date_stored, qr_code)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
             """
-            cursor.execute(insert_query, (self.name, self.type, self.quantity, self.unit, self.expiration_date,
-                                        datetime.now().date(), qr_code_data))
+            cursor.execute(insert_query, (name_for_db, type_for_db, self.quantity, self.unit,
+                                          self.expiration_date, datetime.now().date(), qr_code_data))
             self.db_connection.commit()
 
             # Show success message and QR code in a custom message box
@@ -87,7 +91,7 @@ class MedicineDeposit:
         CustomMessageBox(
             root=self.root,
             title="Medicine Deposited",
-            message=f"Medicine '{self.name}' has been successfully added!",
+            message=f"Medicine '{self.name.capitalize()}' has been successfully added!",
             icon_path=qr_code_filepath,  # Pass the QR code image path here
             sound_file="success_sound.mp3",  # Optional sound file for added effect
         )
