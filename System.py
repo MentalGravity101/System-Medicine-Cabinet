@@ -573,9 +573,9 @@ def show_medicine_supply():
     search_entry.bind("<FocusOut>", lambda event: (keyboard.hide_keyboard(), add_placeholder(None)))
 
     # Add the search icon next to the Entry widget
-    search_icon_label = tk.Label(search_frame, image=search_img, bg='white')
+    search_icon_label = tk.Button(search_frame, image=search_img, bg='white', command=search_treeview, relief='flat')
     search_icon_label.image = search_img  # Keep a reference to avoid garbage collection
-    search_icon_label.pack(side=tk.RIGHT, padx=(0, 5))
+    search_icon_label.pack(side=tk.RIGHT, fill='both')
 
     buttons = []
 
@@ -836,9 +836,9 @@ def show_doorLog():
     search_entry.insert(0, 'Search here')
 
     # Add the search icon next to the Entry widget
-    search_icon_label = tk.Button(search_frame, image=search_img, bg='white', command=search_treeview)
+    search_icon_label = tk.Button(search_frame, image=search_img, bg='white', command=search_treeview, relief='flat')
     search_icon_label.image = search_img  # Keep a reference to avoid garbage collection
-    search_icon_label.pack(side=tk.RIGHT, padx=(0, 5))
+    search_icon_label.pack(side=tk.RIGHT, fill='both')
 
     # Bind events to the search_entry to show/hide the keyboard
     def focus_in_search(event):
@@ -945,13 +945,13 @@ def show_doorLog():
     button_frame.columnconfigure(3, weight=1)
 
     # Add the first new button (e.g., 'Button 1')
-    lock_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'minus_icon.png')).resize((25, 25), Image.LANCZOS))
+    lock_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'lockWhite_icon.png')).resize((25, 25), Image.LANCZOS))
     lock_button = tk.Button(button_frame, text="Lock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=lock_icon, command=lambda: LockUnlock(content_frame, content_frame, Username, Password, ser, "lock"))
     lock_button.image = lock_icon
     lock_button.grid(row=0, column=0, padx=20, pady=(12, ), sticky='ew')
 
     # Add the second new button (e.g., 'Button 2')
-    unlock_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'add_icon.png')).resize((25, 25), Image.LANCZOS))
+    unlock_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'unlockWhite_icon.png')).resize((35, 35), Image.LANCZOS))
     unlock_button = tk.Button(button_frame, text="Unlock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=unlock_icon, command=lambda: LockUnlock(content_frame, content_frame, Username, Password, ser, "unlock"))
     unlock_button.image = unlock_icon
     unlock_button.grid(row=0, column=1, padx=20, pady=(12, 7), sticky='ew')
@@ -1255,9 +1255,6 @@ def add_user():
                     )
         except mysql.connector.Error as err:
             messagebox.showerror("Database Error", f"Error: {err}")
-        finally:
-            # Always close the database connection
-            conn.close()
 
     def generate_qrcode(qr_data):
         # Ensure the 'users' directory exists

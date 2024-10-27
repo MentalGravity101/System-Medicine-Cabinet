@@ -9,6 +9,7 @@ from custom_messagebox import CustomMessageBox
 import serial
 from withdrawal import QRCodeScanner
 import mysql.connector
+from datetime import datetime
 
 
 motif_color = '#42a7f5'
@@ -181,28 +182,57 @@ class LockUnlock:
 
     #Function that validates user login credentials manually
     def _validate_credentials(self):
+        conn = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="",
+            database="db_medicine_cabinet"
+            )
+        cursor = conn.cursor()
+
         username = self.username_entry.get()
         password = self.password_entry.get()
 
         if username == self.user_Username and password == self.user_Password:
+
+            search_query = "SELECT username, accountType, position FROM users WHERE username = %s AND password = %s"
+            cursor.execute(search_query, (username, password))
+            result = cursor.fetchone()
+            userName, accountType, position = result
+
+            insert_query = """
+                INSERT INTO door_logs (username, accountType, position, date, time, action_taken)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """
+            cursor.execute(insert_query, (userName, accountType, position, datetime.now().date(), datetime.now().time(), self.action))
+            conn.commit()
             self.window.destroy()
             if self.action == "unlock":
                 self._unlock_door()
+
                 message_box = CustomMessageBox(
                     root=self.keyboardFrame,
                     title="Success",
-                    message="Door lock is now unlock.",
+                    message="Door lock is now unlocked.",
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
-                    ok_callback=message_box.destroy
+                    ok_callback=lambda: message_box.destroy()
                 )
             elif self.action == "withdraw":
                 self._unlock_door()
                 message_box = CustomMessageBox(
                     root=self.keyboardFrame,
                     title="Success",
-                    message="Door lock is now unlock\nYou may now proceed to withdraw medicine.",
+                    message="Door lock is now unlocked\nYou may now proceed to withdraw medicine.",
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
                     ok_callback= lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame))
+                )
+            elif self.action == "lock":
+                self._lock_door()
+                message_box = CustomMessageBox(
+                    root=self.keyboardFrame,
+                    title="Success",
+                    message="Door lock is now locked.",
+                    icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png')
                 )
         else:
             message_box = CustomMessageBox(
@@ -249,6 +279,14 @@ class LockUnlock:
 
     #Function that validates user login credentials via QR code
     def _process_qrcode(self, event):
+        conn = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="",
+            database="db_medicine_cabinet"
+            )
+        cursor = conn.cursor()
+
         if self.qr_entry.winfo_exists():
             scanned_qr_code = self.qr_entry.get().strip()
             print(f"Final scanned QR code: {scanned_qr_code}")  # Debugging statement
@@ -273,7 +311,17 @@ class LockUnlock:
                     result = cursor.fetchone()
 
                     if result:
+                        search_query = "SELECT username, accountType, position FROM users WHERE qrcode_data = %s"
+                        cursor.execute(search_query, (scanned_qr_code,))
+                        user_result = cursor.fetchone()
+                        userName, accountType, position = user_result
                         self.window.destroy()
+                        insert_query = """
+                            INSERT INTO door_logs (username, accountType, position, date, time, action_taken)
+                            VALUES (%s, %s, %s, %s, %s, %s)
+                        """
+                        cursor.execute(insert_query, (userName, accountType, position, datetime.now().date(), datetime.now().time(), self.action))
+                        conn.commit()
                         if self.action == "unlock":
                             self._unlock_door()
                             message_box = CustomMessageBox(
@@ -285,12 +333,21 @@ class LockUnlock:
                             )
                         elif self.action == "withdraw":
                             self._unlock_door()
+                            
                             message_box = CustomMessageBox(
                                 root=self.keyboardFrame,
                                 title="Success",
                                 message="Door lock is now unlock\nYou may now proceed to withdraw medicine.",
                                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
                                 ok_callback= lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame))
+                            )
+                        elif self.action == "lock":
+                            self._lock_door()
+                            message_box = CustomMessageBox(
+                                root=self.keyboardFrame,
+                                title="Success",
+                                message="Door lock is now locked.",
+                                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png')
                             )
                     else:
                         # If no match found, show an error
