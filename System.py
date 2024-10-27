@@ -314,6 +314,34 @@ def unbind_activity_events():
 def deposit_window():
     clear_frame()
 
+    db_connection = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="",
+        database="db_medicine_cabinet"
+    )
+    # Fetch data from the database
+    def fetch_medicine_data():
+        cursor = db_connection.cursor()
+
+        # Fetch distinct names
+        cursor.execute("SELECT DISTINCT name FROM medicine_list")
+        names = [row[0] for row in cursor.fetchall()]
+
+        # Fetch distinct types
+        cursor.execute("SELECT DISTINCT type FROM medicine_list")
+        types = [row[0] for row in cursor.fetchall()]
+
+        # Fetch distinct units
+        cursor.execute("SELECT DISTINCT unit FROM medicine_list")
+        units = [row[0] for row in cursor.fetchall()]
+
+        cursor.close()
+        return names, types, units
+
+    # Retrieve data from the database
+    names, types, units = fetch_medicine_data()
+
     # Ensure content_frame expands to fill the available width
     content_frame.grid_columnconfigure(0, weight=1)
 
@@ -333,21 +361,23 @@ def deposit_window():
     numKeyboard.create_keyboard()
     numKeyboard.hide()
 
-    # Labels and input widgets for the form
+    # Name Combobox
     tk.Label(input_frame, text="Name of Medicine", font=("Arial", 16)).grid(row=0, column=0, padx=(30, 10), pady=10, sticky='w')
-    name_combobox = ttk.Combobox(input_frame, font=("Arial", 16), width=20)
+    name_combobox = ttk.Combobox(input_frame, font=("Arial", 16), width=20, values=names)
     name_combobox.grid(row=0, column=1, padx=10, pady=10, sticky='ew')
 
+    # Type Combobox
     tk.Label(input_frame, text="Type", font=("Arial", 16)).grid(row=1, column=0, padx=(30, 10), pady=10, sticky='w')
-    type_combobox = ttk.Combobox(input_frame, font=("Arial", 16), width=20)
+    type_combobox = ttk.Combobox(input_frame, font=("Arial", 16), width=20, values=types)
     type_combobox.grid(row=1, column=1, padx=10, pady=10, sticky='ew')
 
     tk.Label(input_frame, text="Quantity", font=("Arial", 16)).grid(row=2, column=0, padx=(30, 10), pady=10, sticky='w')
     quantity_spinbox = tk.Spinbox(input_frame, from_=0, to=100, font=("Arial", 16), width=20)
     quantity_spinbox.grid(row=2, column=1, padx=10, pady=10, sticky='ew')
 
+    # Unit Combobox
     tk.Label(input_frame, text="Unit", font=("Arial", 16)).grid(row=3, column=0, padx=(30, 10), pady=10, sticky='w')
-    unit_combobox = ttk.Combobox(input_frame, font=("Arial", 16), width=20)
+    unit_combobox = ttk.Combobox(input_frame, font=("Arial", 16), width=20, values=units)
     unit_combobox.grid(row=3, column=1, padx=10, pady=10, sticky='ew')
 
     tk.Label(input_frame, text="Expiration Date", font=("Arial", 16)).grid(row=4, column=0, padx=(30, 10), pady=10, sticky='w')
