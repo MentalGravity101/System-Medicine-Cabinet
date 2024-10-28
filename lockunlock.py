@@ -380,14 +380,47 @@ class LockUnlock:
                 )
                 print("Lock command sent")
             else:
-                message_box = CustomMessageBox(
+                # Recursive function to keep checking the sensors
+                def recheck_sensors(warning_box):
+                    self.arduino.write(b'check_sensors\n')
+                    time.sleep(0.1)
+                    if self.arduino.in_waiting > 0:
+                        response = self.arduino.readline().decode().strip()
+                        if response == "Object detected":
+                            # Destroy the warning box since doors are properly closed now
+                            warning_box.destroy()
+                            # Send lock command and show success message
+                            self.arduino.write(b'lock\n')
+                            CustomMessageBox(
+                                root=self.keyboardFrame,
+                                title="Success",
+                                message="Door lock is now locked.",
+                                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png')
+                            )
+                            print("Lock command sent after recheck")
+                        else:
+                            # Display warning again if doors are still not closed properly
+                            warning_box = CustomMessageBox(
+                                root=self.keyboardFrame,
+                                title="Warning",
+                                color='red',
+                                message="Doors are not properly closed\nPlease close both the doors properly.",
+                                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
+                                ok_callback=lambda: recheck_sensors(warning_box)  # Reattach recheck_sensors with warning_box as callback
+                            )
+                            print("Rechecking sensors: No object detected.")
+                
+                # Show warning message with the recheck callback
+                warning_box = CustomMessageBox(
                     root=self.keyboardFrame,
                     title="Warning",
                     color='red',
                     message="Doors are not properly closed\nPlease close both the doors properly.",
-                    icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+                    icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
+                    ok_callback=lambda: recheck_sensors(warning_box)  # Attach recheck_sensors with warning_box as callback
                 )
                 print("Lock command aborted: No object detected.")
+
 
     # Function to send the unlock command
     def _unlock_door(self):

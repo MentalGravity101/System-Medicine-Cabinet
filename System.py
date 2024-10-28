@@ -399,7 +399,7 @@ def deposit_window():
         unit = unit_combobox.get()
         expiration_date = expiration_date_entry.get_date()
 
-        deposit = MedicineDeposit(name, type_, quantity, unit, expiration_date, conn, main_ui_frame)
+        deposit = MedicineDeposit(name, type_, quantity, unit, expiration_date, conn, main_ui_frame, content_frame, content_frame, Username, Password, ser, "unlock")
 
         if deposit.validate_inputs():
             deposit.save_to_database()
