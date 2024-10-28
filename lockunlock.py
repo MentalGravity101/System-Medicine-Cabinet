@@ -10,6 +10,7 @@ import serial
 from withdrawal import QRCodeScanner
 import mysql.connector
 from datetime import datetime
+import time
 
 
 motif_color = '#42a7f5'
@@ -228,12 +229,6 @@ class LockUnlock:
                 )
             elif self.action == "lock":
                 self._lock_door()
-                message_box = CustomMessageBox(
-                    root=self.keyboardFrame,
-                    title="Success",
-                    message="Door lock is now locked.",
-                    icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png')
-                )
         else:
             message_box = CustomMessageBox(
             root=self.keyboardFrame,
@@ -366,8 +361,33 @@ class LockUnlock:
 
     # Function to send the lock command
     def _lock_door(self):
-        self.arduino.write(b'lock\n')  # Send the "lock" command to the Arduino
-        print("Lock command sent")
+        # Step 1: Check the sensors before sending the lock command
+        self.arduino.write(b'check_sensors\n')  # Send "check_sensors" command to Arduino
+        time.sleep(0.1)  # Brief delay to allow Arduino to process and respond
+
+        # Step 2: Read Arduino's response
+        if self.arduino.in_waiting > 0:
+            response = self.arduino.readline().decode().strip()
+            
+            # Step 3: Proceed based on the sensor check response
+            if response == "Object detected":
+                self.arduino.write(b'lock\n')  # Send the "lock" command to the Arduino
+                message_box = CustomMessageBox(
+                    root=self.keyboardFrame,
+                    title="Success",
+                    message="Door lock is now locked.",
+                    icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png')
+                )
+                print("Lock command sent")
+            else:
+                message_box = CustomMessageBox(
+                    root=self.keyboardFrame,
+                    title="Warning",
+                    color='red',
+                    message="Doors are not properly closed\nPlease close both the doors properly.",
+                    icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+                )
+                print("Lock command aborted: No object detected.")
 
     # Function to send the unlock command
     def _unlock_door(self):

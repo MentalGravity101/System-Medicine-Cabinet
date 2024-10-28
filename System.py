@@ -268,10 +268,10 @@ def logout(reason):
     account_setting_button = None
     if reason == 'inactivity':
         message_box = CustomMessageBox(
-            root=root,
-            title="Automatic Logout",
+            root=login_frame,
+            title="Session Expired",
             message="You have been logged-out due to inactivity.",
-            color=motif_color,  # Background color for warning
+            color='red',  # Background color for warning
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'logout_icon.png'),
             sound_file ="sounds/automaticLogout.mp3",
         )
@@ -293,7 +293,7 @@ def reset_timer(event=None):
 
 #Function for automatic logout during idle
 def automatic_logout():
-    print("User has been automatically logged out due to inactivity.")
+    print("\nUser has been automatically logged out due to inactivity.")
     logout('inactivity')
 
 #Function for binding user activities in the Main UI Frame and toplevels
@@ -1139,7 +1139,7 @@ def delete_selected_user(tree):
             show_account_setting()
 
         def no_delete():
-            print("User deletion canceled.")
+            print("\nUser deletion canceled.")
 
         CustomMessageBox(
             root=tree, 
@@ -1163,7 +1163,7 @@ def add_user():
                 database="db_medicine_cabinet"
             )
     except mysql.connector.Error as err:
-        print(f"Error reconnecting to the database: {err}")
+        print(f"\nError reconnecting to the database: {err}")
         message_box = CustomMessageBox(
             root=root,
             title="ERROR",
@@ -1524,12 +1524,12 @@ def on_wifi_ui_close():
 # Function to send the lock command
 def lock_door():
     ser.write(b'lock\n')  # Send the "lock" command to the Arduino
-    print("Lock command sent")
+    print("\nLock command sent")
 
 # Function to send the unlock command
 def unlock_door():
     ser.write(b'unlock\n')  # Send the "unlock" command to the Arduino
-    print("Unlock command sent")
+    print("\nUnlock command sent")
 
 
 #-----------------------------------------------MAIN------------------------------------------------------
@@ -1563,13 +1563,13 @@ def main():
         try:
             ser = serial.Serial('COM5', 9600)  # Port of the Arduino
             time.sleep(2)  # Wait for the connection to establish
-            print("Serial connection established")
+            print("\nSerial connection established")
             # Once connected, proceed to show login_frame
             login_frame = create_login_frame(container)
         
             login_frame.tkraise()
         except serial.SerialException as e:
-            print(f"Error opening serial port: {e}")
+            print(f"\nError opening serial port: {e}")
             ser = None  # Set to None if the connection fails
             show_retry_window()  # Show retry window if connection fails
 
@@ -1606,7 +1606,7 @@ def main():
     # Close the serial connection when the application exits, if it's open
     if ser is not None:
         ser.close()
-        print("Serial connection closed")
+        print("\nSerial connection closed")
 
 if __name__ == "__main__":
     main()
