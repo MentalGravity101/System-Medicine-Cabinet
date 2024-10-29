@@ -16,6 +16,7 @@ class QRCodeScanner:
         self.top.resizable(width=False, height=False)
 
         self.top.focus_set()
+        self.top.grab_set()
 
         # Title Frame
         self.title_frame = tk.Frame(self.top, bg=motif_color)

@@ -9,13 +9,14 @@ font_style = 'Helvetica'
 font_size = 13
 
 class OnScreenKeyboard:
-    def __init__(self, parent_frame, on_close_callback=None):
+    def __init__(self, parent_frame, on_close_callback=None, toplevel=None):
         self.parent_frame = parent_frame
         self.keyboard_frame = None
         self.capslock_on = False  # Ensure CapsLock is off by default (lowercase)
         self.symbols_on = False   # To track whether symbols are being displayed
         self.keys_buttons = {}  # Store button references for updating keys dynamically
         self.on_close_callback = on_close_callback  # Callback for close button
+        self.toplevel = toplevel
 
         # Load and resize images for CapsLock button
         self.capslock_image_on = ImageTk.PhotoImage(
@@ -30,6 +31,8 @@ class OnScreenKeyboard:
         for widget in self.parent_frame.winfo_children():
             if isinstance(widget, tk.Entry) or isinstance(widget, ttk.Combobox):
                 widget.bind("<FocusIn>", self.show_keyboard)  # Show keyboard on focus
+
+        
 
     def create_keyboard(self):
         if self.keyboard_frame:

@@ -14,9 +14,12 @@ import time
 
 
 motif_color = '#42a7f5'
+tab1 = None
+tab2 = None
 
 class LockUnlock:
-    def __init__(self, root, keyboardframe, userName, passWord, arduino, action):
+    def __init__(self, root, keyboardframe, userName, passWord, arduino, action, parentHeader, exit_callback=None, container=None):
+
 
         self.user_Username = userName
         self.user_Password = passWord
@@ -24,22 +27,23 @@ class LockUnlock:
         self.arduino = arduino
         self.action = action
 
-        self.window = tk.Toplevel(root, relief='raised', bd=5)
-        self.window.overrideredirect(True)  # Remove the title bar
-        self.window.resizable(width=False, height=False)
+        self.exit_callback = exit_callback
+
+        self.window = root
+
+        self.parentHeader = parentHeader
+
+        self.container = container
+        
+        for widget in self.window.winfo_children():
+            widget.destroy()
 
         self.keyboardFrame = keyboardframe
         # Instantiate OnScreenKeyboard
-        self.keyboard = OnScreenKeyboard(self.keyboardFrame, on_close_callback=self._restore_window)
+        self.keyboard = OnScreenKeyboard(self.keyboardFrame)
         self.keyboard.create_keyboard()
         self.keyboard.hide_keyboard()  # Initially hide the keyboard
 
-        self.window.attributes('-topmost', True)
-        self.window.focus_set()
-
-        # Store original window position
-        self.original_position = None
-        self.is_moved_up = False  # Flag to track if the window is moved up
 
         # Add the close button icon at the top-right corner
         self.close_icon_path = os.path.join(os.path.dirname(__file__), 'images', 'cancel_icon.png')
@@ -48,38 +52,14 @@ class LockUnlock:
         else:
             self.close_img = None
 
+        self._disable_container_buttons()
+        self._enable_all()
+
         # Create the UI components
         self._create_ui()
 
-        # Adjust only the height based on the message length
-        self._adjust_window_height()
 
 
-
-    def _adjust_window_height(self):
-        """Adjust window height based on the message length while keeping the width fixed."""
-        window_width = 620  # Default width
-        max_label_width = 550  # Maximum width for the message label
-
-        # Allow widgets to calculate their required dimensions
-        self.window.update_idletasks()
-
-        # Calculate the required height of the message label
-        required_height = self.window.winfo_reqheight()
-
-        # Center the window on the screen with the new height
-        screen_width = self.window.winfo_screenwidth()
-        screen_height = self.window.winfo_screenheight()
-
-        # Calculate the position to center the window
-        position_x = int((screen_width / 2) - (window_width / 2))
-        position_y = int((screen_height / 2) - (required_height / 2))
-
-        # Store the original position for later use
-        self.original_position = (position_x, position_y)
-
-        # Set the new geometry with fixed width and dynamic height
-        self.window.geometry(f"{window_width}x{required_height}+{position_x}+{position_y}")
 
     def _create_ui(self):
         
@@ -87,11 +67,12 @@ class LockUnlock:
         title_frame = tk.Frame(self.window, bg=motif_color)
         title_frame.pack(fill=tk.X)
 
-        # Title label
-        title_label = tk.Label(title_frame, text="Login Credentials", font=('Arial', 15, 'bold'), bg=motif_color, fg='white', pady=12)
+        
+        title_label = tk.Label(title_frame, text=f'{self.parentHeader.capitalize()} > {self.action.capitalize()}', font=('Arial', 15, 'bold'), bg=motif_color, fg='white', pady=12)
         title_label.pack(side=tk.LEFT, padx=(10, 0))
 
-        close_button = tk.Button(title_frame, image=self.close_img, command=lambda: [self.window.destroy(), self.keyboard.hide_keyboard()], bg=motif_color, relief=tk.FLAT, bd=0)
+
+        close_button = tk.Button(title_frame, image=self.close_img, command=self._exit_action, bg=motif_color, relief=tk.FLAT, bd=0)
         close_button.image = self.close_img  # Keep a reference to avoid garbage collection
         close_button.pack(side=tk.RIGHT, padx=(0, 10), pady=(0, 5))
 
@@ -104,6 +85,8 @@ class LockUnlock:
         style = ttk.Style()
         style.configure("TNotebook.Tab", font=("Arial", 18, 'bold'), padding=[20, 17])  # Adjust font size and padding
 
+        global tab1, tab2
+
         # Create frames for each tab
         tab1 = ttk.Frame(notebook)
         tab2 = ttk.Frame(notebook)
@@ -112,20 +95,25 @@ class LockUnlock:
         notebook.add(tab1, text="Manual")
         notebook.add(tab2, text="QR Code")
 
-        manual_instruction = tk.Label(tab1, text='Enter your login credentials manually\nto lock or unlock the door.', font=('Arial', 18))
+        if self.action == "withdraw":
+            manual_instruction = tk.Label(tab1, text=f'Enter your username and password manually\nto unlock the door before proceeding to {self.action} medicine.', font=('Arial', 18))
+        elif self.action == "deposit":
+            manual_instruction = tk.Label(tab1, text=f'Enter your username and password manually\nto unlock the door before proceeding to {self.action} medicine.', font=('Arial', 18))
+        else:
+            manual_instruction = tk.Label(tab1, text=f'Enter your username and password manually\nto lock the door.', font=('Arial', 18))
         manual_instruction.pack(pady=10, anchor='center')
 
         username_label = tk.Label(tab1, text="Username", font=("Arial", 18))
         username_label.pack(pady=10)
 
-        self.username_entry = tk.Entry(tab1, font=("Arial", 16), relief='sunken', bd=3)
-        self.username_entry.pack(pady=5, fill='x', padx=20)
+        self.username_entry = tk.Entry(tab1, font=("Arial", 16), relief='sunken', bd=3, width=50)
+        self.username_entry.pack(pady=5, padx=20)
 
         password_label = tk.Label(tab1, text="Password", font=("Arial", 18))
         password_label.pack(pady=10)
 
-        self.password_entry = tk.Entry(tab1, show="*", font=("Arial", 16), relief='sunken', bd=3)
-        self.password_entry.pack(pady=5, fill='x', padx=20)
+        self.password_entry = tk.Entry(tab1, show="*", font=("Arial", 16), relief='sunken', bd=3, width=50)
+        self.password_entry.pack(pady=5, padx=20)
 
         # Function to show/hide password based on Checkbutton state
         def toggle_password_visibility():
@@ -138,15 +126,14 @@ class LockUnlock:
         show_password_var = tk.BooleanVar()
         show_password_checkbutton = tk.Checkbutton(tab1, text="Show Password", variable=show_password_var,
                                                     command=toggle_password_visibility, font=("Arial", 14))
-        show_password_checkbutton.pack(anchor='w', padx=20, pady=(5, 10))  # Align to the left with padding
+        show_password_checkbutton.pack(anchor='center', pady=(5, 10))  # Align to the left with padding
 
         enter_button = tk.Button(tab1, text="Enter", font=("Arial", 18, 'bold'), bg=motif_color, fg='white', relief="raised", bd=3, pady=7, padx=40, command=self._validate_credentials)
         enter_button.pack(anchor='center', pady=(0, 10))
 
         # Bind the FocusIn event to show the keyboard when focused
-        self.username_entry.bind("<FocusIn>", lambda event: self._show_keyboard())
-        self.password_entry.bind("<FocusIn>", lambda event: self._show_keyboard())
-
+        self.username_entry.bind("<FocusIn>", lambda event : self._show_keyboard())
+        self.password_entry.bind("<FocusIn>", lambda event : self._show_keyboard())
 
 
         #TAB 2 - QR SCANNING TO LOCK OUR UNLOCK THE DOOR
@@ -207,7 +194,7 @@ class LockUnlock:
             """
             cursor.execute(insert_query, (userName, accountType, position, datetime.now().date(), datetime.now().time(), self.action))
             conn.commit()
-            self.window.destroy()
+            self._exit_action()
             if self.action == "unlock":
                 self._unlock_door()
 
@@ -225,7 +212,7 @@ class LockUnlock:
                     title="Success",
                     message="Door lock is now unlocked\nYou may now proceed to withdraw medicine.",
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
-                    ok_callback= lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame))
+                    ok_callback= lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame), self._enable_all)
                 )
             elif self.action == "lock":
                 self._lock_door()
@@ -250,27 +237,10 @@ class LockUnlock:
     def _show_keyboard(self):
         """Show the keyboard and move the window up."""
         self.keyboard.show_keyboard()
-        self._move_window_up()
 
     def _hide_keyboard(self):
         """Hide the keyboard and restore the window position."""
         self.keyboard.hide_keyboard()
-        self._restore_window()
-
-    def _move_window_up(self):
-        """Move the window up when the keyboard is shown."""
-        if not self.is_moved_up and self.original_position:
-            # Move the window up by 200 pixels (adjust this as necessary)
-            new_y_position = self.original_position[1] - 200
-            self.window.geometry(f"+{self.original_position[0]}+{new_y_position}")
-            self.is_moved_up = True
-
-    def _restore_window(self):
-        """Restore the window to its original position when the keyboard is destroyed."""
-        if self.is_moved_up and self.original_position:
-            # Restore to the original position
-            self.window.geometry(f"+{self.original_position[0]}+{self.original_position[1]}")
-            self.is_moved_up = False
 
     #Function that validates user login credentials via QR code
     def _process_qrcode(self, event):
@@ -310,7 +280,7 @@ class LockUnlock:
                         cursor.execute(search_query, (scanned_qr_code,))
                         user_result = cursor.fetchone()
                         userName, accountType, position = user_result
-                        self.window.destroy()
+                        self._exit_action()
                         insert_query = """
                             INSERT INTO door_logs (username, accountType, position, date, time, action_taken)
                             VALUES (%s, %s, %s, %s, %s, %s)
@@ -334,7 +304,7 @@ class LockUnlock:
                                 title="Success",
                                 message="Door lock is now unlock\nYou may now proceed to withdraw medicine.",
                                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
-                                ok_callback= lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame))
+                                ok_callback= lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame), self._enable_all())
                             )
                         elif self.action == "lock":
                             self._lock_door()
@@ -426,5 +396,24 @@ class LockUnlock:
     def _unlock_door(self):
         print("Unlock command sent")
         self.arduino.write(b'unlock\n')  # Send the "unlock" command to the Arduino
+
+    def _exit_action(self):
+        """Trigger the no callback and close the window."""
+        if self.exit_callback:
+            self.exit_callback()
+
+    def _disable_container_buttons(self):
+        """Disable all buttons within the container frame."""
+        if self.container:
+            for widget in self.container.winfo_children():
+                if isinstance(widget, tk.Button):
+                    widget.config(state=tk.DISABLED)
+
+    def _enable_all(self):
+        """Re-enable all buttons within the container frame."""
+        if self.container:
+            for widget in self.container.winfo_children():
+                if isinstance(widget, tk.Button):
+                    widget.config(state=tk.NORMAL)
         
 
