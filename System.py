@@ -406,7 +406,7 @@ def deposit_window():
             show_medicine_supply()
             # Check for soon-to-expire medicines on home page load
             notification_manager = NotificationManager(root, asap=False)
-            notification_manager.check_soon_to_expire()  # Automatically check and pop-up notifications
+            notification_manager.check_soon_to_expire()  #Refreshes the notification logs if the deposited medicine is going to expire soon
 
     # Cancel and Save buttons
     cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
@@ -993,8 +993,6 @@ def on_row_select(event):
 # Define the refresh interval in milliseconds (e.g., 60000ms for 1 minute)
 REFRESH_INTERVAL = 60000  
 
-
-
 def show_notification():
     clear_frame()
     reset_button_colors()
@@ -1142,26 +1140,73 @@ def show_account_setting():
     edit_button.grid(row=0, column=1, padx=30, pady=10, sticky="ew")
 
     delete_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'delete_icon.png')).resize((25, 25), Image.LANCZOS))
-    delete_button = tk.Button(button_frame, text="Delete User", font=("Arial", 15), pady=20, padx=25, bg=motif_color, fg='white', height=25, relief="raised", bd=3, compound=tk.LEFT, image=delete_img, command=lambda: delete_selected_user(tree))
+    delete_button = tk.Button(button_frame, text="Delete User", font=("Arial", 15), pady=20, padx=25, bg=motif_color, fg='white', height=25, relief="raised", bd=3, compound=tk.LEFT, image=delete_img, command=lambda: delete_selected_user(tree, Username, conn))
     delete_button.image = delete_img
     delete_button.grid(row=0, column=2, padx=30, pady=10, sticky="ew")
 
 
-def delete_selected_user(tree):
+def delete_selected_user(tree, authenticated_user, conn):
     selected_item = tree.selection()  # Get selected item
-    if selected_item:
-        username = tree.item(selected_item, "values")[0]
+    if not selected_item:
+        return
 
-        def yes_delete():
-            cursor = conn.cursor()
-            cursor.execute("DELETE FROM users WHERE username = %s", [username])
-            conn.commit()
-            # Refresh the table after deleting
-            show_account_setting()
+    username = tree.item(selected_item, "values")[0]
+    account_type = tree.item(selected_item, "values")[2]  # Account type for the selected user
+    cursor = conn.cursor()
 
-        def no_delete():
-            print("\nUser deletion canceled.")
+    # Check the number of admin accounts
+    cursor.execute("SELECT COUNT(*) FROM users WHERE accountType = 'Admin'")
+    admin_count = cursor.fetchone()[0]
 
+    # Define callbacks for deletion confirmation
+    def yes_delete():
+        # If user confirms deleting own account, check if it’s the last admin
+        if username == authenticated_user and account_type == "Admin" and admin_count <= 1:
+            CustomMessageBox(
+                root=tree, 
+                title="Action Denied", 
+                message="Cannot delete the last admin account.", 
+                color="red",
+                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+            )
+            return
+        
+        # Proceed with deletion
+        cursor.execute("DELETE FROM users WHERE username = %s", (username,))
+        conn.commit()
+        if username == authenticated_user:
+            logout("delete own")
+        else:
+            show_account_setting()  # Refresh the account settings
+
+    def no_delete():
+        print("User deletion canceled.")
+
+    # Check if the selected account is the user’s own account
+    if username == authenticated_user:
+        # Ask for confirmation to delete own account
+        CustomMessageBox(
+            root=tree, 
+            title="Confirm Delete", 
+            message=f"Are you sure you want to delete your own account '{username}'?", 
+            color="red", 
+            yes_callback=yes_delete, 
+            no_callback=no_delete,
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+        )
+    else:
+        # If it's another user, check if they're the last admin and confirm deletion
+        if account_type == "Admin" and admin_count <= 1:
+            CustomMessageBox(
+                root=tree, 
+                title="Action Denied", 
+                message="Cannot delete the last admin account.", 
+                color="red",
+                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+            )
+            return
+
+        # Ask for confirmation to delete other user's account
         CustomMessageBox(
             root=tree, 
             title="Confirm Delete", 
@@ -1170,7 +1215,7 @@ def delete_selected_user(tree):
             yes_callback=yes_delete, 
             no_callback=no_delete,
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
-            sound_file="sounds/confirmDelete.mp3"
+            sound_file=os.path.join(os.path.dirname(__file__), 'sounds', 'confirmDelete.mp3')
         )
 
 def add_user():
