@@ -276,6 +276,15 @@ def logout(reason):
             sound_file ="sounds/automaticLogout.mp3",
         )
         OnScreenKeyboard(content_frame).hide_keyboard()
+    if reason == 'delete own':
+        message_box = CustomMessageBox(
+            root=login_frame,
+            title="Session Expired",
+            message="You deleted your own account.\nPlease log-in again using other account.",
+            color='red',  # Background color for warning
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'logout_icon.png')
+        )
+        OnScreenKeyboard(content_frame).hide_keyboard()
 
 def on_ok_pressed():
     print("Custom OK action triggered!")
