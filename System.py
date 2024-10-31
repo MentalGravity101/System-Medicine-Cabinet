@@ -404,6 +404,9 @@ def deposit_window():
         if deposit.validate_inputs():
             deposit.save_to_database()
             show_medicine_supply()
+            # Check for soon-to-expire medicines on home page load
+            notification_manager = NotificationManager(root, asap=False)
+            notification_manager.check_soon_to_expire()  # Automatically check and pop-up notifications
 
     # Cancel and Save buttons
     cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
@@ -987,7 +990,11 @@ def on_row_select(event):
                         icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'))
 
 
-# Function that creates the UI for notification logs in the content_frame
+# Define the refresh interval in milliseconds (e.g., 60000ms for 1 minute)
+REFRESH_INTERVAL = 60000  
+
+
+
 def show_notification():
     clear_frame()
     reset_button_colors()
@@ -1011,23 +1018,37 @@ def show_notification():
 
     tree.pack(fill="both", expand=True, padx=20, pady=10)
 
-    # Create an instance of NotificationManager
-    notification_manager = NotificationManager(root)
-
-    # Fetch notification logs from the database
-    notification_manager.cursor.execute("SELECT medicine_name, expiration_date, notification_date, days_until_expiration FROM notification_logs")
-    logs = notification_manager.cursor.fetchall()
-
-    # Insert the logs into the Treeview
-    if logs:
-        for log in logs:
-            tree.insert("", tk.END, values=log)
-    else:
-        # Display a message if there are no logs
-        tk.Label(content_frame, text="No notifications found.", font=('Arial', 14), pady=10).pack()
-
     # Bind the <<TreeviewSelect>> event to trigger the on_row_select function
     tree.bind('<<TreeviewSelect>>', on_row_select)
+
+    def update_notification_logs():
+        """Fetches updated notification logs and refreshes the Treeview."""
+        # Clear existing rows in the Treeview
+        for item in tree.get_children():
+            tree.delete(item)
+
+        # Fetch new notification logs from the database
+        notification_manager = NotificationManager(root)
+        notification_manager.cursor.execute(
+            "SELECT medicine_name, expiration_date, notification_date, days_until_expiration "
+            "FROM notification_logs "
+            "ORDER BY notification_date DESC, notification_time DESC"
+        )
+        logs = notification_manager.cursor.fetchall()
+
+        # Insert the new logs into the Treeview
+        if logs:
+            for log in logs:
+                tree.insert("", tk.END, values=log)
+        else:
+            # Display a message if there are no logs (optional)
+            tk.Label(content_frame, text="No notifications found.", font=('Arial', 14), pady=10).pack()
+
+        # Schedule the next update after the specified interval
+        content_frame.after(REFRESH_INTERVAL, update_notification_logs)
+
+    # Initial fetch and start automatic refresh
+    update_notification_logs()
 
 
 #------------------------------------------------------ACCOUNT SETTINGS FRAME----------------------------------------------------------------------
