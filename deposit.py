@@ -98,7 +98,7 @@ class MedicineDeposit:
         message_box = CustomMessageBox(
             root=self.root,
             title="Medicine Deposited",
-            message=f"Medicine '{self.name.capitalize()}' has been successfully added!\nPlease attach the printed QR Code with Exp. Date to the medicine.\nClick 'Ok' if your ready to unlock the door.",
+            message=f"Medicine '{self.name.capitalize()}' has been successfullsy added!\nPlease attach the printed QR Code with Exp. Date to the medicine.\nClick 'Ok' if your ready to unlock the door.",
             icon_path=qr_code_filepath,  # Pass the QR code image path here
             ok_callback=lambda: (LockUnlock(self.content_frame, self.keyboardFrame, self.Username, self.Password, self.arduino, self.action, "medicine inventory"), message_box.destroy())
         )

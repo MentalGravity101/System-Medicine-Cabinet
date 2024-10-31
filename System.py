@@ -74,7 +74,7 @@ def authenticate_user(username, password):
         show_medicine_supply()
         configure_sidebar(user_role)
         # Check for soon-to-expire medicines on home page load
-        notification_manager = NotificationManager(root, conn)
+        notification_manager = NotificationManager(root)
         notification_manager.check_soon_to_expire()  # Automatically check and pop-up notifications
     else:
         message_box = CustomMessageBox(
@@ -1012,7 +1012,7 @@ def show_notification():
     tree.pack(fill="both", expand=True, padx=20, pady=10)
 
     # Create an instance of NotificationManager
-    notification_manager = NotificationManager(root, conn)
+    notification_manager = NotificationManager(root)
 
     # Fetch notification logs from the database
     notification_manager.cursor.execute("SELECT medicine_name, expiration_date, notification_date, days_until_expiration FROM notification_logs")

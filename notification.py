@@ -4,9 +4,14 @@ from custom_messagebox import CustomMessageBox
 import os
 
 class NotificationManager:
-    def __init__(self, root, conn):
+    def __init__(self, root):
         self.root = root
-        self.conn = conn
+        self.conn = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="",
+            database="db_medicine_cabinet"
+        )
         self.cursor = self.conn.cursor()
 
     def check_soon_to_expire(self):
