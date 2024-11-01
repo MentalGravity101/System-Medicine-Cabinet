@@ -534,16 +534,24 @@ def show_medicine_supply():
 
     def sort_treeview(column, clicked_button):
         global active_column, sort_order
-        activate_button(clicked_button)
 
-        # Set the active column and toggle sort order
+        # Enable all buttons first
+        for btn in buttons:
+            btn.config(bg=motif_color, fg="white", state="normal")
+
+        # Set the clicked button to active style and disable it
+        clicked_button.config(bg="white", fg="black", state="disabled")
+
+        # Check if we're clicking the same column to toggle sort order
         if active_column == column:
+            # Toggle the sort order if the same button is clicked again
             sort_order = "DESC" if sort_order == "ASC" else "ASC"
         else:
+            # Set active column and reset sort order to ascending
             active_column = column
             sort_order = "ASC"
 
-        # Repopulate the treeview with the current search term and sort order
+        # Repopulate the treeview with the current sorting
         populate_treeview(order_by=active_column, sort=sort_order)
 
     # Load the search icon image
@@ -613,7 +621,7 @@ def show_medicine_supply():
     buttons.append(sort_button_4)
 
     sort_button_5 = tk.Button(header_frame, text="Sort by Date Stored", bg="white", fg=motif_color, padx=10, pady=5,
-                              command=lambda: sort_treeview("date_stored", sort_button_5), relief="raised", bd=4, font=(font_style, font_size))
+                              command=lambda: sort_treeview("date_stored", sort_button_5), relief="raised", bd=4, font=(font_style, font_size), state="disabled")
     sort_button_5.grid(row=0, column=6, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_5)
 
@@ -812,23 +820,26 @@ def show_doorLog():
             tree.insert("", "end", values=(date_str, time_str, username, accountType, position, action_taken), tags=(tag,))
 
     def sort_treeview(column, clicked_button):
-        nonlocal active_column, sort_order
-        activate_button(clicked_button)
+        global active_column, sort_order
 
-        # Set the active column and toggle sort order
+        # Enable all buttons first
+        for btn in buttons:
+            btn.config(bg=motif_color, fg="white", state="normal")
+
+        # Set the clicked button to active style and disable it
+        clicked_button.config(bg="white", fg="black", state="disabled")
+
+        # Check if we're clicking the same column to toggle sort order
         if active_column == column:
+            # Toggle the sort order if the same button is clicked again
             sort_order = "DESC" if sort_order == "ASC" else "ASC"
         else:
+            # Set active column and reset sort order to ascending
             active_column = column
             sort_order = "ASC"
 
-        # Modify the column to handle combined Date & Time sorting
-        if column == "date_time":
-            # Sort by both date and time
-            populate_treeview(order_by="date, time", sort=sort_order)
-        else:
-            # Regular sorting by a single column
-            populate_treeview(order_by=active_column, sort=sort_order)
+        # Repopulate the treeview with the current sorting
+        populate_treeview(order_by=active_column, sort=sort_order)
 
 
     # Header frame for sorting buttons and search bar
@@ -884,7 +895,7 @@ def show_doorLog():
 
     # Combined Sorting Button for Date & Time
     sort_button_date_time = tk.Button(header_frame, text="Sort by Date & Time", bg="white", fg='black', padx=10, pady=5,
-                                    command=lambda: sort_treeview("date_time", sort_button_date_time), relief="raised", bd=4, font=(font_style, font_size))
+                                    command=lambda: sort_treeview("date", sort_button_date_time), relief="raised", bd=4, font=(font_style, font_size), state="disabled")
     sort_button_date_time.grid(row=0, column=2, padx=(110, 0), pady=10, sticky="e")
     buttons.append(sort_button_date_time)
 
