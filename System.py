@@ -55,6 +55,8 @@ default_bg_color = motif_color  # Default background color
 active_fg_color ='#000000' # Active foreground color
 default_fg_color="#fff" # Default foreground color
 
+
+
 #----------------------------------------------------LOGIN WINDOW--------------------------------------------------------
 
 #function for authentication during the login frame
@@ -86,6 +88,7 @@ def authenticate_user(username, password):
             sound_file="sounds/invalidLogin.mp3",
             page='Login'
         )
+        
 
 # Function that creates the UI for login frame
 def create_login_frame(container):
@@ -141,7 +144,6 @@ def create_login_frame(container):
     login_button.pack(pady=(20, 10))
 
     login_frame.grid(row=0, column=0, sticky='news')
-
 
     qrlogin= tk.Button(box_frame, text="or Login using QR code", fg="black", cursor="hand2", bg='white', relief="flat", font=('Arial', 13), command=lambda: QRLogin(login_frame, callback=authenticate_user))
     qrlogin.pack()
@@ -1055,11 +1057,14 @@ def on_row_select(event):
     # Create a new Toplevel window to show the selected row's data
     if row_data:  # Only if a row is selected
         text=f"A medicine is about to expire!\n\nMedicine Name: {row_data[0]}\nExpiration Date: {row_data[1]}\nNotification Date: {row_data[2]}\nDays Until Expiration: {row_data[3]}"
-        CustomMessageBox(root=content_frame,
+        message_box = CustomMessageBox(root=content_frame,
                         title="Medicine Expiration",
                         color='red',
                         message=text,
                         icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'))
+        message_box.window.bind("<Motion>", reset_timer)
+        message_box.window.bind("<KeyPress", reset_timer)
+        message_box.window.bind("<ButtonPress>", reset_timer)
 
 
 # Define the refresh interval in milliseconds (e.g., 60000ms for 1 minute)
@@ -1143,6 +1148,9 @@ def show_account_setting():
             color="red",
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
         )
+        message_box.window.bind("<Motion>", reset_timer)
+        message_box.window.bind("<KeyPress", reset_timer)
+        message_box.window.bind("<ButtonPress>", reset_timer)
         return
     
     cursor = conn.cursor()
@@ -1234,13 +1242,16 @@ def delete_selected_user(tree, authenticated_user, conn):
     def yes_delete():
         # If user confirms deleting own account, check if it’s the last admin
         if username == authenticated_user and account_type == "Admin" and admin_count <= 1:
-            CustomMessageBox(
+            message_box = CustomMessageBox(
                 root=tree, 
                 title="Action Denied", 
                 message="Cannot delete the last admin account.", 
                 color="red",
                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
             )
+            message_box.window.bind("<Motion>", reset_timer)
+            message_box.window.bind("<KeyPress", reset_timer)
+            message_box.window.bind("<ButtonPress>", reset_timer)
             return
         
         # Proceed with deletion
@@ -1257,7 +1268,7 @@ def delete_selected_user(tree, authenticated_user, conn):
     # Check if the selected account is the user’s own account
     if username == authenticated_user:
         # Ask for confirmation to delete own account
-        CustomMessageBox(
+        message_box = CustomMessageBox(
             root=tree, 
             title="Confirm Delete", 
             message=f"Are you sure you want to delete your own account '{username}'?", 
@@ -1266,20 +1277,26 @@ def delete_selected_user(tree, authenticated_user, conn):
             no_callback=no_delete,
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
         )
+        message_box.window.bind("<Motion>", reset_timer)
+        message_box.window.bind("<KeyPress", reset_timer)
+        message_box.window.bind("<ButtonPress>", reset_timer)
     else:
         # If it's another user, check if they're the last admin and confirm deletion
         if account_type == "Admin" and admin_count <= 1:
-            CustomMessageBox(
+            message_box = CustomMessageBox(
                 root=tree, 
                 title="Action Denied", 
                 message="Cannot delete the last admin account.", 
                 color="red",
                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
             )
+            message_box.window.bind("<Motion>", reset_timer)
+            message_box.window.bind("<KeyPress", reset_timer)
+            message_box.window.bind("<ButtonPress>", reset_timer)
             return
 
         # Ask for confirmation to delete other user's account
-        CustomMessageBox(
+        message_box = CustomMessageBox(
             root=tree, 
             title="Confirm Delete", 
             message=f"Are you sure you want to delete the user '{username}'?", 
@@ -1289,6 +1306,9 @@ def delete_selected_user(tree, authenticated_user, conn):
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
             sound_file=os.path.join(os.path.dirname(__file__), 'sounds', 'confirmDelete.mp3')
         )
+        message_box.window.bind("<Motion>", reset_timer)
+        message_box.window.bind("<KeyPress>", reset_timer)
+        message_box.window.bind("<ButtonPress>", reset_timer)
 
 def add_user():
     global conn
@@ -1391,6 +1411,9 @@ def add_user():
                         icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
                         sound_file="sounds/FillAllFields.mp3"
                     )
+                    message_box.window.bind("<Motion>", reset_timer)
+                    message_box.window.bind("<KeyPress", reset_timer)
+                    message_box.window.bind("<ButtonPress>", reset_timer)
         except mysql.connector.Error as err:
             messagebox.showerror("Database Error", f"Error: {err}")
 
@@ -1438,7 +1461,10 @@ def on_tree_select(tree):
             message="Please select a user to edit.",
             color="red",
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
-    )
+        )
+        message_box.window.bind("<Motion>", reset_timer)
+        message_box.window.bind("<KeyPress", reset_timer)
+        message_box.window.bind("<ButtonPress>", reset_timer)
 
 def validate_all_fields_filled(*widgets):
     for widget in widgets:
@@ -1460,6 +1486,9 @@ def validate_user_info(mode, username, password, confirm_password, position, acc
             color="red",
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
         )
+        message_box.window.bind("<Motion>", reset_timer)
+        message_box.window.bind("<KeyPress", reset_timer)
+        message_box.window.bind("<ButtonPress>", reset_timer)
         return False
 
     # Check if username already exists
@@ -1475,6 +1504,9 @@ def validate_user_info(mode, username, password, confirm_password, position, acc
             color="red",
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
         )
+        message_box.window.bind("<Motion>", reset_timer)
+        message_box.window.bind("<KeyPress", reset_timer)
+        message_box.window.bind("<ButtonPress>", reset_timer)
         return False
 
     # Check if accountType is Admin and if there are already 2 Admins
@@ -1490,6 +1522,9 @@ def validate_user_info(mode, username, password, confirm_password, position, acc
                 color="red",
                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
             )
+            message_box.window.bind("<Motion>", reset_timer)
+            message_box.window.bind("<KeyPress", reset_timer)
+            message_box.window.bind("<ButtonPress>", reset_timer)
             return False
 
     # All validations passed
@@ -1571,6 +1606,9 @@ def edit_user(username):
                 message="User account successfully configured.",
                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'accountSetting_Icon.png'),
             )
+            message_box.window.bind("<Motion>", reset_timer)
+            message_box.window.bind("<KeyPress", reset_timer)
+            message_box.window.bind("<ButtonPress>", reset_timer)
             show_account_setting()  # Refresh the user table
     
     # Cancel and Save buttons
