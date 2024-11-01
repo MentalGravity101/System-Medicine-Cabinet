@@ -41,7 +41,7 @@ def establish_connection():
         print(f"Error: {err}")
         conn = None  # Set to None if connection fails
 
-INACTIVITY_PERIOD = 60000 #automatic logout timer in milliseconds
+INACTIVITY_PERIOD = 10000 #automatic logout timer in milliseconds
 inactivity_timer = None #initialization of idle timer
 root = None  # Global variable for root window
 
@@ -213,7 +213,7 @@ def create_main_ui_frame(container):
     account_setting_button = None
     
     logout_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'logout_icon.png')).resize((40, 40), Image.LANCZOS))
-    logout_button = tk.Button(sidebar_frame, height=100, width=350, text="Log Out", command=lambda: logout('manual logout'), font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=logout_img, padx=10, anchor='w')
+    logout_button = tk.Button(sidebar_frame, height=100, width=350, text="Log Out", command=lambda: logout_with_sensor_check('manual logout'), font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=logout_img, padx=10, anchor='w')
     logout_button.image = logout_img
     logout_button.grid(row=6, column=0, sticky="we", columnspan=2)
     content_frame = tk.Frame(main_ui_frame, bg='#ecf0f1')
@@ -286,6 +286,58 @@ def logout(reason):
         )
         OnScreenKeyboard(content_frame).hide_keyboard()
 
+def logout_with_sensor_check(logout_type):
+    # Step 1: Check sensors before logging out
+    arduino.write(b'check_sensors\n')
+    time.sleep(0.1)  # Small delay for Arduino to respond
+
+    # Step 2: Read Arduino's response
+    if arduino.in_waiting > 0:
+        response = arduino.readline().decode().strip()
+
+        # Step 3: Proceed based on the sensor check response
+        if response == "Object detected":
+            # Proceed with logout if sensors detect an object
+            logout(logout_type)  # Call logout with provided type
+            print("Closed the door successfully and logged-out successful")
+
+        else:
+            # Recursive function to recheck the sensors
+            def recheck_sensors(warning_box):
+                arduino.write(b'check_sensors\n')
+                time.sleep(0.1)
+                
+                if arduino.in_waiting > 0:
+                    response = arduino.readline().decode().strip()
+                    
+                    if response == "Object detected":
+                        # Destroy warning and proceed with logout
+                        warning_box.destroy()
+                        logout(logout_type)
+                        print("Closed the door successfully and logged-out successful")
+                    else:
+                        # Show warning again and recheck sensors
+                        warning_box = CustomMessageBox(
+                            root=content_frame,
+                            title="Warning",
+                            color='red',
+                            message="Doors are not properly closed.\nPlease close both the doors properly.",
+                            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
+                            ok_callback=lambda: recheck_sensors(warning_box)
+                        )
+                        print("Rechecking sensors: No object detected.")
+
+            # Show initial warning if sensors do not detect an object
+            warning_box = CustomMessageBox(
+                root=content_frame,
+                title="Warning",
+                color='red',
+                message="Doors are not properly closed.\nPlease close both the doors properly.",
+                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
+                ok_callback=lambda: recheck_sensors(warning_box)
+            )
+            print("Logout command aborted: No object detected.")
+
 def on_ok_pressed():
     print("Custom OK action triggered!")
 
@@ -303,7 +355,7 @@ def reset_timer(event=None):
 #Function for automatic logout during idle
 def automatic_logout():
     print("\nUser has been automatically logged out due to inactivity.")
-    logout('inactivity')
+    logout_with_sensor_check('inactivity')
 
 #Function for binding user activities in the Main UI Frame and toplevels
 def bind_activity_events():
@@ -408,7 +460,7 @@ def deposit_window():
         unit = unit_combobox.get()
         expiration_date = expiration_date_entry.get_date()
 
-        deposit = MedicineDeposit(name, type_, quantity, unit, expiration_date, conn, main_ui_frame, content_frame, content_frame, Username, Password, ser, "unlock")
+        deposit = MedicineDeposit(name, type_, quantity, unit, expiration_date, conn, main_ui_frame, content_frame, content_frame, Username, Password, arduino, "unlock")
 
         if deposit.validate_inputs():
             deposit.save_to_database()
@@ -678,7 +730,7 @@ def show_medicine_supply():
 
 
     widthdraw_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'minus_icon.png')).resize((25, 25), Image.LANCZOS))
-    withdraw_button = tk.Button(button_frame, text="Withdraw", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=widthdraw_icon, command=lambda: LockUnlock(content_frame, content_frame, Username, Password, ser, "withdraw", "medicine inventory", container=root))
+    withdraw_button = tk.Button(button_frame, text="Withdraw", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=widthdraw_icon, command=lambda: LockUnlock(content_frame, content_frame, Username, Password, arduino, "withdraw", "medicine inventory", container=root))
     withdraw_button.image = widthdraw_icon
     withdraw_button.grid(row=0, column=0, padx=20, pady=(12, ), sticky='ew')
 
@@ -969,13 +1021,13 @@ def show_doorLog():
 
     # Add the first new button (e.g., 'Button 1')
     lock_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'lockWhite_icon.png')).resize((25, 25), Image.LANCZOS))
-    lock_button = tk.Button(button_frame, text="Lock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=lock_icon, command=lambda: LockUnlock(content_frame, content_frame, Username, Password, ser, "lock", "door functions"))
+    lock_button = tk.Button(button_frame, text="Lock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=lock_icon, command=lambda: LockUnlock(content_frame, content_frame, Username, Password, arduino, "lock", "door functions"))
     lock_button.image = lock_icon
     lock_button.grid(row=0, column=0, padx=20, pady=(12, ), sticky='ew')
 
     # Add the second new button (e.g., 'Button 2')
     unlock_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'unlockWhite_icon.png')).resize((35, 35), Image.LANCZOS))
-    unlock_button = tk.Button(button_frame, text="Unlock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=unlock_icon, command=lambda: LockUnlock(content_frame, content_frame, Username, Password, ser, "unlock", "door functions"))
+    unlock_button = tk.Button(button_frame, text="Unlock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=unlock_icon, command=lambda: LockUnlock(content_frame, content_frame, Username, Password, arduino, "unlock", "door functions"))
     unlock_button.image = unlock_icon
     unlock_button.grid(row=0, column=1, padx=20, pady=(12, 7), sticky='ew')
 
@@ -1195,7 +1247,7 @@ def delete_selected_user(tree, authenticated_user, conn):
         cursor.execute("DELETE FROM users WHERE username = %s", (username,))
         conn.commit()
         if username == authenticated_user:
-            logout("delete own")
+            logout_with_sensor_check("delete own")
         else:
             show_account_setting()  # Refresh the account settings
 
@@ -1609,18 +1661,18 @@ def on_wifi_ui_close():
 
 # Function to send the lock command
 def lock_door():
-    ser.write(b'lock\n')  # Send the "lock" command to the Arduino
+    arduino.write(b'lock\n')  # Send the "lock" command to the Arduino
     print("\nLock command sent")
 
 # Function to send the unlock command
 def unlock_door():
-    ser.write(b'unlock\n')  # Send the "unlock" command to the Arduino
+    arduino.write(b'unlock\n')  # Send the "unlock" command to the Arduino
     print("\nUnlock command sent")
 
 
 #-----------------------------------------------MAIN------------------------------------------------------
 def main():
-    global root, ser, container
+    global root, arduino, container
 
     root = tk.Tk()
     root.resizable(width=False, height=False)
@@ -1645,9 +1697,9 @@ def main():
 
     # Delay creation of login and main UI frames until Arduino connection is done
     def connect_to_arduino():
-        global ser
+        global arduino
         try:
-            ser = serial.Serial('COM5', 9600)  # Port of the Arduino
+            arduino = serial.Serial('COM5', 9600)  # Port of the Arduino
             time.sleep(2)  # Wait for the connection to establish
             print("\nSerial connection established")
             # Once connected, proceed to show login_frame
@@ -1656,7 +1708,7 @@ def main():
             login_frame.tkraise()
         except serial.SerialException as e:
             print(f"\nError opening serial port: {e}")
-            ser = None  # Set to None if the connection fails
+            arduino = None  # Set to None if the connection fails
             show_retry_window()  # Show retry window if connection fails
 
     # Create a Toplevel window for retrying the connection
@@ -1690,8 +1742,8 @@ def main():
     root.mainloop()
 
     # Close the serial connection when the application exits, if it's open
-    if ser is not None:
-        ser.close()
+    if arduino is not None:
+        arduino.close()
         print("\nSerial connection closed")
 
 if __name__ == "__main__":

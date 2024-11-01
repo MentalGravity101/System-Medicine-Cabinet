@@ -52,7 +52,7 @@ class NotificationManager:
                 self.log_notification(med_name, exp_date, days_left)
 
                 if self.asap == True: 
-                    self.log_notification(med_name, exp_date, days_left)
+                    self.create_notification_popup(med_name, exp_date, days_left, notification_count)
                 else:
                     pass
 
