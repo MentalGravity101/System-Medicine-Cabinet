@@ -107,6 +107,7 @@ class MedicineDeposit:
 
     def _yes_action(self):
         """Trigger the yes callback and close the window."""
+        print("yes Callback called")
         if self.yes_callback:
             self.yes_callback()
 

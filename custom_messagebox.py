@@ -9,7 +9,7 @@ import pygame
 motif_color = '#42a7f5'
 
 class CustomMessageBox:
-    def __init__(self, root, title, message, color=motif_color, icon_path=None, sound_file=None, ok_callback=None, yes_callback=None, no_callback=None, close_icon_path=None, page='Home'):
+    def __init__(self, root, title, message, color=motif_color, icon_path=None, sound_file=None, ok_callback=None, yes_callback=None, no_callback=None, close_icon_path=None, page='Home', close_state=None):
         self.window = tk.Toplevel(root, relief='raised', bd=5)
         self.window.overrideredirect(True)  # Remove the title bar
         self.window.resizable(width=False, height=False)
@@ -33,6 +33,7 @@ class CustomMessageBox:
         self.yes_callback = yes_callback
         self.no_callback = no_callback
         self.page = page
+        self.close_state = close_state
 
         # Initialize pygame mixer
         if self.sound_file:
@@ -98,6 +99,9 @@ class CustomMessageBox:
         close_button = tk.Button(title_frame, image=self.close_img, command=self.destroy, bg=self.color, relief=tk.FLAT, bd=0)
         close_button.image = self.close_img  # Keep a reference to avoid garbage collection
         close_button.pack(side=tk.RIGHT, padx=(0, 10), pady=(0, 5))
+
+        if self.close_state:
+            close_button.config(state='disabled')
 
         # Add the icon if provided
         if self.icon_path:

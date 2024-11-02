@@ -41,7 +41,7 @@ def establish_connection():
         print(f"Error: {err}")
         conn = None  # Set to None if connection fails
 
-INACTIVITY_PERIOD = 10000 #automatic logout timer in milliseconds
+INACTIVITY_PERIOD = 60000 #automatic logout timer in milliseconds
 inactivity_timer = None #initialization of idle timer
 root = None  # Global variable for root window
 
@@ -325,7 +325,8 @@ def logout_with_sensor_check(logout_type):
                             color='red',
                             message="Doors are not properly closed.\nPlease close both the doors properly.",
                             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
-                            ok_callback=lambda: recheck_sensors(warning_box)
+                            ok_callback=lambda: recheck_sensors(warning_box),
+                            close_state=True
                         )
                         print("Rechecking sensors: No object detected.")
 
@@ -336,7 +337,8 @@ def logout_with_sensor_check(logout_type):
                 color='red',
                 message="Doors are not properly closed.\nPlease close both the doors properly.",
                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
-                ok_callback=lambda: recheck_sensors(warning_box)
+                ok_callback=lambda: recheck_sensors(warning_box),
+                close_state=True
             )
             print("Logout command aborted: No object detected.")
 
@@ -389,8 +391,12 @@ def center_toplevel(toplevel):
     # Set the new position of the Toplevel window
     toplevel.geometry(f"+{x}+{y}")
 
-def deposit_window():
+def deposit_window(permission):
+    print("deposit_window called with permission:", permission)
     deposit_Toplevel = tk.Toplevel(root, relief='raised', bd=5)
+    deposit_Toplevel.attributes('-topmost', True)
+    deposit_Toplevel.overrideredirect(True)  # Remove the title bar
+    deposit_Toplevel.resizable(width=False, height=False)
 
     # Center the Toplevel window when it's created
     center_toplevel(deposit_Toplevel)
@@ -485,7 +491,7 @@ def deposit_window():
         unit = unit_combobox.get()
         expiration_date = expiration_date_entry.get_date()
 
-        deposit = MedicineDeposit(name, type_, quantity, unit, expiration_date, conn, main_ui_frame, content_frame, content_frame, Username, Password, arduino, action="unlock", yes_callback=deposit_window)
+        deposit = MedicineDeposit(name, type_, quantity, unit, expiration_date, conn, main_ui_frame, content_frame, content_frame, Username, Password, arduino, action="unlock", yes_callback=lambda: (print("Calling deposit_window with 'deposit_again'"), deposit_window('deposit_again'), deposit_Toplevel.destroy()))
 
         if deposit.validate_inputs():
             deposit.save_to_database()
@@ -496,9 +502,16 @@ def deposit_window():
 
     # Cancel and Save buttons
     cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
-    cancel_button = tk.Button(input_frame, text="Cancel", font=("Arial", 16), bg=motif_color, fg='white', command=show_medicine_supply, width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=cancel_img, pady=5)
+    cancel_button = tk.Button(input_frame, text="Cancel", font=("Arial", 16), bg=motif_color, fg='white', width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=cancel_img, pady=5)
     cancel_button.image = cancel_img
     cancel_button.grid(row=5, column=0, padx=(40, 60), pady=(50, 0))
+
+    if permission == 'deposit_again':
+        cancel_button.config(command=lambda: (LockUnlock(content_frame, content_frame, Username, Password, arduino, "lock", "medicine inventory", container=root), deposit_Toplevel.destroy()))
+    else:
+        cancel_button.config(command=lambda: (show_medicine_supply(), deposit_Toplevel.destroy()))
+
+        
 
     save_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'saveBlack_icon.png')).resize((25, 25), Image.LANCZOS))
     save_button = tk.Button(input_frame, text="Save", font=("Arial", 16), bg=motif_color, fg='white', width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=save_img, pady=5, command=save_medicine)
@@ -507,6 +520,78 @@ def deposit_window():
 
     deposit_Toplevel.overrideredirect(True)  # Remove the title bar
     deposit_Toplevel.resizable(width=False, height=False)
+
+def check_sensor(toplevel):
+    print("Checking sensors...")
+    # Step 1: Check sensors
+    arduino.write(b'check_sensors\n')
+    time.sleep(0.1)  # Small delay for Arduino to respond
+
+    # Step 2: Read Arduino's response
+    if arduino.in_waiting > 0:
+        response = arduino.readline().decode().strip()
+
+        # Step 3: Proceed based on the sensor check response
+        if response == "Object detected":
+            # Proceed with logout if sensors detect an object
+            toplevel.destroy()
+            arduino.write(b'lock\n')
+            print("Locked the door successfully")
+
+        else:
+            # Recursive function to recheck the sensors
+            def recheck_sensors(warning_box):
+                arduino.write(b'check_sensors\n')
+                time.sleep(0.1)
+                
+                if arduino.in_waiting > 0:
+                    response = arduino.readline().decode().strip()
+                    
+                    if response == "Object detected":
+                        # Destroy warning and proceed with logout
+                        warning_box.destroy()
+                        arduino.write(b'lock\n')
+                        toplevel.destroy()
+                        success_box = CustomMessageBox(
+                            root=content_frame,
+                            title="Warning",
+                            color=motif_color,
+                            message="Doors are not properly closed.",
+                            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
+                            ok_callback=lambda: recheck_sensors(warning_box)
+                        )
+                        success_box.bind("<Motion>", reset_timer)
+                        success_box.bind("<KeyPress>", reset_timer)
+                        success_box.bind("<ButtonPress>", reset_timer)
+                        print("Locked the Door Successfully")
+                    else:
+                        # Show warning again and recheck sensors
+                        warning_box = CustomMessageBox(
+                            root=content_frame,
+                            title="Warning",
+                            color='red',
+                            message="Doors are not properly closed.",
+                            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
+                            ok_callback=lambda: recheck_sensors(warning_box)
+                        )
+                        warning_box.bind("<Motion>", reset_timer)
+                        warning_box.bind("<KeyPress>", reset_timer)
+                        warning_box.bind("<ButtonPress>", reset_timer)
+                        print("Rechecking sensors: No object detected.")
+
+            # Show initial warning if sensors do not detect an object
+            warning_box = CustomMessageBox(
+                root=content_frame,
+                title="Warning",
+                color='red',
+                message="Doors are not properly close.",
+                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
+                ok_callback=lambda: recheck_sensors(warning_box)
+            )
+            warning_box.bind("<Motion>", reset_timer)
+            warning_box.bind("<KeyPress>", reset_timer)
+            warning_box.bind("<ButtonPress>", reset_timer)
+            print("Door is not properly closed")
 
 
 # Function that creates the UI for medicine inventory in the content_frame
@@ -763,7 +848,7 @@ def show_medicine_supply():
 
 
     deposit_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'add_icon.png')).resize((25, 25), Image.LANCZOS))
-    deposit_button = tk.Button(button_frame, text="Deposit", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=deposit_icon,command=deposit_window)
+    deposit_button = tk.Button(button_frame, text="Deposit", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=deposit_icon,command=lambda: deposit_window('normal'))
     deposit_button.image = deposit_icon
     deposit_button.grid(row=0, column=1, padx=20, pady=(12, 7), sticky='ew')
 
