@@ -373,9 +373,35 @@ def unbind_activity_events():
 
         
 #--------------------------------------------------------------MEDICINE INVENTORY---------------------------------------------------------------------    
+def center_toplevel(toplevel):
+    # Get the screen width and height
+    screen_width = toplevel.winfo_screenwidth()
+    screen_height = toplevel.winfo_screenheight()
+
+    # Get the dimensions of the Toplevel window
+    window_width = toplevel.winfo_width()
+    window_height = toplevel.winfo_height()
+
+    # Calculate the x and y coordinates to center the window
+    x = (screen_width // 2) - (window_width // 2)
+    y = (screen_height // 2) - (window_height // 2)
+
+    # Set the new position of the Toplevel window
+    toplevel.geometry(f"+{x}+{y}")
 
 def deposit_window():
-    clear_frame()
+    deposit_Toplevel = tk.Toplevel(root, relief='raised', bd=5)
+
+    # Center the Toplevel window when it's created
+    center_toplevel(deposit_Toplevel)
+
+    # Bind the <Configure> event to the centering function
+    deposit_Toplevel.bind("<Configure>", lambda e: center_toplevel(deposit_Toplevel))
+
+    deposit_Toplevel.bind("<Motion>", reset_timer)
+    deposit_Toplevel.bind("<KeyPress>", reset_timer)
+    deposit_Toplevel.bind("<ButtonPress>", reset_timer)
+
 
     db_connection = mysql.connector.connect(
         host="localhost",
@@ -405,22 +431,19 @@ def deposit_window():
     # Retrieve data from the database
     names, types, units = fetch_medicine_data()
 
-    # Ensure content_frame expands to fill the available width
-    content_frame.grid_columnconfigure(0, weight=1)
-
-    title_label = tk.Label(content_frame, text="DEPOSIT MEDICINE", bg=motif_color, fg="white", font=('Arial', 25, 'bold'), height=2, relief='groove', bd=1)
+    title_label = tk.Label(deposit_Toplevel, text="DEPOSIT MEDICINE", bg=motif_color, fg="white", font=('Arial', 25, 'bold'), height=2, relief='groove', bd=1)
     title_label.pack(fill='both')
 
     # Create input frame and ensure it expands horizontally
-    input_frame = tk.LabelFrame(content_frame, text='Fill out all the necessary information below', font=('Arial', 14), pady=20, padx=5, relief='raised', bd=5)
+    input_frame = tk.LabelFrame(deposit_Toplevel, text='Fill out all the necessary information below', font=('Arial', 14), pady=20, padx=5, relief='raised', bd=5)
     input_frame.pack(fill='x', pady=30, padx=300)
 
     # Instantiate OnScreenKeyboard and NumericKeyboard
-    keyboard = OnScreenKeyboard(content_frame)
+    keyboard = OnScreenKeyboard(deposit_Toplevel)
     keyboard.create_keyboard()
     keyboard.hide_keyboard()  # Initially hide the keyboard
 
-    numKeyboard = NumericKeyboard(content_frame)
+    numKeyboard = NumericKeyboard(deposit_Toplevel)
     numKeyboard.create_keyboard()
     numKeyboard.hide()
 
@@ -462,7 +485,7 @@ def deposit_window():
         unit = unit_combobox.get()
         expiration_date = expiration_date_entry.get_date()
 
-        deposit = MedicineDeposit(name, type_, quantity, unit, expiration_date, conn, main_ui_frame, content_frame, content_frame, Username, Password, arduino, "unlock")
+        deposit = MedicineDeposit(name, type_, quantity, unit, expiration_date, conn, main_ui_frame, content_frame, content_frame, Username, Password, arduino, action="unlock", yes_callback=deposit_window)
 
         if deposit.validate_inputs():
             deposit.save_to_database()
@@ -482,6 +505,8 @@ def deposit_window():
     save_button.image = save_img
     save_button.grid(row=5, column=1, padx=(60, 40), pady=(50, 0))
 
+    deposit_Toplevel.overrideredirect(True)  # Remove the title bar
+    deposit_Toplevel.resizable(width=False, height=False)
 
 
 # Function that creates the UI for medicine inventory in the content_frame

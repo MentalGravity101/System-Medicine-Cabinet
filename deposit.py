@@ -9,7 +9,7 @@ from custom_messagebox import CustomMessageBox
 from lockunlock import LockUnlock
 
 class MedicineDeposit:
-    def __init__(self, name, type_, quantity, unit, expiration_date, db_connection, root, content_frame, keyboardFrame, Username, Password, arduino, action="unlock"):
+    def __init__(self, name, type_, quantity, unit, expiration_date, db_connection, root, content_frame, keyboardFrame, Username, Password, arduino, action="unlock", yes_callback=None):
         self.root = root
         self.name = name.lower()
         self.type = type_.lower()
@@ -23,6 +23,7 @@ class MedicineDeposit:
         self.Password = Password
         self.arduino = arduino
         self.action = action
+        self.yes_callback = yes_callback
 
     def validate_inputs(self):
         # Check if all fields are filled
@@ -95,11 +96,17 @@ class MedicineDeposit:
         """Display the custom messagebox after successfully adding the medicine."""
 
         # Initialize the CustomMessageBox with QR code icon
-        message_box = CustomMessageBox(
+        self.message_box = CustomMessageBox(
             root=self.root,
             title="Medicine Deposited",
-            message=f"Medicine '{self.name.capitalize()}' has been successfullsy added!\nPlease attach the printed QR Code with Exp. Date to the medicine.\nClick 'Ok' if your ready to unlock the door.",
+            message=f"Adding medicine: '{self.name.capitalize()}'\nPlease attach the printed QR Code with Exp. Date to the medicine.\nDo you want to add more medicine?.",
             icon_path=qr_code_filepath,  # Pass the QR code image path here
-            ok_callback=lambda: (LockUnlock(self.content_frame, self.keyboardFrame, self.Username, self.Password, self.arduino, self.action, "medicine inventory"), message_box.destroy())
+            no_callback=lambda: (LockUnlock(self.content_frame, self.keyboardFrame, self.Username, self.Password, self.arduino, self.action, "medicine inventory"), self.message_box.destroy()),
+            yes_callback=lambda: (self._yes_action(), self.message_box.destroy())
         )
+
+    def _yes_action(self):
+        """Trigger the yes callback and close the window."""
+        if self.yes_callback:
+            self.yes_callback()
 

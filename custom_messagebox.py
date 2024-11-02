@@ -5,6 +5,7 @@ from PIL import Image, ImageTk
 import os
 import pygame
 
+
 motif_color = '#42a7f5'
 
 class CustomMessageBox:
