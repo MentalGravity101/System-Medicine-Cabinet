@@ -392,11 +392,12 @@ def center_toplevel(toplevel):
     toplevel.geometry(f"+{x}+{y}")
 
 def deposit_window(permission):
-    print("deposit_window called with permission:", permission)
     deposit_Toplevel = tk.Toplevel(root, relief='raised', bd=5)
     deposit_Toplevel.attributes('-topmost', True)
     deposit_Toplevel.overrideredirect(True)  # Remove the title bar
     deposit_Toplevel.resizable(width=False, height=False)
+    deposit_Toplevel.focus_set()
+    deposit_Toplevel.grab_set()
 
     # Center the Toplevel window when it's created
     center_toplevel(deposit_Toplevel)
@@ -463,18 +464,21 @@ def deposit_window(permission):
     type_combobox = ttk.Combobox(input_frame, font=("Arial", 16), width=20, values=types)
     type_combobox.grid(row=1, column=1, padx=10, pady=10, sticky='ew')
 
-    tk.Label(input_frame, text="Quantity", font=("Arial", 16)).grid(row=2, column=0, padx=(30, 10), pady=10, sticky='w')
-    quantity_spinbox = tk.Spinbox(input_frame, from_=0, to=100, font=("Arial", 16), width=20)
-    quantity_spinbox.grid(row=2, column=1, padx=10, pady=10, sticky='ew')
-
     # Unit Combobox
-    tk.Label(input_frame, text="Unit", font=("Arial", 16)).grid(row=3, column=0, padx=(30, 10), pady=10, sticky='w')
+    tk.Label(input_frame, text="Unit", font=("Arial", 16)).grid(row=2, column=0, padx=(30, 10), pady=10, sticky='w')
     unit_combobox = ttk.Combobox(input_frame, font=("Arial", 16), width=20, values=units)
-    unit_combobox.grid(row=3, column=1, padx=10, pady=10, sticky='ew')
+    unit_combobox.grid(row=2, column=1, padx=10, pady=10, sticky='ew')
 
-    tk.Label(input_frame, text="Expiration Date", font=("Arial", 16)).grid(row=4, column=0, padx=(30, 10), pady=10, sticky='w')
+    tk.Label(input_frame, text="Quantity", font=("Arial", 16)).grid(row=3, column=0, padx=(30, 10), pady=10, sticky='w')
+    quantity_spinbox = tk.Spinbox(input_frame, from_=0, to=100, font=("Arial", 16), width=20)
+    quantity_spinbox.grid(row=3, column=1, padx=10, pady=(10, 1), sticky='ew')
+
+    tk.Label(input_frame, text="For capsule or tablet box, input the No. of blisters present in the box.\nFor syrup box, input the No, of box/es to be deposited.", font=("Arial", 13), justify="left").grid(row=4, column=0, padx=(30, 10), pady=(0, 10), sticky='w', columnspan=2)
+
+    tk.Label(input_frame, text="Expiration Date", font=("Arial", 16)).grid(row=5, column=0, padx=(30, 10), pady=(5, 1), sticky='w')
     expiration_date_entry = DateEntry(input_frame, font=("Arial", 16), date_pattern='mm-dd-y', width=20)
-    expiration_date_entry.grid(row=4, column=1, padx=10, pady=10, sticky='ew')
+    expiration_date_entry.grid(row=5, column=1, padx=10, pady=10, sticky='ew')
+
 
     # Bind focus events to show/hide the keyboard for each widget
     for widget in [name_combobox, type_combobox, unit_combobox, expiration_date_entry]:
@@ -504,22 +508,17 @@ def deposit_window(permission):
     cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
     cancel_button = tk.Button(input_frame, text="Cancel", font=("Arial", 16), bg=motif_color, fg='white', width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=cancel_img, pady=5)
     cancel_button.image = cancel_img
-    cancel_button.grid(row=5, column=0, padx=(40, 60), pady=(50, 0))
+    cancel_button.grid(row=6, column=0, padx=(40, 60), pady=(50, 0))
 
     if permission == 'deposit_again':
         cancel_button.config(command=lambda: (LockUnlock(content_frame, content_frame, Username, Password, arduino, "lock", "medicine inventory", container=root), deposit_Toplevel.destroy()))
     else:
         cancel_button.config(command=lambda: (show_medicine_supply(), deposit_Toplevel.destroy()))
 
-        
-
     save_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'saveBlack_icon.png')).resize((25, 25), Image.LANCZOS))
     save_button = tk.Button(input_frame, text="Save", font=("Arial", 16), bg=motif_color, fg='white', width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=save_img, pady=5, command=save_medicine)
     save_button.image = save_img
-    save_button.grid(row=5, column=1, padx=(60, 40), pady=(50, 0))
-
-    deposit_Toplevel.overrideredirect(True)  # Remove the title bar
-    deposit_Toplevel.resizable(width=False, height=False)
+    save_button.grid(row=6, column=1, padx=(60, 40), pady=(50, 0))
 
 def check_sensor(toplevel):
     print("Checking sensors...")
@@ -1173,7 +1172,7 @@ def on_row_select(event):
                         message=text,
                         icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'))
         message_box.window.bind("<Motion>", reset_timer)
-        message_box.window.bind("<KeyPress", reset_timer)
+        message_box.window.bind("<KeyPress>", reset_timer)
         message_box.window.bind("<ButtonPress>", reset_timer)
 
 
