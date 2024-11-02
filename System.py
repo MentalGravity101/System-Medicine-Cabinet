@@ -499,6 +499,7 @@ def deposit_window(permission):
 
         if deposit.validate_inputs():
             deposit.save_to_database()
+            deposit_Toplevel.destroy()
             show_medicine_supply()
             # Check for soon-to-expire medicines on home page load
             notification_manager = NotificationManager(root, asap=False)

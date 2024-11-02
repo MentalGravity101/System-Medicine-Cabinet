@@ -29,7 +29,29 @@ class LockUnlock:
 
         self.exit_callback = exit_callback
 
-        self.window = root
+        self.window = tk.Toplevel(root)
+        self.window.overrideredirect(True)  # Remove the title bar
+        self.window.resizable(width=False, height=False)
+
+        self.window.attributes('-topmost', True)
+        self.window.focus_set()
+
+        screen_width = self.window.winfo_screenwidth()
+        screen_height = self.window.winfo_screenheight()
+
+        # Get the dimensions of the Toplevel window
+        window_width = self.window.winfo_width()
+        window_height = self.window.winfo_height()
+
+        # Calculate the x and y coordinates to center the window
+        x = (screen_width // 2) - (window_width // 2)
+        y = (screen_height // 2) - (window_height // 2)
+
+        # Set the new position of the Toplevel window
+        self.window.geometry(f"+{x}+{y}")
+
+        # Make the window modal (prevents interaction with other windows)
+        self.window.grab_set()
 
         self.parentHeader = parentHeader
 
@@ -201,9 +223,9 @@ class LockUnlock:
                 message_box = CustomMessageBox(
                     root=self.keyboardFrame,
                     title="Success",
-                    message="Door lock is now unlocked.",
+                    message="Door lock is now unlocked.\nPress ok to proceed on locking.",
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
-                    ok_callback=lambda: message_box.destroy()
+                    ok_callback=lambda: (message_box.destroy(), self._lock_door())
                 )
             elif self.action == "withdraw":
                 self._unlock_door()
@@ -366,6 +388,7 @@ class LockUnlock:
                                 title="Success",
                                 message="Door lock is now locked.",
                                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png')
+                                
                             )
                             print("Lock command sent after recheck")
                         else:
