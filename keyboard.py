@@ -31,9 +31,7 @@ class OnScreenKeyboard:
         for widget in self.parent_frame.winfo_children():
             if isinstance(widget, tk.Entry) or isinstance(widget, ttk.Combobox):
                 widget.bind("<FocusIn>", self.show_keyboard)  # Show keyboard on focus
-
-        
-
+                
     def create_keyboard(self):
         if self.keyboard_frame:
             return

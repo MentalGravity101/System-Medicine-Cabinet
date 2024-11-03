@@ -18,9 +18,7 @@ tab1 = None
 tab2 = None
 
 class LockUnlock:
-    def __init__(self, root, keyboardframe, userName, passWord, arduino, action, parentHeader, exit_callback=None, container=None):
-
-
+    def __init__(self, root, userName, passWord, arduino, action, parentHeader, exit_callback=None, container=None):
         self.user_Username = userName
         self.user_Password = passWord
 
@@ -29,43 +27,36 @@ class LockUnlock:
 
         self.exit_callback = exit_callback
 
-        self.window = tk.Toplevel(root)
+        # Initialize the Toplevel window
+        self.window = tk.Toplevel(root, relief='raised', bd=5)
         self.window.overrideredirect(True)  # Remove the title bar
         self.window.resizable(width=False, height=False)
-
         self.window.attributes('-topmost', True)
         self.window.focus_set()
 
+        # Update the window to get its correct size
+        self.window.update_idletasks()
+
+        # Center the Toplevel window
         screen_width = self.window.winfo_screenwidth()
         screen_height = self.window.winfo_screenheight()
-
-        # Get the dimensions of the Toplevel window
         window_width = self.window.winfo_width()
         window_height = self.window.winfo_height()
-
-        # Calculate the x and y coordinates to center the window
+        
         x = (screen_width // 2) - (window_width // 2)
         y = (screen_height // 2) - (window_height // 2)
-
-        # Set the new position of the Toplevel window
+        
         self.window.geometry(f"+{x}+{y}")
 
         # Make the window modal (prevents interaction with other windows)
         self.window.grab_set()
 
         self.parentHeader = parentHeader
-
         self.container = container
+        self.keyboardFrame = root
         
         for widget in self.window.winfo_children():
             widget.destroy()
-
-        self.keyboardFrame = keyboardframe
-        # Instantiate OnScreenKeyboard
-        self.keyboard = OnScreenKeyboard(self.keyboardFrame)
-        self.keyboard.create_keyboard()
-        self.keyboard.hide_keyboard()  # Initially hide the keyboard
-
 
         # Add the close button icon at the top-right corner
         self.close_icon_path = os.path.join(os.path.dirname(__file__), 'images', 'cancel_icon.png')
@@ -74,30 +65,44 @@ class LockUnlock:
         else:
             self.close_img = None
 
-        self._disable_container_buttons()
-        self._enable_all()
+            # Center the Toplevel window when it's created
+        self._center_toplevel(self.window)
+
+        # Bind the <Configure> event to the centering function
+        self.window.bind("<Configure>", lambda e: self._center_toplevel(self.window))
 
         # Create the UI components
         self._create_ui()
 
+    def _center_toplevel(self, toplevel):
+        # Get the screen width and height
+        screen_width = toplevel.winfo_screenwidth()
+        screen_height = toplevel.winfo_screenheight()
 
+        # Get the dimensions of the Toplevel window
+        window_width = toplevel.winfo_width()
+        window_height = toplevel.winfo_height()
+
+        # Calculate the x and y coordinates to center the window
+        x = (screen_width // 2) - (window_width // 2)
+        y = (screen_height // 2) - (window_height // 2)
+
+        # Set the new position of the Toplevel window
+        toplevel.geometry(f"+{x}+{y}")
 
 
     def _create_ui(self):
         
         # Title frame
         title_frame = tk.Frame(self.window, bg=motif_color)
-        title_frame.pack(fill=tk.X)
-
+        title_frame.pack(fill='both')
         
         title_label = tk.Label(title_frame, text=f'{self.parentHeader.capitalize()} > {self.action.capitalize()}', font=('Arial', 15, 'bold'), bg=motif_color, fg='white', pady=12)
-        title_label.pack(side=tk.LEFT, padx=(10, 0))
-
+        title_label.pack(side=tk.LEFT, padx=(10, 20))
 
         close_button = tk.Button(title_frame, image=self.close_img, command=self._exit_action, bg=motif_color, relief=tk.FLAT, bd=0)
         close_button.image = self.close_img  # Keep a reference to avoid garbage collection
         close_button.pack(side=tk.RIGHT, padx=(0, 10), pady=(0, 5))
-
 
         # Create a Notebook widget
         notebook = ttk.Notebook(self.window)
@@ -112,6 +117,11 @@ class LockUnlock:
         # Create frames for each tab
         tab1 = ttk.Frame(notebook)
         tab2 = ttk.Frame(notebook)
+
+        self.keyboard = OnScreenKeyboard(self.window)
+        self.keyboard.create_keyboard()
+        self.keyboard.hide_keyboard()  # Initially hide the keyboar
+        
 
         # Add frames to the notebook with titles
         notebook.add(tab1, text="Manual")
@@ -424,19 +434,5 @@ class LockUnlock:
         """Trigger the no callback and close the window."""
         if self.exit_callback:
             self.exit_callback()
-
-    def _disable_container_buttons(self):
-        """Disable all buttons within the container frame."""
-        if self.container:
-            for widget in self.container.winfo_children():
-                if isinstance(widget, tk.Button):
-                    widget.config(state=tk.DISABLED)
-
-    def _enable_all(self):
-        """Re-enable all buttons within the container frame."""
-        if self.container:
-            for widget in self.container.winfo_children():
-                if isinstance(widget, tk.Button):
-                    widget.config(state=tk.NORMAL)
         
 

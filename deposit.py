@@ -28,7 +28,13 @@ class MedicineDeposit:
     def validate_inputs(self):
         # Check if all fields are filled
         if not all([self.name, self.type, self.quantity, self.unit, self.expiration_date]):
-            messagebox.showerror("Error", "All fields must be filled.")
+            message_box = CustomMessageBox(
+            root=self.root,
+            title='Error',
+            message='All fields must be filled',
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+        )
+
             return False
 
         # Check if expiration date is in the future
