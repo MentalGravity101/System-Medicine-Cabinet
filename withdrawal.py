@@ -14,6 +14,7 @@ class QRCodeScanner:
 
         self.top.overrideredirect(True)  # Remove the title bar
         self.top.resizable(width=False, height=False)
+        self.top.attributes('-topmost', True)
 
         self.top.focus_set()
         self.top.grab_set()

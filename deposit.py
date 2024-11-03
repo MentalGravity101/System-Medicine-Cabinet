@@ -107,7 +107,7 @@ class MedicineDeposit:
             title="Medicine Deposited",
             message=f"Adding medicine: '{self.name.capitalize()}'\nPlease attach the printed QR Code with Exp. Date to the medicine.\nDo you want to add more medicine?.",
             icon_path=qr_code_filepath,  # Pass the QR code image path here
-            no_callback=lambda: (LockUnlock(self.content_frame, self.keyboardFrame, self.Username, self.Password, self.arduino, self.action, "medicine inventory"), self.message_box.destroy()),
+            no_callback=lambda: (LockUnlock(self.content_frame,  self.Username, self.Password, self.arduino, self.action, "medicine inventory", type="deposit"), self.message_box.destroy()),
             yes_callback=lambda: (self._yes_action(), self.message_box.destroy())
         )
 

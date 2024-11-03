@@ -41,7 +41,7 @@ def establish_connection():
         print(f"Error: {err}")
         conn = None  # Set to None if connection fails
 
-INACTIVITY_PERIOD = 60000 #automatic logout timer in milliseconds
+INACTIVITY_PERIOD = 300000 #automatic logout timer in milliseconds
 inactivity_timer = None #initialization of idle timer
 root = None  # Global variable for root window
 
@@ -842,7 +842,7 @@ def show_medicine_supply():
 
 
     widthdraw_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'minus_icon.png')).resize((25, 25), Image.LANCZOS))
-    withdraw_button = tk.Button(button_frame, text="Withdraw", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=widthdraw_icon, command=lambda: LockUnlock(root, Username, Password, arduino, "withdraw", "medicine inventory", container=root))
+    withdraw_button = tk.Button(button_frame, text="Withdraw", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=widthdraw_icon, command=lambda: LockUnlock(root, Username, Password, arduino, "unlock", "medicine inventory", container=root, type="withdraw"))
     withdraw_button.image = widthdraw_icon
     withdraw_button.grid(row=0, column=0, padx=20, pady=(12, ), sticky='ew')
 

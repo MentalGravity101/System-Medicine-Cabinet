@@ -18,7 +18,7 @@ tab1 = None
 tab2 = None
 
 class LockUnlock:
-    def __init__(self, root, userName, passWord, arduino, action, parentHeader, exit_callback=None, container=None):
+    def __init__(self, root, userName, passWord, arduino, action, parentHeader, exit_callback=None, container=None, type=None):
         self.user_Username = userName
         self.user_Password = passWord
 
@@ -33,6 +33,8 @@ class LockUnlock:
         self.window.resizable(width=False, height=False)
         self.window.attributes('-topmost', True)
         self.window.focus_set()
+
+        self.reference_window = root
 
         # Update the window to get its correct size
         self.window.update_idletasks()
@@ -54,6 +56,7 @@ class LockUnlock:
         self.parentHeader = parentHeader
         self.container = container
         self.keyboardFrame = root
+        self.type = type
         
         for widget in self.window.winfo_children():
             widget.destroy()
@@ -97,8 +100,11 @@ class LockUnlock:
         title_frame = tk.Frame(self.window, bg=motif_color)
         title_frame.pack(fill='both')
         
-        title_label = tk.Label(title_frame, text=f'{self.parentHeader.capitalize()} > {self.action.capitalize()}', font=('Arial', 15, 'bold'), bg=motif_color, fg='white', pady=12)
+        title_label = tk.Label(title_frame, text=self.action, font=('Arial', 15, 'bold'), bg=motif_color, fg='white', pady=12)
         title_label.pack(side=tk.LEFT, padx=(10, 20))
+
+        if self.action == 'successful_close':
+            title_label.config(text="Lock")
 
         close_button = tk.Button(title_frame, image=self.close_img, command=self._exit_action, bg=motif_color, relief=tk.FLAT, bd=0)
         close_button.image = self.close_img  # Keep a reference to avoid garbage collection
@@ -127,10 +133,10 @@ class LockUnlock:
         notebook.add(tab1, text="Manual")
         notebook.add(tab2, text="QR Code")
 
-        if self.action == "withdraw":
-            manual_instruction = tk.Label(tab1, text=f'Enter your username and password manually\nto unlock the door before proceeding to {self.action} medicine.', font=('Arial', 18))
-        elif self.action == "deposit":
-            manual_instruction = tk.Label(tab1, text=f'Enter your username and password manually\nto unlock the door before proceeding to {self.action} medicine.', font=('Arial', 18))
+        if self.type == "withdraw":
+            manual_instruction = tk.Label(tab1, text=f'Enter your username and password manually\nto unlock the door before proceeding to {self.type} medicine.', font=('Arial', 18))
+        elif self.type == "deposit":
+            manual_instruction = tk.Label(tab1, text=f'Enter your username and password manually\nto unlock the door before proceeding to {self.type} medicine.', font=('Arial', 18))
         else:
             manual_instruction = tk.Label(tab1, text=f'Enter your username and password manually\nto lock the door.', font=('Arial', 18))
         manual_instruction.pack(pady=10, anchor='center')
@@ -224,29 +230,44 @@ class LockUnlock:
                 INSERT INTO door_logs (username, accountType, position, date, time, action_taken)
                 VALUES (%s, %s, %s, %s, %s, %s)
             """
-            cursor.execute(insert_query, (userName, accountType, position, datetime.now().date(), datetime.now().time(), self.action))
+            if self.action == 'successful_close':
+                cursor.execute(insert_query, (userName, accountType, position, datetime.now().date(), datetime.now().time(), 'Lock'))
+            else: 
+                cursor.execute(insert_query, (userName, accountType, position, datetime.now().date(), datetime.now().time(), self.action))
             conn.commit()
             self._exit_action()
-            if self.action == "unlock":
+            if self.action == "unlock" and self.type == "deposit":
+                self.window.destroy()
                 self._unlock_door()
-
                 message_box = CustomMessageBox(
                     root=self.keyboardFrame,
                     title="Success",
-                    message="Door lock is now unlocked.\nPress ok to proceed on locking.",
+                    message="Door lock is now unlocked.\nPlease insert your medicine inside the Cabinet.\nPress ok if your finished inserting medicine to proceed on\nlocking the door.",
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
                     ok_callback=lambda: (message_box.destroy(), self._lock_door())
                 )
-            elif self.action == "withdraw":
+            elif self.type== "withdraw" and self.action == "unlock":
                 self._unlock_door()
+                self.window.destroy()
                 message_box = CustomMessageBox(
                     root=self.keyboardFrame,
                     title="Success",
                     message="Door lock is now unlocked\nYou may now proceed to withdraw medicine.",
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
-                    ok_callback= lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame), self._enable_all)
+                    ok_callback= lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame), self.window.destroy())
+                )
+            elif self.action == "successful_close":
+                self.arduino.write(b'lock\n')
+                self.window.destroy()
+                message_box = CustomMessageBox(
+                    root=self.keyboardFrame,
+                    title="Success",
+                    message="Door lock is now locked.",
+                    icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png'),
+                    ok_callback=lambda: message_box.destroy()
                 )
             elif self.action == "lock":
+                self.window.destroy()
                 self._lock_door()
         else:
             message_box = CustomMessageBox(
@@ -317,35 +338,44 @@ class LockUnlock:
                             INSERT INTO door_logs (username, accountType, position, date, time, action_taken)
                             VALUES (%s, %s, %s, %s, %s, %s)
                         """
-                        cursor.execute(insert_query, (userName, accountType, position, datetime.now().date(), datetime.now().time(), self.action))
+                        if self.action == 'successful_close':
+                            cursor.execute(insert_query, (userName, accountType, position, datetime.now().date(), datetime.now().time(), 'Lock'))
+                        else: 
+                            cursor.execute(insert_query, (userName, accountType, position, datetime.now().date(), datetime.now().time(), self.action))
                         conn.commit()
-                        if self.action == "unlock":
+                        if self.action == "unlock" and self.type == "deposit":
+                            self.window.destroy()
                             self._unlock_door()
                             message_box = CustomMessageBox(
                                 root=self.keyboardFrame,
                                 title="Success",
-                                message="Door lock is now unlock.",
+                                message="Door lock is now unlocked.\nPlease insert your medicine inside the Cabinet.\nPress ok if your finished inserting medicine to proceed on\nlocking the door.",
                                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
-                                ok_callback=message_box.destroy
+                                ok_callback=lambda: (message_box.destroy(), self._lock_door())
                             )
-                        elif self.action == "withdraw":
+                        elif self.type== "withdraw" and self.action == "unlock":
                             self._unlock_door()
-                            
+                            self.window.destroy()
                             message_box = CustomMessageBox(
                                 root=self.keyboardFrame,
                                 title="Success",
-                                message="Door lock is now unlock\nYou may now proceed to withdraw medicine.",
+                                message="Door lock is now unlocked\nYou may now proceed to withdraw medicine.",
                                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
-                                ok_callback= lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame), self._enable_all())
+                                ok_callback= lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame), self.window.destroy())
                             )
-                        elif self.action == "lock":
-                            self._lock_door()
+                        elif self.action == "successful_close":
+                            self.arduino.write(b'lock\n')
+                            self.window.destroy()
                             message_box = CustomMessageBox(
                                 root=self.keyboardFrame,
                                 title="Success",
                                 message="Door lock is now locked.",
-                                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png')
+                                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png'),
+                                ok_callback=lambda: message_box.destroy()
                             )
+                        elif self.action == "lock":
+                            self.window.destroy()
+                            self._lock_door()
                     else:
                         # If no match found, show an error
                         self.result_label.config(text="Invalid QR code or credentials.", fg="red")
@@ -373,14 +403,15 @@ class LockUnlock:
             
             # Step 3: Proceed based on the sensor check response
             if response == "Object detected":
-                self.arduino.write(b'lock\n')  # Send the "lock" command to the Arduino
+                self.window.destroy()
                 message_box = CustomMessageBox(
                     root=self.keyboardFrame,
                     title="Success",
-                    message="Door lock is now locked.",
-                    icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png')
+                    message="Door is now properly closed and ready to lock.\nPlease click 'Ok' to process locking the door.",
+                    icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png'),
+                    ok_callback=lambda: (LockUnlock(self.window, self.user_Username, self.user_Password, self.arduino, 'successful_close', self.parentHeader), message_box.destroy())
+                    
                 )
-                print("Lock command sent")
             else:
                 # Recursive function to keep checking the sensors
                 def recheck_sensors(warning_box):
@@ -390,17 +421,17 @@ class LockUnlock:
                         response = self.arduino.readline().decode().strip()
                         if response == "Object detected":
                             # Destroy the warning box since doors are properly closed now
+                            self.window.destroy()
                             warning_box.destroy()
                             # Send lock command and show success message
-                            self.arduino.write(b'lock\n')
-                            CustomMessageBox(
+                            message_box = CustomMessageBox(
                                 root=self.keyboardFrame,
                                 title="Success",
-                                message="Door lock is now locked.",
-                                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png')
+                                message="Door is now properly closed and ready to lock.\nPlease click 'Ok' to process locking the door.",
+                                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png'),
+                                ok_callback=lambda: (LockUnlock(self.reference_window, self.user_Username, self.user_Password, self.arduino, 'successful_close', self.parentHeader), message_box.destroy())
                                 
                             )
-                            print("Lock command sent after recheck")
                         else:
                             # Display warning again if doors are still not closed properly
                             warning_box = CustomMessageBox(
