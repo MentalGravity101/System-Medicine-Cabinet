@@ -391,6 +391,7 @@ def center_toplevel(toplevel):
     # Set the new position of the Toplevel window
     toplevel.geometry(f"+{x}+{y}")
 
+#Function that creates the UI for deposit toplevel
 def deposit_window(permission):
     deposit_Toplevel = tk.Toplevel(root, relief='raised', bd=5)
     deposit_Toplevel.attributes('-topmost', True)
@@ -421,11 +422,11 @@ def deposit_window(permission):
         cursor = db_connection.cursor()
 
         # Fetch distinct names
-        cursor.execute("SELECT DISTINCT name FROM medicine_list")
+        cursor.execute("SELECT DISTINCT brand_name FROM medicine_list")
         names = [row[0] for row in cursor.fetchall()]
 
         # Fetch distinct types
-        cursor.execute("SELECT DISTINCT type FROM medicine_list")
+        cursor.execute("SELECT DISTINCT generic_name FROM medicine_list")
         types = [row[0] for row in cursor.fetchall()]
 
         # Fetch distinct units
@@ -454,48 +455,57 @@ def deposit_window(permission):
     numKeyboard.create_keyboard()
     numKeyboard.hide()
 
-    # Name Combobox
-    tk.Label(input_frame, text="Name of Medicine", font=("Arial", 16)).grid(row=0, column=0, padx=(30, 10), pady=10, sticky='w')
-    name_combobox = ttk.Combobox(input_frame, font=("Arial", 16), width=20, values=names)
-    name_combobox.grid(row=0, column=1, padx=10, pady=10, sticky='ew')
-
     # Type Combobox
-    tk.Label(input_frame, text="Type", font=("Arial", 16)).grid(row=1, column=0, padx=(30, 10), pady=10, sticky='w')
+    tk.Label(input_frame, text="Genric Name", font=("Arial", 16)).grid(row=0, column=0, padx=(30, 10), pady=10, sticky='w')
     type_combobox = ttk.Combobox(input_frame, font=("Arial", 16), width=20, values=types)
-    type_combobox.grid(row=1, column=1, padx=10, pady=10, sticky='ew')
+    type_combobox.grid(row=0, column=1, padx=10, pady=10, sticky='ew')
+
+    # Name Combobox
+    tk.Label(input_frame, text="Brand Name", font=("Arial", 16)).grid(row=1, column=0, padx=(30, 10), pady=10, sticky='w')
+    name_combobox = ttk.Combobox(input_frame, font=("Arial", 16), width=20, values=names)
+    name_combobox.grid(row=1, column=1, padx=10, pady=10, sticky='ew')
 
     # Unit Combobox
-    tk.Label(input_frame, text="Unit", font=("Arial", 16)).grid(row=2, column=0, padx=(30, 10), pady=10, sticky='w')
+    tk.Label(input_frame, text="Dosage", font=("Arial", 16)).grid(row=2, column=0, padx=(30, 10), pady=10, sticky='w')
+    dosage_spinbox= tk.Spinbox(input_frame, from_=0, to=1000, font=("Arial", 16), width=5)
+    dosage_spinbox.grid(row=2, column=1, padx=(10, 10), pady=10, sticky='ew')
+
+    # Unit Combobox
+    tk.Label(input_frame, text="Unit", font=("Arial", 16)).grid(row=3, column=0, padx=(30, 10), pady=10, sticky='w')
     unit_combobox = ttk.Combobox(input_frame, font=("Arial", 16), width=20, values=units)
-    unit_combobox.grid(row=2, column=1, padx=10, pady=10, sticky='ew')
+    unit_combobox.grid(row=3, column=1, padx=10, pady=10, sticky='ew')
 
-    tk.Label(input_frame, text="Quantity", font=("Arial", 16)).grid(row=3, column=0, padx=(30, 10), pady=10, sticky='w')
+
+    tk.Label(input_frame, text="Quantity", font=("Arial", 16)).grid(row=4, column=0, padx=(30, 10), pady=10, sticky='w')
     quantity_spinbox = tk.Spinbox(input_frame, from_=0, to=100, font=("Arial", 16), width=20)
-    quantity_spinbox.grid(row=3, column=1, padx=10, pady=(10, 1), sticky='ew')
+    quantity_spinbox.grid(row=4, column=1, padx=10, pady=(10, 1), sticky='ew')
 
-    tk.Label(input_frame, text="For capsule or tablet box, input the No. of blisters present in the box.\nFor syrup box, input the No, of box/es to be deposited.", font=("Arial", 13), justify="left").grid(row=4, column=0, padx=(30, 10), pady=(0, 10), sticky='w', columnspan=2)
+    tk.Label(input_frame, text="For capsule or tablet box, input the No. of blisters present in the box.\nFor syrup box, input the No, of box/es to be deposited.", font=("Arial", 13), justify="left").grid(row=5, column=0, padx=(30, 10), pady=(0, 10), sticky='w', columnspan=2)
 
-    tk.Label(input_frame, text="Expiration Date", font=("Arial", 16)).grid(row=5, column=0, padx=(30, 10), pady=(5, 1), sticky='w')
+    tk.Label(input_frame, text="Expiration Date", font=("Arial", 16)).grid(row=6, column=0, padx=(30, 10), pady=(5, 1), sticky='w')
     expiration_date_entry = DateEntry(input_frame, font=("Arial", 16), date_pattern='mm-dd-y', width=20)
-    expiration_date_entry.grid(row=5, column=1, padx=10, pady=10, sticky='ew')
+    expiration_date_entry.grid(row=6, column=1, padx=10, pady=10, sticky='ew')
 
 
     # Bind focus events to show/hide the keyboard for each widget
     for widget in [name_combobox, type_combobox, unit_combobox, expiration_date_entry]:
         widget.bind("<FocusIn>", lambda e: keyboard.show_keyboard())
         widget.bind("<FocusOut>", lambda e: keyboard.hide_keyboard())
-    quantity_spinbox.bind("<FocusIn>", lambda e: numKeyboard.show())
-    quantity_spinbox.bind("<FocusOut>", lambda e: numKeyboard.hide())
+
+    for widgetz in [quantity_spinbox, dosage_spinbox]:
+        widgetz.bind("<FocusIn>", lambda e: numKeyboard.show())
+        widgetz.bind("<FocusOut>", lambda e: numKeyboard.hide())
 
     # Save button logic
     def save_medicine():
         name = name_combobox.get()
         type_ = type_combobox.get()
+        dosage = dosage_spinbox.get()
         quantity = quantity_spinbox.get()
         unit = unit_combobox.get()
         expiration_date = expiration_date_entry.get_date()
 
-        deposit = MedicineDeposit(name, type_, quantity, unit, expiration_date, conn, main_ui_frame, content_frame, content_frame, Username, Password, arduino, action="unlock", yes_callback=lambda: (print("Calling deposit_window with 'deposit_again'"), deposit_window('deposit_again'), deposit_Toplevel.destroy()))
+        deposit = MedicineDeposit(name, type_,  quantity, unit, expiration_date, dosage, conn, main_ui_frame, content_frame, content_frame, Username, Password, arduino, action="unlock", yes_callback=lambda: (print("Calling deposit_window with 'deposit_again'"), deposit_window('deposit_again'), deposit_Toplevel.destroy()))
 
         if deposit.validate_inputs():
             deposit.save_to_database()
@@ -509,7 +519,7 @@ def deposit_window(permission):
     cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
     cancel_button = tk.Button(input_frame, text="Cancel", font=("Arial", 16), bg=motif_color, fg='white', width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=cancel_img, pady=5)
     cancel_button.image = cancel_img
-    cancel_button.grid(row=6, column=0, padx=(40, 60), pady=(50, 0))
+    cancel_button.grid(row=7, column=0, padx=(40, 60), pady=(50, 0))
 
     if permission == 'deposit_again':
         cancel_button.config(command=lambda: (LockUnlock(root, Username, Password, arduino, "lock", "medicine inventory", container=root), deposit_Toplevel.destroy()))
@@ -519,7 +529,7 @@ def deposit_window(permission):
     save_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'saveBlack_icon.png')).resize((25, 25), Image.LANCZOS))
     save_button = tk.Button(input_frame, text="Save", font=("Arial", 16), bg=motif_color, fg='white', width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=save_img, pady=5, command=save_medicine)
     save_button.image = save_img
-    save_button.grid(row=6, column=1, padx=(60, 40), pady=(50, 0))
+    save_button.grid(row=7, column=1, padx=(60, 40), pady=(50, 0))
 
 def check_sensor(toplevel):
     print("Checking sensors...")
