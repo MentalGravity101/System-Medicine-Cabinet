@@ -9,10 +9,13 @@ import tkinter as tk
 from tkinter import messagebox
 from custom_messagebox import CustomMessageBox
 from lockunlock import LockUnlock
+import threading
 
 SERIAL_PORT = 'COM4'  # Update to your printer's COM port if different
 BAUD_RATE = 9600
 TIMEOUT = 1
+
+motif_color = '#42a7f5'
 
 class MedicineDeposit:
     def __init__(self, name, generic_name, quantity, unit, expiration_date, dosage, db_connection, root, content_frame, keyboardFrame, Username, Password, arduino, action="unlock", yes_callback=None):
@@ -99,9 +102,37 @@ class MedicineDeposit:
         qr_image_tk = ImageTk.PhotoImage(qr_image_resized)
         # Add code here to update the label widget if necessary
 
+    def show_loading_window(self):
+        """Display a Toplevel window with a 'Loading...' message."""
+        self.loading_window = tk.Toplevel(self.root, relief='raised', bd=5)
+        self.loading_window.title("Printing")
+        self.loading_window.geometry("500x300")
+        self.loading_window.resizable(False, False)
+        self.loading_window.attributes('-topmost', True)
+        self.loading_window.focus_set()
+        self.loading_window.grab_set()  # Make it modal (disable interaction with main window)
+        self.loading_window.overrideredirect(True)  # Remove the title bar
+        
+        # Center the loading window
+        x = self.root.winfo_x() + (self.root.winfo_width() // 2) - 100
+        y = self.root.winfo_y() + (self.root.winfo_height() // 2) - 50
+        self.loading_window.geometry(f"+{x}+{y}")
+
+        loading_label = tk.Label(self.loading_window, text="Loading...", font=("Arial", 18, 'bold'), bg=motif_color, fg='white')
+        loading_label.pack(expand=True, fill='both')
+
+    def close_loading_window(self):
+        """Close the loading window."""
+        if self.loading_window:
+            self.loading_window.destroy()
+            self.loading_window = None
+
     def print_qr_code(self, expiration_date):
-        """Prints the QR code and expiration date side-by-side with space below on the thermal printer."""
+        """Prints the QR code and expiration date on the thermal printer, showing a loading window during the process."""
         try:
+            # Show the loading window before starting the print task
+            self.show_loading_window()
+
             # Generate QR code image
             qr_code_filepath = self.generate_qr_code()
             qr_image = Image.open(qr_code_filepath)
@@ -114,8 +145,8 @@ class MedicineDeposit:
             
             # Load a bold TrueType font (adjust the path as needed for your system)
             font_path = "C:/Windows/Fonts/arialbd.ttf"  # Arial Bold on Windows
-            font = ImageFont.truetype(font_path, 33)  # 24px for larger text
-            text_width, text_height = font.getbbox(expiration_text)[2:]  # Measure text dimensions
+            font = ImageFont.truetype(font_path, 33)  # 33px for larger text
+            text_width, text_height = font.getbbox(expiration_text)[2:]
 
             # Create a new blank image with space for both the QR and expiration text
             combined_width = qr_image.width + text_width + 20  # 20px padding between QR and text
@@ -133,18 +164,65 @@ class MedicineDeposit:
             # Convert the combined image to ESC/POS format and print
             img_data = self.image_to_escpos_data(combined_image)
 
-            with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=TIMEOUT) as printer:
-                # Send the combined image data to the printer
-                printer.write(img_data)
-                printer.flush()
+            # Define the print task in a separate thread to prevent UI freezing
+            def print_task():
+                try:
+                    with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=TIMEOUT) as printer:
+                        printer.write(img_data)
+                        printer.flush()
 
-                # Optional cut command if printer supports it
-                printer.write(b'\x1d\x56\x42\x00')  # ESC i - Cut paper
-                printer.flush()
+                        # Optional cut command if printer supports it
+                        printer.write(b'\x1d\x56\x42\x00')  # ESC i - Cut paper
+                        printer.flush()
 
-            print("QR code and expiration date printed with spacing successfully.")
-        except serial.SerialException as e:
-            print(f"Printer communication error: {e}")
+                    print("QR code and expiration date printed with spacing successfully.")
+                except serial.SerialException as e:
+                    print(f"Printer communication error: {e}")
+                finally:
+                    # Ensure both the loading window is closed and success message is shown after printing
+                    self.close_loading_window()
+                    self.show_success_message(qr_code_filepath)
+
+            # Start the print task in a new thread
+            threading.Thread(target=print_task).start()
+
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            self.close_loading_window()  # Ensure loading window is closed in case of error
+
+    def save_to_database(self):
+        # Generate QR code and get the image file path
+        qr_code_filepath = self.generate_qr_code()
+        qr_code_data = f"{self.name}_{self.expiration_date}"
+
+        # Convert name and type to Title Case for database insertion
+        name_for_db = self.name.capitalize()
+        type_for_db = self.generic_name.capitalize()
+        dosage_for_db = f"{self.dosage}{self.unit}" 
+        if self.unit == 'capsule' or self.unit == 'tablet':
+            dosage_for_db = f"{self.dosage}mg"
+        elif self.unit == 'syrup':
+            dosage_for_db = f"{self.dosage}ml"
+
+        # Save the medicine data to the database
+        try:
+            cursor = self.db_connection.cursor()
+            insert_query = """
+                INSERT INTO medicine_inventory (name, type, quantity, unit, dosage, expiration_date, date_stored, qr_code)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            cursor.execute(insert_query, (name_for_db, type_for_db, self.quantity, self.unit.capitalize(), dosage_for_db,
+                                        self.expiration_date, datetime.now().date(), qr_code_data))
+            self.db_connection.commit()
+
+            # Start printing process after database save
+            print("Attempting to print expiration date on thermal printer...")
+            self.print_qr_code(self.expiration_date)
+
+        except mysql.connector.Error as err:
+            messagebox.showerror("Error", f"Database error: {err}")
+        finally:
+            cursor.close()
 
     def image_to_escpos_data(self, img):
         """Converts a monochrome image to ESC/POS format."""
@@ -173,45 +251,9 @@ class MedicineDeposit:
         return img_data
 
 
-    def save_to_database(self):
-        # Generate QR code and get the image file path
-        qr_code_filepath = self.generate_qr_code()
-        qr_code_data = f"{self.name}_{self.expiration_date}"
-
-        # Convert name and type to Title Case for database insertion
-        name_for_db = self.name.capitalize()
-        type_for_db = self.generic_name.capitalize()
-        dosage_for_db = f"{self.dosage}{self.unit}" 
-        if self.unit == 'capsule' or self.unit == 'tablet':
-            dosage_for_db = f"{self.dosage}mg"
-        elif self.unit == 'syrup':
-            dosage_for_db = f"{self.dosage}ml"
-
-        # Save the medicine data to the database
-        try:
-            cursor = self.db_connection.cursor()
-            insert_query = """
-                INSERT INTO medicine_inventory (name, type, quantity, unit, dosage, expiration_date, date_stored, qr_code)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            """
-            cursor.execute(insert_query, (name_for_db, type_for_db, self.quantity, self.unit.capitalize(), dosage_for_db,
-                                        self.expiration_date, datetime.now().date(), qr_code_data))
-            self.db_connection.commit()
-
-            # Show success message and QR code in a custom message box
-            self.show_success_message(qr_code_filepath)
-
-            # Print the expiration date after database entry (for debugging)
-            print("Attempting to print expiration date on thermal printer...")
-            self.print_qr_code(self.expiration_date)
-
-        except mysql.connector.Error as err:
-            messagebox.showerror("Error", f"Database error: {err}")
-        finally:
-            cursor.close()
-
     def show_success_message(self, qr_code_filepath):
         """Display the custom messagebox after successfully adding the medicine."""
+        self.close_loading_window()
         self.message_box = CustomMessageBox(
             root=self.root,
             title="Medicine Deposited",

@@ -504,8 +504,9 @@ def deposit_window(permission):
         quantity = quantity_spinbox.get()
         unit = unit_combobox.get()
         expiration_date = expiration_date_entry.get_date()
+        keyboard.hide_keyboard()
 
-        deposit = MedicineDeposit(name, type_,  quantity, unit, expiration_date, dosage, conn, main_ui_frame, content_frame, content_frame, Username, Password, arduino, action="unlock", yes_callback=lambda: (print("Calling deposit_window with 'deposit_again'"), deposit_window('deposit_again'), deposit_Toplevel.destroy()))
+        deposit = MedicineDeposit(name, type_,  quantity, unit, expiration_date, dosage, conn, root, content_frame, content_frame, Username, Password, arduino, action="unlock", yes_callback=lambda: (print("Calling deposit_window with 'deposit_again'"), deposit_window('deposit_again'), deposit_Toplevel.destroy()))
 
         if deposit.validate_inputs():
             deposit.save_to_database()
