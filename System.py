@@ -1513,7 +1513,7 @@ def add_user():
                     conn.commit()
 
                     # Generate and save QR code image temporarily
-                    qr_path = generate_qrcode(qr_code_data)
+                    qr_path = generate_qrcode(qr_code_data, 'add')
 
                 else:
                     message_box = CustomMessageBox(
@@ -1530,130 +1530,6 @@ def add_user():
         except mysql.connector.Error as err:
             messagebox.showerror("Database Error", f"Error: {err}")
 
-    def generate_qrcode(qr_data):
-        qr_dir = os.path.join(os.path.dirname(__file__), 'users')
-        os.makedirs(qr_dir, exist_ok=True)
-
-        qr = qrcode.QRCode(
-            version=1,
-            error_correction=qrcode.constants.ERROR_CORRECT_L,
-            box_size=10,
-            border=4,
-        )
-        qr.add_data(qr_data)
-        qr.make(fit=True)
-
-        qr_img = qr.make_image(fill='black', back_color='white')
-        qr_path = os.path.join(qr_dir, f"{qr_data.split(' - ')[0]}_qrcode.png")
-        qr_img.save(qr_path)
-
-        # Combine QR with text
-        print_qr_code_with_text(qr_path, qr_data.split(' - ')[0])
-
-        return qr_path
-
-    def print_qr_code_with_text(qr_image_path, username):
-        # Create a Toplevel window for "Printing..."
-        printing_window = tk.Toplevel(relief='raised', bd=3, bg=motif_color)
-        printing_window.overrideredirect(True)  # Remove the title bar
-
-        # Get the screen width and height
-        screen_width = printing_window.winfo_screenwidth()
-        screen_height = printing_window.winfo_screenheight()
-
-        # Set the dimensions of the Toplevel window
-        window_width = 400
-        window_height = 150
-
-        # Calculate the position to center the window
-        position_top = int((screen_height / 2) - (window_height / 2))
-        position_left = int((screen_width / 2) - (window_width / 2))
-
-        # Set the geometry of the window to center it
-        printing_window.geometry(f"{window_width}x{window_height}+{position_left}+{position_top}")
-        printing_window.resizable(False, False)
-
-        # Label to show the printing status
-        printing_label = tk.Label(printing_window, text="Loading, please wait...", font=("Arial", 18, 'bold'), fg='white', bg=motif_color)
-        printing_label.pack(expand=True)
-
-        # Call the function to print in a separate thread to keep the GUI responsive
-        print_thread = threading.Thread(target=perform_printing, args=(qr_image_path, username, printing_window, username))
-        print_thread.start()
-
-
-    def perform_printing(qr_image_path, username, printing_window, userName):
-        try:
-            # Simulate the QR code printing process
-            qr_image = Image.open(qr_image_path)
-            qr_image = qr_image.resize((200, 200))
-
-            font_path = "C:/Windows/Fonts/arialbd.ttf"  # Adjust path as needed
-            font = ImageFont.truetype(font_path, 35)
-            text_width, text_height = font.getbbox(username)[2:]
-
-            padding = 12
-            total_width = qr_image.width + padding + text_width
-            extra_space_below = 60
-            total_height = max(qr_image.height, text_height) + extra_space_below
-
-            combined_image = Image.new('L', (total_width, total_height), 255)
-            combined_image.paste(qr_image, (padding + text_width, 0))
-
-            draw = ImageDraw.Draw(combined_image)
-            draw.text((padding, (total_height - text_height) // 2), username, font=font, fill=0)
-            combined_image = combined_image.convert('1')
-
-            img_data = image_to_escpos_data(combined_image)
-
-            # Send the data to the printer
-            SERIAL_PORT = 'COM4'
-            BAUD_RATE = 9600
-            TIMEOUT = 1
-
-            with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=TIMEOUT) as printer:
-                printer.write(img_data)
-                printer.flush()
-                printer.write(b'\x1d\x56\x42\x00')  # ESC/POS cut command
-                printer.flush()
-
-            # Display success message with QR code
-            message_box = CustomMessageBox(
-                root=root,
-                title="SUCCESS",
-                message=f'Successfully added new user {userName}',
-                icon_path=qr_image_path
-            )
-            show_account_setting()
-            print("QR code and username printed successfully.")
-
-        except Exception as e:
-            print(f"Printing failed: {e}")
-        finally:
-            # Close the Toplevel window after printing is finished
-            printing_window.destroy()
-
-
-    def image_to_escpos_data(img):
-        width, height = img.size
-        bytes_per_row = (width + 7) // 8  
-        img_data = b'\x1d\x76\x30\x00' + bytes([bytes_per_row % 256, bytes_per_row // 256, height % 256, height // 256])
-
-        for y in range(height):
-            byte = 0
-            row_data = b''
-            for x in range(width):
-                if img.getpixel((x, y)) == 0:  # Black pixel
-                    byte |= (1 << (7 - (x % 8)))
-                if x % 8 == 7:
-                    row_data += bytes([byte])
-                    byte = 0
-            if width % 8 != 0:
-                row_data += bytes([byte])
-            img_data += row_data
-
-        return img_data
-
     cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
     cancel_button = tk.Button(input_frame, text="Cancel", font=("Arial", 16), bg=motif_color, fg='white', command=show_account_setting, width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=cancel_img, pady=5)
     cancel_button.image = cancel_img
@@ -1662,7 +1538,140 @@ def add_user():
     save_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'saveBlack_icon.png')).resize((25, 25), Image.LANCZOS))
     save_button = tk.Button(input_frame, text="Save", font=("Arial", 16), bg=motif_color, fg='white', width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=save_img, pady=5, command=add_new_user)
     save_button.image = save_img
-    save_button.grid(row=7, column=1, padx=(60, 40), pady=(50, 0))    
+    save_button.grid(row=7, column=1, padx=(60, 40), pady=(50, 0))
+
+def generate_qrcode(qr_data, mode):
+    qr_dir = os.path.join(os.path.dirname(__file__), 'users')
+    os.makedirs(qr_dir, exist_ok=True)
+
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(qr_data)
+    qr.make(fit=True)
+
+    qr_img = qr.make_image(fill='black', back_color='white')
+    qr_path = os.path.join(qr_dir, f"{qr_data.split(' - ')[0]}_qrcode.png")
+    qr_img.save(qr_path)
+
+    # Combine QR with text
+    print_qr_code_with_text(qr_path, qr_data.split(' - ')[0], mode)
+
+    return qr_path
+
+def print_qr_code_with_text(qr_image_path, username, mode):
+    # Create a Toplevel window for "Printing..."
+    printing_window = tk.Toplevel(relief='raised', bd=3, bg=motif_color)
+    printing_window.overrideredirect(True)  # Remove the title bar
+
+    # Get the screen width and height
+    screen_width = printing_window.winfo_screenwidth()
+    screen_height = printing_window.winfo_screenheight()
+
+    # Set the dimensions of the Toplevel window
+    window_width = 400
+    window_height = 150
+
+    # Calculate the position to center the window
+    position_top = int((screen_height / 2) - (window_height / 2))
+    position_left = int((screen_width / 2) - (window_width / 2))
+
+    # Set the geometry of the window to center it
+    printing_window.geometry(f"{window_width}x{window_height}+{position_left}+{position_top}")
+    printing_window.resizable(False, False)
+
+    # Label to show the printing status
+    printing_label = tk.Label(printing_window, text="Loading, please wait...", font=("Arial", 18, 'bold'), fg='white', bg=motif_color)
+    printing_label.pack(expand=True)
+
+    # Call the function to print in a separate thread to keep the GUI responsive
+    print_thread = threading.Thread(target=perform_printing, args=(qr_image_path, username, printing_window, username, mode))
+    print_thread.start()
+
+
+def perform_printing(qr_image_path, username, printing_window, userName, mode):
+    try:
+        # Simulate the QR code printing process
+        qr_image = Image.open(qr_image_path)
+        qr_image = qr_image.resize((200, 200))
+
+        font_path = "C:/Windows/Fonts/arialbd.ttf"  # Adjust path as needed
+        font = ImageFont.truetype(font_path, 35)
+        text_width, text_height = font.getbbox(username)[2:]
+
+        padding = 12
+        total_width = qr_image.width + padding + text_width
+        extra_space_below = 60
+        total_height = max(qr_image.height, text_height) + extra_space_below
+
+        combined_image = Image.new('L', (total_width, total_height), 255)
+        combined_image.paste(qr_image, (padding + text_width, 0))
+
+        draw = ImageDraw.Draw(combined_image)
+        draw.text((padding, (total_height - text_height) // 2), username, font=font, fill=0)
+        combined_image = combined_image.convert('1')
+
+        img_data = image_to_escpos_data(combined_image)
+
+        # Send the data to the printer
+        SERIAL_PORT = 'COM4'
+        BAUD_RATE = 9600
+        TIMEOUT = 1
+
+        with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=TIMEOUT) as printer:
+            printer.write(img_data)
+            printer.flush()
+            printer.write(b'\x1d\x56\x42\x00')  # ESC/POS cut command
+            printer.flush()
+
+        if mode == 'add':
+            # Display success message with QR code
+            message_box = CustomMessageBox(
+                root=root,
+                title="Added User",
+                message=f'Successfully added new user {userName}.\nPlease carefully tear off the QR code sticker.',
+                icon_path=qr_image_path
+            )
+            show_account_setting()
+        elif mode == 'edit':
+            # Display success message with QR code
+            message_box = CustomMessageBox(
+                root=root,
+                title="User QR Code",
+                message=f'Printed the QR code for {userName}.\nPlease carefully tear off the QR code sticker.',
+                icon_path=qr_image_path
+            )
+        print("QR code and username printed successfully.")
+
+    except Exception as e:
+        print(f"Printing failed: {e}")
+    finally:
+        # Close the Toplevel window after printing is finished
+        printing_window.destroy()
+
+
+def image_to_escpos_data(img):
+    width, height = img.size
+    bytes_per_row = (width + 7) // 8  
+    img_data = b'\x1d\x76\x30\x00' + bytes([bytes_per_row % 256, bytes_per_row // 256, height % 256, height // 256])
+
+    for y in range(height):
+        byte = 0
+        row_data = b''
+        for x in range(width):
+            if img.getpixel((x, y)) == 0:  # Black pixel
+                byte |= (1 << (7 - (x % 8)))
+            if x % 8 == 7:
+                row_data += bytes([byte])
+                byte = 0
+        if width % 8 != 0:
+            row_data += bytes([byte])
+        img_data += row_data
+
+    return img_data    
 
 def on_tree_select(tree):
     selected_item = tree.selection()  # Get selected item
@@ -1738,7 +1747,7 @@ def validate_user_info(mode, username, password, confirm_password, position, acc
                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
             )
             message_box.window.bind("<Motion>", reset_timer)
-            message_box.window.bind("<KeyPress", reset_timer)
+            message_box.window.bind("<KeyPress>", reset_timer)
             message_box.window.bind("<ButtonPress>", reset_timer)
             return False
 
@@ -1756,7 +1765,7 @@ def edit_user(username):
 
     # Retrieve the user information from the database
     cursor = conn.cursor()
-    cursor.execute("SELECT position, accountType, password, qrcode_data FROM users WHERE username = %s", [username])
+    cursor.execute("SELECT id, position, accountType, password, qrcode_data FROM users WHERE username = %s", [username])
     user = cursor.fetchone()
 
     title_label = tk.Label(content_frame, text="ACCOUNT SETTINGS", bg=motif_color, fg="white", font=('Arial', 25, 'bold'), height=2, relief='groove', bd=1)
@@ -1825,17 +1834,33 @@ def edit_user(username):
             message_box.window.bind("<KeyPress", reset_timer)
             message_box.window.bind("<ButtonPress>", reset_timer)
             show_account_setting()  # Refresh the user table
-    
-    # Cancel and Save buttons
-    cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
-    cancel_button = tk.Button(input_frame, text="Cancel", font=("Arial", 16), bg=motif_color, fg='white', command=show_account_setting, width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=cancel_img, pady=5)
-    cancel_button.image = cancel_img
-    cancel_button.grid(row=5, column=0, padx=(40, 60), pady=(50, 0))
 
+        # New "Decode QR" button to generate QR based on existing QR data
+    def decode_and_generate_qr():
+        # Retrieve the qrcode_data from the database (it is stored as a string)
+        qr_data = user[4]  # Assuming `qrcode_data` is at index 3
+        
+        # Generate QR code with the decoded data (this is already a string)
+        qr_path = generate_qrcode(qr_data, 'edit')
+        
+        # You can optionally display or log the generated QR code path
+        print(f"QR code generated and saved at: {qr_path}")
+    
+    # Cancel button
+    cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
+    cancel_button = tk.Button(input_frame, text="Cancel", font=("Arial", 16), bg=motif_color, fg='white', command=show_account_setting, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=cancel_img, pady=5)
+    cancel_button.image = cancel_img
+    cancel_button.grid(row=5, column=0, pady=(50, 0))
+
+    # New "Decode QR" button between Cancel and Save
+    decode_qr_button = tk.Button(input_frame, text="Print QR", font=("Arial", 16), bg=motif_color, fg='white', command=decode_and_generate_qr, padx=20, relief="raised", bd=3, compound=tk.LEFT, pady=5)
+    decode_qr_button.grid(row=5, column=1, pady=(50, 0))  # Position the new button between Cancel and Save
+
+    # Save button
     save_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'saveBlack_icon.png')).resize((25, 25), Image.LANCZOS))
-    save_button = tk.Button(input_frame, text="Save", font=("Arial", 16), bg=motif_color, fg='white', width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=save_img, pady=5, command=save_changes)
+    save_button = tk.Button(input_frame, text="Save", font=("Arial", 16), bg=motif_color, fg='white', padx=20, relief="raised", bd=3, compound=tk.LEFT, image=save_img, pady=5, command=save_changes)
     save_button.image = save_img
-    save_button.grid(row=5, column=1, padx=(60, 40), pady=(50, 0))
+    save_button.grid(row=5, column=2, pady=(50, 0))
 
     # Bind the focus events to show/hide the keyboard for each widget
     for widget in [username_entry, password_entry, position_combobox, accountType_combobox]:
