@@ -35,9 +35,18 @@ class MedicineDeposit:
         self.action = action
         self.yes_callback = yes_callback
 
+        self.reference_window = root
+
+        self.dosage_for_db = f"{self.dosage}{self.unit}" 
+        if self.unit == 'capsule' or self.unit == 'tablet':
+            self.dosage_for_db = f"{self.dosage_for_db}mg"
+        elif self.unit == 'syrup':
+            self.dosage_for_db = f"{self.dosage_for_db}ml"
+
+
     def validate_inputs(self):
         # Check if all fields are filled
-        if not all([self.name, self.generic_name, self.quantity, self.unit, self.expiration_date, self.dosage]):
+        if not all([self.name, self.generic_name, self.quantity, self.unit, self.expiration_date, self.dosage_for_db]):
             message_box = CustomMessageBox(
                 root=self.root,
                 title='Error',
@@ -79,7 +88,7 @@ class MedicineDeposit:
 
     def generate_qr_code(self):
         # Combine name and expiration date to create a unique identifier for the QR code
-        qr_code_data = f"{self.name}_{self.expiration_date}"
+        qr_code_data = f"{self.name}_{self.dosage_for_db}_{self.expiration_date}"
         qr = qrcode.QRCode(version=1, box_size=10, border=5)
         qr.add_data(qr_code_data)
         qr.make(fit=True)
@@ -193,17 +202,12 @@ class MedicineDeposit:
     def save_to_database(self):
         # Generate QR code and get the image file path
         qr_code_filepath = self.generate_qr_code()
-        qr_code_data = f"{self.name}_{self.expiration_date}"
+        qr_code_data = f"{self.name}_{self.dosage_for_db}_{self.expiration_date}"
 
         # Convert name and type to Title Case for database insertion
         name_for_db = self.name.capitalize()
         type_for_db = self.generic_name.capitalize()
-        dosage_for_db = f"{self.dosage}{self.unit}" 
-        if self.unit == 'capsule' or self.unit == 'tablet':
-            dosage_for_db = f"{self.dosage}mg"
-        elif self.unit == 'syrup':
-            dosage_for_db = f"{self.dosage}ml"
-
+        
         # Save the medicine data to the database
         try:
             cursor = self.db_connection.cursor()
@@ -211,7 +215,7 @@ class MedicineDeposit:
                 INSERT INTO medicine_inventory (name, type, quantity, unit, dosage, expiration_date, date_stored, qr_code)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """
-            cursor.execute(insert_query, (name_for_db, type_for_db, self.quantity, self.unit.capitalize(), dosage_for_db,
+            cursor.execute(insert_query, (name_for_db, type_for_db, self.quantity, self.unit.capitalize(), self.dosage_for_db,
                                         self.expiration_date, datetime.now().date(), qr_code_data))
             self.db_connection.commit()
 
@@ -259,7 +263,7 @@ class MedicineDeposit:
             title="Medicine Deposited",
             message=f"Adding medicine: '{self.name.capitalize()}'\nPlease attach the printed QR Code with Exp. Date to the medicine.\nDo you want to add more medicine?",
             icon_path=qr_code_filepath,
-            no_callback=lambda: (LockUnlock(self.content_frame, self.Username, self.Password, self.arduino, self.action, "medicine inventory", type="deposit"), self.message_box.destroy()),
+            no_callback=lambda: (LockUnlock(self.reference_window, self.Username, self.Password, self.arduino, self.action, "medicine inventory", type="deposit"), self.message_box.destroy()),
             yes_callback=lambda: (self._yes_action(), self.message_box.destroy())
         )
 
