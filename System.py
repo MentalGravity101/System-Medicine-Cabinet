@@ -69,7 +69,7 @@ def authenticate_user(username, password):
     cursor.execute("SELECT * FROM users WHERE username = %s AND password = %s", [username, password])
     user = cursor.fetchone()
     if user:
-        user_role = user[2]
+        user_role = user[3]
         main_ui_frame = create_main_ui_frame(container) 
         main_ui_frame.tkraise()
         reset_timer()
@@ -1372,7 +1372,7 @@ def delete_selected_user(tree, authenticated_user, conn):
                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
             )
             message_box.window.bind("<Motion>", reset_timer)
-            message_box.window.bind("<KeyPress", reset_timer)
+            message_box.window.bind("<KeyPress>", reset_timer)
             message_box.window.bind("<ButtonPress>", reset_timer)
             return
         
@@ -1400,7 +1400,7 @@ def delete_selected_user(tree, authenticated_user, conn):
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
         )
         message_box.window.bind("<Motion>", reset_timer)
-        message_box.window.bind("<KeyPress", reset_timer)
+        message_box.window.bind("<KeyPress>", reset_timer)
         message_box.window.bind("<ButtonPress>", reset_timer)
     else:
         # If it's another user, check if they're the last admin and confirm deletion
@@ -1413,7 +1413,7 @@ def delete_selected_user(tree, authenticated_user, conn):
                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
             )
             message_box.window.bind("<Motion>", reset_timer)
-            message_box.window.bind("<KeyPress", reset_timer)
+            message_box.window.bind("<KeyPress>", reset_timer)
             message_box.window.bind("<ButtonPress>", reset_timer)
             return
 
@@ -1525,7 +1525,7 @@ def add_user():
                         sound_file="sounds/FillAllFields.mp3"
                     )
                     message_box.window.bind("<Motion>", reset_timer)
-                    message_box.window.bind("<KeyPress", reset_timer)
+                    message_box.window.bind("<KeyPress>", reset_timer)
                     message_box.window.bind("<ButtonPress>", reset_timer)
         except mysql.connector.Error as err:
             messagebox.showerror("Database Error", f"Error: {err}")
@@ -1644,6 +1644,7 @@ def perform_printing(qr_image_path, username, printing_window, userName, mode):
                 message=f'Printed the QR code for {userName}.\nPlease carefully tear off the QR code sticker.',
                 icon_path=qr_image_path
             )
+            show_account_setting()
         print("QR code and username printed successfully.")
 
     except Exception as e:
@@ -1687,7 +1688,7 @@ def on_tree_select(tree):
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
         )
         message_box.window.bind("<Motion>", reset_timer)
-        message_box.window.bind("<KeyPress", reset_timer)
+        message_box.window.bind("<KeyPress>", reset_timer)
         message_box.window.bind("<ButtonPress>", reset_timer)
 
 def validate_all_fields_filled(*widgets):
@@ -1700,7 +1701,7 @@ def validate_all_fields_filled(*widgets):
                 return False
     return True
 
-def validate_user_info(mode, username, password, confirm_password, position, accountType):
+def validate_user_info(mode, username, password, confirm_password, position, accountType, current_accountType):
     # Check if passwords match
     if password != confirm_password:
         message_box = CustomMessageBox(
@@ -1711,15 +1712,16 @@ def validate_user_info(mode, username, password, confirm_password, position, acc
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
         )
         message_box.window.bind("<Motion>", reset_timer)
-        message_box.window.bind("<KeyPress", reset_timer)
+        message_box.window.bind("<KeyPress>", reset_timer)
         message_box.window.bind("<ButtonPress>", reset_timer)
         return False
 
-    # Check if username already exists
+    # Check if username already exists (for adding users only)
     cursor = conn.cursor()
     cursor.execute("SELECT username FROM users WHERE username = %s", [username])
     user_exists = cursor.fetchone()
 
+    # If mode is 'add' and the username exists, show error
     if mode == 'add' and user_exists:
         message_box = CustomMessageBox(
             root=root,
@@ -1733,8 +1735,8 @@ def validate_user_info(mode, username, password, confirm_password, position, acc
         message_box.window.bind("<ButtonPress>", reset_timer)
         return False
 
-    # Check if accountType is Admin and if there are already 2 Admins
-    if accountType == 'Admin':
+    # Check if accountType is Admin and if there are already 2 Admins (Only for 'add' mode)
+    if mode == 'add' and accountType == 'Admin':
         cursor.execute("SELECT COUNT(*) FROM users WHERE accountType = 'Admin'")
         admin_count = cursor.fetchone()[0]
 
@@ -1751,9 +1753,26 @@ def validate_user_info(mode, username, password, confirm_password, position, acc
             message_box.window.bind("<ButtonPress>", reset_timer)
             return False
 
+    # Check if position is being changed to "Admin" and there are already 2 Admins (Only for 'edit' mode)
+    if mode == 'edit' and accountType == 'Admin' and current_accountType != 'Admin':
+        cursor.execute("SELECT COUNT(*) FROM users WHERE accountType = 'Admin'")
+        admin_count = cursor.fetchone()[0]
+
+        if admin_count >= 2:
+            message_box = CustomMessageBox(
+                root=root,
+                title="ERROR",
+                message="There are already 2 admin accounts. You cannot make more admins.",
+                color="red",
+                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+            )
+            message_box.window.bind("<Motion>", reset_timer)
+            message_box.window.bind("<KeyPress>", reset_timer)
+            message_box.window.bind("<ButtonPress>", reset_timer)
+            return False
+
     # All validations passed
     return True
-
 
 def toplevel_destroy(window):
         window.destroy()
@@ -1791,20 +1810,20 @@ def edit_user(username):
     tk.Label(input_frame, text="Password", font=("Arial", 14)).grid(row=1, column=0, padx=10, pady=10)
     password_entry = tk.Entry(input_frame, show="*", font=("Arial", 14))
     password_entry.grid(row=1, column=1, padx=10, pady=10)
-    password_entry.insert(0, user[2])
+    password_entry.insert(0, user[3])
     
     # Position combobox
     tk.Label(input_frame, text="Position", font=("Arial", 14)).grid(row=2, column=0, padx=10, pady=10)
     position_combobox = ttk.Combobox(input_frame, font=("Arial", 14), values=["Midwife", "BHW", "BNS"])
     position_combobox.grid(row=2, column=1, padx=10, pady=10)
-    position_combobox.set(user[0])
+    position_combobox.set(user[1])
     position_combobox.config(validate="key", validatecommand=(position_combobox.register(validate_combobox_input), '%d', '%S'))
 
     # Account Type combobox
     tk.Label(input_frame, text="Account Type", font=("Arial", 14)).grid(row=3, column=0, padx=10, pady=10)
     accountType_combobox = ttk.Combobox(input_frame, font=("Arial", 14), values=["Admin", "Staff"])
     accountType_combobox.grid(row=3, column=1, padx=10, pady=10)
-    accountType_combobox.set(user[1])
+    accountType_combobox.set(user[2])
     accountType_combobox.config(validate="key", validatecommand=(position_combobox.register(validate_combobox_input), '%d', '%S'))
 
     # Save changes button
@@ -1814,7 +1833,7 @@ def edit_user(username):
         new_position = position_combobox.get()
         new_accountType = accountType_combobox.get()
 
-        if validate_user_info('edit', new_username, new_password, new_password, new_position, new_accountType):
+        if validate_user_info('edit', new_username, new_password, new_password, new_position, new_accountType, 'Admin'):
             cursor = conn.cursor()
             cursor.execute("""
                 UPDATE users
@@ -1831,7 +1850,7 @@ def edit_user(username):
                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'accountSetting_Icon.png'),
             )
             message_box.window.bind("<Motion>", reset_timer)
-            message_box.window.bind("<KeyPress", reset_timer)
+            message_box.window.bind("<KeyPress>", reset_timer)
             message_box.window.bind("<ButtonPress>", reset_timer)
             show_account_setting()  # Refresh the user table
 
