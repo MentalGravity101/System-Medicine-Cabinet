@@ -20,6 +20,7 @@ import time
 from loginQrCode import QRLogin
 from lockunlock import LockUnlock
 import threading
+import datetime
 
 conn = mysql.connector.connect(
   host="localhost",
@@ -76,6 +77,7 @@ def authenticate_user(username, password):
         bind_activity_events()
         show_medicine_supply()
         configure_sidebar(user_role)
+        update_datetime()
         # Check for soon-to-expire medicines on home page load
         notification_manager = NotificationManager(root)
         notification_manager.check_soon_to_expire()  # Automatically check and pop-up notifications
@@ -175,7 +177,7 @@ def create_login_frame(container):
 
 #functin to create the UI of Main UI Frame, including the sidebar navigation
 def create_main_ui_frame(container): 
-    global main_ui_frame
+    global main_ui_frame, date_time_label
     main_ui_frame = tk.Frame(container, bg=motif_color)
     global content_frame, inventory_img, cabinet_img, notification_img, account_setting_img
     global sidebar_frame
@@ -219,6 +221,8 @@ def create_main_ui_frame(container):
     logout_button = tk.Button(sidebar_frame, height=100, width=350, text="Log Out", command=lambda: logout_with_sensor_check('manual logout'), font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=logout_img, padx=10, anchor='w')
     logout_button.image = logout_img
     logout_button.grid(row=6, column=0, sticky="we", columnspan=2)
+    date_time_label = tk.Label(main_ui_frame, text=get_current_datetime(), anchor='ne', padx=20, font=('Arial', 18, 'bold'))
+    date_time_label.pack(fill='both', side='top')
     content_frame = tk.Frame(main_ui_frame, bg='#ecf0f1')
     content_frame.pack(expand=True, fill='both', side='top')
     main_ui_frame.grid(row=0, column=0, sticky='nsew')
@@ -673,7 +677,7 @@ def show_medicine_supply():
             database="db_medicine_cabinet"
         )
         cursor = conn.cursor()
-        query = f"SELECT name, type, quantity, unit, date_stored, expiration_date FROM medicine_inventory WHERE quantity <> 0 ORDER BY {order_by} {sort}"
+        query = f"SELECT name, type, dosage, quantity, unit, date_stored, expiration_date FROM medicine_inventory WHERE quantity <> 0 ORDER BY {order_by} {sort}"
         cursor.execute(query)
         medicine = cursor.fetchall()
 
@@ -682,7 +686,7 @@ def show_medicine_supply():
         search_term_lower = search_term.lower()
 
         for med in medicine:
-            name, type, quantity, unit, date_stored, expiration_date = med
+            name, type, dosage, quantity, unit, date_stored, expiration_date = med
 
             # Convert date objects to strings (handling NoneType)
             date_stored_str = date_stored.strftime("%b %d, %Y").lower() if date_stored else "N/A"
@@ -693,6 +697,7 @@ def show_medicine_supply():
                 search_term_lower in name.lower() or
                 search_term_lower in type.lower() or
                 search_term_lower in unit.lower() or
+                search_term_lower in dosage.lower() or
                 search_term_lower in str(quantity).lower() or
                 search_term_lower in date_stored_str or
                 search_term_lower in expiration_date_str
@@ -701,11 +706,11 @@ def show_medicine_supply():
 
         # Use the filtered results to populate the Treeview
         for i, med in enumerate(filtered_medicine):
-            name, type, quantity, unit, date_stored, expiration_date = med
+            name, type, dosage, quantity, unit, date_stored, expiration_date = med
             date_stored_str = date_stored.strftime("%b %d, %Y") if date_stored else "N/A"
             expiration_date_str = expiration_date.strftime("%b %d, %Y") if expiration_date else "N/A"
             tag = 'evenrow' if i % 2 == 0 else 'oddrow'
-            tree.insert("", "end", values=(name, type, quantity, unit, date_stored_str, expiration_date_str), tags=(tag,))
+            tree.insert("", "end", values=(name, type, dosage, quantity, unit, date_stored_str, expiration_date_str), tags=(tag,))
 
 
     def sort_treeview(column, clicked_button):
@@ -776,32 +781,35 @@ def show_medicine_supply():
     buttons = []
 
     # Sorting buttons
-    sort_button_1 = tk.Button(header_frame, text="Sort by Name", bg=motif_color, fg="white", padx=10, pady=5,
-                              command=lambda: sort_treeview("name", sort_button_1), relief="raised", bd=4, font=(font_style, font_size))
-    sort_button_1.grid(row=0, column=2, padx=(110, 0), pady=10, sticky="e")
+    tk.Label(header_frame, text="Sort by:", bg=motif_color, fg='white', padx=10, pady=5, font=(font_style, font_size)).grid(row=0, column=2, padx=(50, 5), pady=10, sticky="e")
+
+    sort_button_1 = tk.Button(header_frame, text="Brand Name", bg='white', fg=motif_color, padx=10, pady=5,
+                              command=lambda: sort_treeview("name", sort_button_1), relief="raised", bd=4, font=(font_style, font_size), state="disabled", width=10)
+    sort_button_1.grid(row=0, column=3, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_1)
 
-    sort_button_2 = tk.Button(header_frame, text="Sort by Type", bg=motif_color, fg="white", padx=10, pady=5,
-                              command=lambda: sort_treeview("type", sort_button_2), relief="raised", bd=4, font=(font_style, font_size))
-    sort_button_2.grid(row=0, column=3, padx=5, pady=10, sticky="e")
+    sort_button_2 = tk.Button(header_frame, text="Generic Name", bg=motif_color, fg="white", padx=10, pady=5,
+                              command=lambda: sort_treeview("type", sort_button_2), relief="raised", bd=4, font=(font_style, font_size), width=10)
+    sort_button_2.grid(row=0, column=4, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_2)
 
-    sort_button_3 = tk.Button(header_frame, text="Sort by Unit", bg=motif_color, fg="white", padx=10, pady=5,
-                              command=lambda: sort_treeview("unit", sort_button_3), relief="raised", bd=4, font=(font_style, font_size))
-    sort_button_3.grid(row=0, column=4, padx=5, pady=10, sticky="e")
+    sort_button_3 = tk.Button(header_frame, text="Unit", bg=motif_color, fg="white", padx=10, pady=5,
+                              command=lambda: sort_treeview("unit", sort_button_3), relief="raised", bd=4, font=(font_style, font_size), width=10)
+    sort_button_3.grid(row=0, column=5, padx=6, pady=10, sticky="e")
     buttons.append(sort_button_3)
 
-    sort_button_4 = tk.Button(header_frame, text="Sort by Expiration Date", bg=motif_color, fg="white", padx=10, pady=5,
-                              command=lambda: sort_treeview("expiration_date", sort_button_4), relief="raised", bd=4, font=(font_style, font_size))
-    sort_button_4.grid(row=0, column=5, padx=5, pady=10, sticky="e")
+    sort_button_4 = tk.Button(header_frame, text="Date Stored", bg=motif_color, fg='white', padx=10, pady=5,
+                              command=lambda: sort_treeview("date_stored", sort_button_4), relief="raised", bd=4, font=(font_style, font_size), width=10)
+    sort_button_4.grid(row=0, column=6, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_4)
 
-    sort_button_5 = tk.Button(header_frame, text="Sort by Date Stored", bg="white", fg=motif_color, padx=10, pady=5,
-                              command=lambda: sort_treeview("date_stored", sort_button_5), relief="raised", bd=4, font=(font_style, font_size), state="disabled")
-    sort_button_5.grid(row=0, column=6, padx=5, pady=10, sticky="e")
+    sort_button_5 = tk.Button(header_frame, text="Expiration Date", bg=motif_color, fg="white", padx=10, pady=5,
+                              command=lambda: sort_treeview("expiration_date", sort_button_5), relief="raised", bd=4, font=(font_style, font_size), width=10)
+    sort_button_5.grid(row=0, column=7, padx=6, pady=10, sticky="e")
     buttons.append(sort_button_5)
 
-    activate_button(sort_button_5)
+
+    activate_button(sort_button_1)
 
     # Frame for the treeview
     tree_frame = tk.Frame(content_frame, bg="#f0f0f0")
@@ -814,7 +822,7 @@ def show_medicine_supply():
     table_style()
 
     # Define columns
-    columns = ("name", "type", "quantity", "unit", "date stored", "expiration date")
+    columns = ("brand name", "generic name", "dosage", "quantity", "unit", "date stored", "expiration date")
     tree = ttk.Treeview(tree_frame, columns=columns, show="headings", yscrollcommand=tree_scroll.set, height=10)
 
     tree_scroll.config(command=tree.yview)
@@ -1009,6 +1017,8 @@ def show_doorLog():
         if active_column == column:
             # Toggle the sort order if the same button is clicked again
             sort_order = "DESC" if sort_order == "ASC" else "ASC"
+            if active_column == 'date':
+                sort_order = "DESC"
         else:
             # Set active column and reset sort order to ascending
             active_column = column
@@ -1070,28 +1080,31 @@ def show_doorLog():
     buttons = []
 
     # Combined Sorting Button for Date & Time
-    sort_button_date_time = tk.Button(header_frame, text="Sort by Date & Time", bg="white", fg='black', padx=10, pady=5,
-                                    command=lambda: sort_treeview("date", sort_button_date_time), relief="raised", bd=4, font=(font_style, font_size), state="disabled")
-    sort_button_date_time.grid(row=0, column=2, padx=(110, 0), pady=10, sticky="e")
+    tk.Label(header_frame, text="Sort by:", bg=motif_color, fg='white', padx=10, pady=5, font=(font_style, font_size)).grid(row=0, column=1, padx=(50, 5), pady=10, sticky="e")
+
+
+    sort_button_date_time = tk.Button(header_frame, text="Date & Time", bg="white", fg='black', padx=10, pady=5,
+                                    command=lambda: sort_treeview("date", sort_button_date_time), relief="raised", bd=4, font=(font_style, font_size), state="disabled", width=10)
+    sort_button_date_time.grid(row=0, column=2, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_date_time)
 
-    sort_button_1 = tk.Button(header_frame, text="Sort by Username", bg=motif_color, fg="white", padx=10, pady=5,
-                              command=lambda: sort_treeview("username", sort_button_1), relief="raised", bd=4, font=(font_style, font_size))
+    sort_button_1 = tk.Button(header_frame, text="Username", bg=motif_color, fg="white", padx=10, pady=5,
+                              command=lambda: sort_treeview("username", sort_button_1), relief="raised", bd=4, font=(font_style, font_size), width=10)
     sort_button_1.grid(row=0, column=3, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_1)
 
-    sort_button_2 = tk.Button(header_frame, text="Sort by Account Type", bg=motif_color, fg="white", padx=10, pady=5,
-                              command=lambda: sort_treeview("accountType", sort_button_2), relief="raised", bd=4, font=(font_style, font_size))
+    sort_button_2 = tk.Button(header_frame, text="Account Type", bg=motif_color, fg="white", padx=10, pady=5,
+                              command=lambda: sort_treeview("accountType", sort_button_2), relief="raised", bd=4, font=(font_style, font_size), width=10)
     sort_button_2.grid(row=0, column=4, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_2)
 
-    sort_button_3 = tk.Button(header_frame, text="Sort by Position", bg=motif_color, fg="white", padx=10, pady=5,
-                              command=lambda: sort_treeview("position", sort_button_3), relief="raised", bd=4, font=(font_style, font_size))
+    sort_button_3 = tk.Button(header_frame, text="Position", bg=motif_color, fg="white", padx=10, pady=5,
+                              command=lambda: sort_treeview("position", sort_button_3), relief="raised", bd=4, font=(font_style, font_size), width=10)
     sort_button_3.grid(row=0, column=5, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_3)
 
-    sort_button_6 = tk.Button(header_frame, text="Sort by Action Taken", bg=motif_color, fg='white', padx=10, pady=5,
-                              command=lambda: sort_treeview("action_taken", sort_button_6), relief="raised", bd=4, font=(font_style, font_size))
+    sort_button_6 = tk.Button(header_frame, text="Action Taken", bg=motif_color, fg='white', padx=10, pady=5,
+                              command=lambda: sort_treeview("action_taken", sort_button_6), relief="raised", bd=4, font=(font_style, font_size), width=10)
     sort_button_6.grid(row=0, column=6, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_6)
 
@@ -1966,11 +1979,21 @@ def unlock_door():
     arduino.write(b'unlock\n')  # Send the "unlock" command to the Arduino
     print("\nUnlock command sent")
 
+def get_current_datetime():
+    # Format date as "Nov 7, 2024" and time as "hh:mm:ss AM/PM"
+    now = datetime.datetime.now()
+    date_str = now.strftime("%b %d, %Y")   # "Nov 7, 2024"
+    time_str = now.strftime("%I:%M:%S %p") # "hh:mm:ss AM/PM"
+    return f"{date_str}   {time_str}"
+
+def update_datetime():
+    date_time_label.config(text=get_current_datetime())
+    root.after(1000, update_datetime)
+
 
 #-----------------------------------------------MAIN------------------------------------------------------
 def main():
     global root, arduino, container
-
     root = tk.Tk()
     root.resizable(width=False, height=False)
     root.title("Electronic Medicine Cabinet Control System")

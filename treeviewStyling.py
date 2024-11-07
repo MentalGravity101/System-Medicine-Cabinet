@@ -6,7 +6,7 @@ motif_color = '#42a7f5'
 def table_style(type=None):
     # Treeview styling
     style = ttk.Style()
-    style.configure("Treeview", rowheight=40, borderwidth=2, relief="solid", font=("Arial", 18))
+    style.configure("Treeview", rowheight=38, borderwidth=2, relief="solid", font=("Arial", 18))
     style.configure("Treeview.Heading", font=("Arial", 18, "bold"))
     if type == "Notification" or "Accounts":
         style.map('Treeview', 
