@@ -221,8 +221,21 @@ def create_main_ui_frame(container):
     logout_button = tk.Button(sidebar_frame, height=100, width=350, text="Log Out", command=lambda: logout_with_sensor_check('manual logout'), font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=logout_img, padx=10, anchor='w')
     logout_button.image = logout_img
     logout_button.grid(row=6, column=0, sticky="we", columnspan=2)
-    date_time_label = tk.Label(main_ui_frame, text=get_current_datetime(), anchor='ne', padx=20, font=('Arial', 18, 'bold'))
-    date_time_label.pack(fill='both', side='top')
+    # Assuming main_ui_frame is already defined as part of your Tkinter window
+    user_and_datetime_label = tk.Frame(main_ui_frame)
+    user_and_datetime_label.pack(fill='x', side='top')
+
+    # Configure grid to expand columns appropriately
+    user_and_datetime_label.grid_columnconfigure(0, weight=1)  # Left side (user label)
+    user_and_datetime_label.grid_columnconfigure(1, weight=1)  # Right side (datetime label)
+
+    # User label
+    user = tk.Label(user_and_datetime_label, text=f'USER: {Username}', anchor='w', padx=20, font=('Arial', 18, 'bold'))
+    user.grid(row=0, column=0, sticky='w')  # Align to the left
+
+    # Date and time label
+    date_time_label = tk.Label(user_and_datetime_label, text=get_current_datetime(), anchor='e', padx=20, font=('Arial', 18, 'bold'))
+    date_time_label.grid(row=0, column=1, sticky='e')  # Align to the right
     content_frame = tk.Frame(main_ui_frame, bg='#ecf0f1')
     content_frame.pack(expand=True, fill='both', side='top')
     main_ui_frame.grid(row=0, column=0, sticky='nsew')
@@ -630,7 +643,7 @@ def show_medicine_supply():
     search_term = ""  # Store the search term globally
 
     header_frame = tk.Frame(content_frame, bg=motif_color)
-    header_frame.pack(fill="x", pady=10)
+    header_frame.pack(fill="x", pady=(0, 10))
 
     def activate_button(clicked_button):
         for btn in buttons:
@@ -1030,7 +1043,7 @@ def show_doorLog():
 
     # Header frame for sorting buttons and search bar
     header_frame = tk.Frame(content_frame, bg=motif_color)
-    header_frame.pack(fill="x", pady=10)
+    header_frame.pack(fill="x", pady=(0, 10))
 
     # Load the search icon image
     search_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'search_icon.png')).resize((14, 14), Image.LANCZOS))
@@ -1996,6 +2009,7 @@ def main():
     global root, arduino, container
     root = tk.Tk()
     root.resizable(width=False, height=False)
+    root.overrideredirect(True)
     root.title("Electronic Medicine Cabinet Control System")
     root.state("zoomed")  # Maximize the window to full screen
 
