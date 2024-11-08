@@ -8,10 +8,9 @@ def table_style(type=None):
     style = ttk.Style()
     style.configure("Treeview", rowheight=38, borderwidth=2, relief="solid", font=("Arial", 18))
     style.configure("Treeview.Heading", font=("Arial", 18, "bold"))
-    if type == "Notification" or "Accounts":
-        style.map('Treeview', 
-                    background=[('selected', motif_color)],
-                    foreground=[('selected', 'white')])
+    style.map('Treeview', 
+                background=[('selected', motif_color)],
+                foreground=[('selected', 'white')])
 
     # Customize scrollbar
     style.configure("Vertical.TScrollbar", 

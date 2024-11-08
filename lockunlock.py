@@ -241,7 +241,7 @@ class LockUnlock:
                 message_box = CustomMessageBox(
                     root=self.keyboardFrame,
                     title="Success",
-                    message="Door lock is now unlocked.\nPlease insert your medicine inside the Cabinet.\nPress ok if your finished inserting medicine to proceed on\nlocking the door.",
+                    message="Door is now unlocked.\nPlease insert your medicine inside the Cabinet.\nPress ok if your finished inserting medicine to proceed on\nlocking the door.",
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
                     ok_callback=lambda: (message_box.destroy(), self._lock_door())
                 )
@@ -252,7 +252,7 @@ class LockUnlock:
                 message_box = CustomMessageBox(
                     root=self.keyboardFrame,
                     title="Success",
-                    message="Door lock is now unlocked\nYou may now proceed to withdraw medicine.",
+                    message="Door is now unlocked\nYou may now proceed to withdraw medicine.",
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
                     ok_callback= lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame, self.user_Username, self.user_Password, self.arduino, 'lock'), self.window.destroy())
                 )
@@ -263,7 +263,7 @@ class LockUnlock:
                 message_box = CustomMessageBox(
                     root=self.keyboardFrame,
                     title="Success",
-                    message="Door lock is now locked.",
+                    message="Door is now locked.",
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png'),
                     ok_callback=lambda: message_box.destroy()
                 )
@@ -350,7 +350,7 @@ class LockUnlock:
                             message_box = CustomMessageBox(
                                 root=self.keyboardFrame,
                                 title="Success",
-                                message="Door lock is now unlocked.\nPlease insert your medicine inside the Cabinet.\nPress ok if your finished inserting medicine to proceed on\nlocking the door.",
+                                message="Door is now unlocked.\nPlease insert your medicine inside the Cabinet.\nPress ok if your finished inserting medicine to proceed on\nlocking the door.",
                                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
                                 ok_callback=lambda: (message_box.destroy(), self._lock_door())
                             )
@@ -371,7 +371,7 @@ class LockUnlock:
                             message_box = CustomMessageBox(
                                 root=self.keyboardFrame,
                                 title="Success",
-                                message="Door lock is now locked.",
+                                message="Door is now locked.",
                                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png'),
                                 ok_callback=lambda: message_box.destroy()
                             )
