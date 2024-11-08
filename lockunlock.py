@@ -256,6 +256,7 @@ class LockUnlock:
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
                     ok_callback= lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame, self.user_Username, self.user_Password, self.arduino, 'lock'), self.window.destroy())
                 )
+
             elif self.action == "successful_close":
                 self.arduino.write(b'lock\n')
                 self.window.destroy()
@@ -410,7 +411,7 @@ class LockUnlock:
                     title="Success",
                     message="Door is now properly closed and ready to lock.\nPlease click 'Ok' to process locking the door.",
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png'),
-                    ok_callback=lambda: (LockUnlock(self.window, self.user_Username, self.user_Password, self.arduino, 'successful_close', self.parentHeader), message_box.destroy())
+                    ok_callback=lambda: (LockUnlock(self.reference_window, self.user_Username, self.user_Password, self.arduino, 'successful_close', self.parentHeader), message_box.destroy())
                     
                 )
             else:

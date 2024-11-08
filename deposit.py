@@ -35,13 +35,11 @@ class MedicineDeposit:
         self.action = action
         self.yes_callback = yes_callback
 
-        self.reference_window = root
-
-        self.dosage_for_db = f"{self.dosage}{self.unit}" 
+        self.reference_window = root 
         if self.unit == 'capsule' or self.unit == 'tablet':
-            self.dosage_for_db = f"{self.dosage_for_db}mg"
+            self.dosage_for_db = f"{self.dosage} mg"
         elif self.unit == 'syrup':
-            self.dosage_for_db = f"{self.dosage_for_db}ml"
+            self.dosage_for_db = f"{self.dosage} ml"
 
 
     def validate_inputs(self):
@@ -263,7 +261,7 @@ class MedicineDeposit:
             title="Medicine Deposited",
             message=f"Adding medicine: '{self.name.capitalize()}'\nPlease attach the printed QR Code with Exp. Date to the medicine.\nDo you want to add more medicine?",
             icon_path=qr_code_filepath,
-            no_callback=lambda: (LockUnlock(self.reference_window, self.Username, self.Password, self.arduino, self.action, "medicine inventory", type="deposit"), self.message_box.destroy()),
+            no_callback=lambda: (LockUnlock(self.root, self.Username, self.Password, self.arduino, self.action, "medicine inventory", type="deposit"), self.message_box.destroy()),
             yes_callback=lambda: (self._yes_action(), self.message_box.destroy())
         )
 

@@ -230,7 +230,7 @@ def create_main_ui_frame(container):
     user_and_datetime_label.grid_columnconfigure(1, weight=1)  # Right side (datetime label)
 
     # User label
-    user = tk.Label(user_and_datetime_label, text=f'USER: {Username}', anchor='w', padx=20, font=('Arial', 18, 'bold'))
+    user = tk.Label(user_and_datetime_label, text=f'Welcome user, {Username}', anchor='w', padx=20, font=('Arial', 18, 'bold italic'))
     user.grid(row=0, column=0, sticky='w')  # Align to the left
 
     # Date and time label
@@ -474,39 +474,57 @@ def deposit_window(permission):
     numKeyboard.hide()
 
     # Type Combobox
-    tk.Label(input_frame, text="Genric Name", font=("Arial", 16)).grid(row=0, column=0, padx=(30, 10), pady=10, sticky='w')
-    type_combobox = ttk.Combobox(input_frame, font=("Arial", 16), width=20, values=types)
+    tk.Label(input_frame, text="Generic Name: ", font=("Arial", 16)).grid(row=0, column=0, padx=(30, 20), pady=10, sticky='e')
+    type_combobox = tk.Entry(input_frame, font=("Arial", 16), width=2)
     type_combobox.grid(row=0, column=1, padx=10, pady=10, sticky='ew')
 
     # Name Combobox
-    tk.Label(input_frame, text="Brand Name", font=("Arial", 16)).grid(row=1, column=0, padx=(30, 10), pady=10, sticky='w')
-    name_combobox = ttk.Combobox(input_frame, font=("Arial", 16), width=20, values=names)
+    tk.Label(input_frame, text="Brand Name: ", font=("Arial", 16)).grid(row=1, column=0, padx=(30, 20), pady=10, sticky='e')
+    name_combobox = tk.Entry(input_frame, font=("Arial", 16), width=20)
     name_combobox.grid(row=1, column=1, padx=10, pady=10, sticky='ew')
 
     # Unit Combobox
-    tk.Label(input_frame, text="Dosage", font=("Arial", 16)).grid(row=2, column=0, padx=(30, 10), pady=10, sticky='w')
+    tk.Label(input_frame, text="Dosage: ", font=("Arial", 16)).grid(row=2, column=0, padx=(30, 20), pady=10, sticky='e')
     dosage_spinbox= tk.Spinbox(input_frame, from_=0, to=1000, font=("Arial", 16), width=5)
     dosage_spinbox.grid(row=2, column=1, padx=(10, 10), pady=10, sticky='ew')
 
-    # Unit Combobox
-    tk.Label(input_frame, text="Unit", font=("Arial", 16)).grid(row=3, column=0, padx=(30, 10), pady=10, sticky='w')
-    unit_combobox = ttk.Combobox(input_frame, font=("Arial", 16), width=20, values=units)
-    unit_combobox.grid(row=3, column=1, padx=10, pady=10, sticky='ew')
+    # Unit OptionMenu
+    tk.Label(input_frame, text="Unit: ", font=("Arial", 16)).grid(row=3, column=0, padx=(30, 20), pady=10, sticky='e')
 
+    # Define units and set the placeholder as the initial value
+    units = ["Syrup", "Capsule", "Tablet"]
+    selected_unit = tk.StringVar(value="Select a unit")  # Set placeholder value
 
-    tk.Label(input_frame, text="Quantity", font=("Arial", 16)).grid(row=4, column=0, padx=(30, 10), pady=10, sticky='w')
+    # Create OptionMenu with placeholder
+    unit_option_menu = tk.OptionMenu(input_frame, selected_unit, *units)
+    unit_option_menu.config(font=("Arial", 16), width=20, bg='white')
+    unit_option_menu.grid(row=3, column=1, padx=10, pady=10, sticky='ew')
+
+    # Optional: Add validation to check if a valid unit is selected (i.e., placeholder is removed)
+    def validate_selection(*args):
+        if selected_unit.get() == "Select a unit":
+            selected_unit.set(units[0])  # You could set it to units[0] or keep the placeholder for invalid selection feedback
+
+    # Track changes in the selected unit to enforce valid selection if needed
+    selected_unit.trace_add("write", validate_selection)
+
+    # Customize the dropdown menu styling
+    menu = unit_option_menu["menu"]
+    menu.config(font=("Arial", 18), activebackground="blue") 
+
+    tk.Label(input_frame, text="Quantity: ", font=("Arial", 16)).grid(row=4, column=0, padx=(30, 20), pady=10, sticky='e')
     quantity_spinbox = tk.Spinbox(input_frame, from_=0, to=100, font=("Arial", 16), width=20)
     quantity_spinbox.grid(row=4, column=1, padx=10, pady=(10, 1), sticky='ew')
 
-    tk.Label(input_frame, text="For capsule or tablet box, input the No. of blisters present in the box.\nFor syrup box, input the No, of box/es to be deposited.", font=("Arial", 13), justify="left").grid(row=5, column=0, padx=(30, 10), pady=(0, 10), sticky='w', columnspan=2)
+    tk.Label(input_frame, text="For capsule or tablet box, input the pieces of blisters present in the box.\nFor syrup box, input the pieces of box/es to be deposited.", font=("Arial", 13), justify="center").grid(row=5, column=0, padx=(30, 10), pady=(0, 10), sticky='w', columnspan=2)
 
-    tk.Label(input_frame, text="Expiration Date", font=("Arial", 16)).grid(row=6, column=0, padx=(30, 10), pady=(5, 1), sticky='w')
+    tk.Label(input_frame, text="Expiration Date: ", font=("Arial", 16)).grid(row=6, column=0, padx=(30, 20), pady=(5, 1), sticky='e')
     expiration_date_entry = DateEntry(input_frame, font=("Arial", 16), date_pattern='mm-dd-y', width=20)
     expiration_date_entry.grid(row=6, column=1, padx=10, pady=10, sticky='ew')
 
 
     # Bind focus events to show/hide the keyboard for each widget
-    for widget in [name_combobox, type_combobox, unit_combobox, expiration_date_entry]:
+    for widget in [name_combobox, type_combobox, expiration_date_entry]:
         widget.bind("<FocusIn>", lambda e: keyboard.show_keyboard())
         widget.bind("<FocusOut>", lambda e: keyboard.hide_keyboard())
 
@@ -520,7 +538,7 @@ def deposit_window(permission):
         type_ = type_combobox.get()
         dosage = dosage_spinbox.get()
         quantity = quantity_spinbox.get()
-        unit = unit_combobox.get()
+        unit = selected_unit.get()
         expiration_date = expiration_date_entry.get_date()
         keyboard.hide_keyboard()
 
@@ -1327,9 +1345,9 @@ def show_account_setting():
     tree.heading("accountType", text="Account Type")
 
     # Define column widths
-    tree.column("username", width=150)
-    tree.column("position", width=150)
-    tree.column("accountType", width=150)
+    tree.column("username", width=150, anchor=tk.CENTER)
+    tree.column("position", width=150, anchor=tk.CENTER)
+    tree.column("accountType", width=150, anchor=tk.CENTER)
 
     # Insert data into the treeview with alternating row colors
     # conn = sqlite3.connect('Medicine Cabinet.db')
@@ -1504,15 +1522,48 @@ def add_user():
     confirm_password_entry = tk.Entry(input_frame, show="*", font=("Arial", 14), width=20)
     confirm_password_entry.grid(row=3, column=1, padx=10, pady=10)
 
+    # Position OptionMenu
     tk.Label(input_frame, text="Position", font=("Arial", 14)).grid(row=4, column=0, padx=10, pady=10)
-    position_combobox = ttk.Combobox(input_frame, font=("Arial", 14), values=["Midwife", "BHW", "BNS"], width=20)
-    position_combobox.grid(row=4, column=1, padx=10, pady=10)
 
+    # Define positions and set placeholder
+    positions = ["Midwife", "Brgy Health Worker (BHW)", "Brgy Nutrition Scholar (BNS)", "Brgy Health Councilor"]
+    selected_position = tk.StringVar(value="Select Position")  # Placeholder
+
+    position_option_menu = tk.OptionMenu(input_frame, selected_position, *positions)
+    position_option_menu.config(font=("Arial", 16), width=20, bg='white')
+    position_option_menu.grid(row=4, column=1, padx=10, pady=10, sticky='ew')
+
+
+    # Account Type OptionMenu
     tk.Label(input_frame, text="Account Type", font=("Arial", 14)).grid(row=5, column=0, padx=10, pady=10)
-    accountType_combobox = ttk.Combobox(input_frame, font=("Arial", 14), values=["Admin", "Staff"], width=20)
-    accountType_combobox.grid(row=5, column=1, padx=10, pady=10)
 
-    for widget in [username_entry, password_entry, confirm_password_entry, position_combobox, accountType_combobox]:
+    # Define account types and set placeholder
+    account_types = ["Admin", "Staff"]
+    selected_account_type = tk.StringVar(value="Select Account Type")  # Placeholder
+
+    account_type_option_menu = tk.OptionMenu(input_frame, selected_account_type, *account_types)
+    account_type_option_menu.config(font=("Arial", 16), width=20, bg='white')
+    account_type_option_menu.grid(row=5, column=1, padx=10, pady=10, sticky='ew')
+
+
+    # Optional: Function to ensure a valid selection (not the placeholder)
+    def validate_selection(var, placeholder, valid_values):
+        if var.get() == placeholder:
+            var.set(valid_values[0])  # Set to a default valid value if needed
+
+    # Customize the dropdown menu styling
+    menu0 = position_option_menu["menu"]
+    menu0.config(font=("Arial", 18), activebackground="blue") 
+    menu1 = account_type_option_menu["menu"]
+    menu1.config(font=("Arial", 18), activebackground="blue")
+
+
+    # Track selection for Position and Account Type
+    selected_position.trace_add("write", lambda *args: validate_selection(selected_position, "Select Position", positions))
+    selected_account_type.trace_add("write", lambda *args: validate_selection(selected_account_type, "Select Account Type", account_types))
+
+
+    for widget in [username_entry, password_entry, confirm_password_entry]:
         widget.bind("<FocusIn>", lambda e: keyboard.show_keyboard())
         widget.bind("<FocusOut>", lambda e: keyboard.hide_keyboard())
 
@@ -1521,11 +1572,11 @@ def add_user():
             new_username = username_entry.get()
             new_password = password_entry.get()
             confirm_password = confirm_password_entry.get()
-            new_position = position_combobox.get()
-            new_accountType = accountType_combobox.get()
+            new_position = selected_position.get()
+            new_accountType = selected_account_type.get()
 
-            if validate_all_fields_filled(username_entry, password_entry, confirm_password_entry, position_combobox, accountType_combobox):
-                if validate_user_info('add', new_username, new_password, confirm_password, new_position, new_accountType):
+            if validate_all_fields_filled(username_entry, password_entry, confirm_password_entry, selected_position, selected_account_type):
+                if validate_user_info('add', new_username, new_password, confirm_password, new_position, new_accountType, new_accountType):
 
                     # Generate the QR code data string
                     qr_code_data = f"{new_username} - {new_position}"
@@ -1838,26 +1889,46 @@ def edit_user(username):
     password_entry.grid(row=1, column=1, padx=10, pady=10)
     password_entry.insert(0, user[3])
     
-    # Position combobox
+    #Position OptionMenu
     tk.Label(input_frame, text="Position", font=("Arial", 14)).grid(row=2, column=0, padx=10, pady=10)
-    position_combobox = ttk.Combobox(input_frame, font=("Arial", 14), values=["Midwife", "BHW", "BNS"])
-    position_combobox.grid(row=2, column=1, padx=10, pady=10)
-    position_combobox.set(user[1])
-    position_combobox.config(validate="key", validatecommand=(position_combobox.register(validate_combobox_input), '%d', '%S'))
 
-    # Account Type combobox
+    # Define the positions and initialize with database value or placeholder
+    positions = ["Midwife", "Brgy Health Worker (BHW)", "Brgy Nutrition Scholar (BNS)", "Brgy Health Councilor"]
+    selected_position = tk.StringVar(value=user[1] if user[1] in positions else "Select Position")  # Set from DB or placeholder
+
+    position_option_menu = tk.OptionMenu(input_frame, selected_position, *positions)
+    position_option_menu.config(font=("Arial", 14), width=20, bg='white')
+    position_option_menu.grid(row=2, column=1, padx=10, pady=10, sticky='ew')
+
+
+    # Account Type OptionMenu
     tk.Label(input_frame, text="Account Type", font=("Arial", 14)).grid(row=3, column=0, padx=10, pady=10)
-    accountType_combobox = ttk.Combobox(input_frame, font=("Arial", 14), values=["Admin", "Staff"])
-    accountType_combobox.grid(row=3, column=1, padx=10, pady=10)
-    accountType_combobox.set(user[2])
-    accountType_combobox.config(validate="key", validatecommand=(position_combobox.register(validate_combobox_input), '%d', '%S'))
+
+    # Define account types and initialize with database value or placeholder
+    account_types = ["Admin", "Staff"]
+    selected_account_type = tk.StringVar(value=user[2] if user[2] in account_types else "Select Account Type")  # Set from DB or placeholder
+
+    account_type_option_menu = tk.OptionMenu(input_frame, selected_account_type, *account_types)
+    account_type_option_menu.config(font=("Arial", 14), width=20, bg='white')
+    account_type_option_menu.grid(row=3, column=1, padx=10, pady=10, sticky='ew')
+
+
+    # Optional validation to ensure user does not submit with a placeholder selected
+    def validate_selection(var, placeholder, valid_values):
+        if var.get() == placeholder:
+            var.set(valid_values[0])  # Set to a default valid value if needed
+
+
+    # Track changes to enforce valid selection for both fields
+    selected_position.trace_add("write", lambda *args: validate_selection(selected_position, "Select Position", positions))
+    selected_account_type.trace_add("write", lambda *args: validate_selection(selected_account_type, "Select Account Type", account_types))
 
     # Save changes button
     def save_changes():
         new_username = username_entry.get()
         new_password = password_entry.get()
-        new_position = position_combobox.get()
-        new_accountType = accountType_combobox.get()
+        new_position = selected_position.get()
+        new_accountType = selected_account_type.get()
 
         if validate_user_info('edit', new_username, new_password, new_password, new_position, new_accountType, 'Admin'):
             cursor = conn.cursor()
@@ -1908,7 +1979,7 @@ def edit_user(username):
     save_button.grid(row=5, column=2, pady=(50, 0))
 
     # Bind the focus events to show/hide the keyboard for each widget
-    for widget in [username_entry, password_entry, position_combobox, accountType_combobox]:
+    for widget in [username_entry, password_entry]:
         widget.bind("<FocusIn>", lambda e: keyboard.show_keyboard())
         widget.bind("<FocusOut>", lambda e: keyboard.hide_keyboard())
 
@@ -1997,7 +2068,7 @@ def get_current_datetime():
     now = datetime.datetime.now()
     date_str = now.strftime("%b %d, %Y")   # "Nov 7, 2024"
     time_str = now.strftime("%I:%M:%S %p") # "hh:mm:ss AM/PM"
-    return f"{date_str}   {time_str}"
+    return f"{date_str}     {time_str}"
 
 def update_datetime():
     date_time_label.config(text=get_current_datetime())
