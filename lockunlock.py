@@ -7,7 +7,6 @@ from PIL import Image, ImageTk, ImageSequence
 from keyboard import OnScreenKeyboard
 from custom_messagebox import CustomMessageBox
 import serial
-from withdrawal import QRCodeScanner
 import mysql.connector
 from datetime import datetime
 import time
@@ -247,6 +246,7 @@ class LockUnlock:
                     ok_callback=lambda: (message_box.destroy(), self._lock_door())
                 )
             elif self.type== "withdraw" and self.action == "unlock":
+                from withdrawal import QRCodeScanner
                 self._unlock_door()
                 self.window.destroy()
                 message_box = CustomMessageBox(
@@ -254,7 +254,7 @@ class LockUnlock:
                     title="Success",
                     message="Door lock is now unlocked\nYou may now proceed to withdraw medicine.",
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
-                    ok_callback= lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame), self.window.destroy())
+                    ok_callback= lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame, self.user_Username, self.user_Password, self.arduino, 'lock'), self.window.destroy())
                 )
             elif self.action == "successful_close":
                 self.arduino.write(b'lock\n')
@@ -354,6 +354,7 @@ class LockUnlock:
                                 ok_callback=lambda: (message_box.destroy(), self._lock_door())
                             )
                         elif self.type== "withdraw" and self.action == "unlock":
+                            from withdrawal import QRCodeScanner
                             self._unlock_door()
                             self.window.destroy()
                             message_box = CustomMessageBox(
@@ -361,7 +362,7 @@ class LockUnlock:
                                 title="Success",
                                 message="Door lock is now unlocked\nYou may now proceed to withdraw medicine.",
                                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
-                                ok_callback= lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame), self.window.destroy())
+                                ok_callback= lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame, self.user_Username, self.user_Password, self.arduino, 'lock'), self.window.destroy())
                             )
                         elif self.action == "successful_close":
                             self.arduino.write(b'lock\n')

@@ -7,7 +7,7 @@ from PIL import Image, ImageTk, ImageSequence
 motif_color = '#42a7f5'  # Primary color used for the theme
 
 class QRCodeScanner:
-    def __init__(self, parent):
+    def __init__(self, parent, username, password, arduino, lock):
         print("QRCodeScanner initialized")  # Debugging statement
         # Create a new Toplevel window
         self.top = tk.Toplevel(parent, relief='raised', bd=5)
@@ -15,6 +15,13 @@ class QRCodeScanner:
         self.top.overrideredirect(True)  # Remove the title bar
         self.top.resizable(width=False, height=False)
         self.top.attributes('-topmost', True)
+
+        self.parent = parent
+
+        self.username = username
+        self.password = password
+        self.arduino = arduino
+        self.lock = lock
 
         self.top.focus_set()
         self.top.grab_set()
@@ -34,7 +41,7 @@ class QRCodeScanner:
         else:
             self.close_img = None
 
-        close_button = tk.Button(self.title_frame, image=self.close_img, command=self.top.destroy, relief=tk.FLAT, bd=0, bg=motif_color, activebackground=motif_color)
+        close_button = tk.Button(self.title_frame, image=self.close_img, command=self.ask_lock, relief=tk.FLAT, bd=0, bg=motif_color, activebackground=motif_color)
         close_button.image = self.close_img  # Keep a reference to avoid garbage collection
         close_button.pack(side=tk.RIGHT, padx=(0, 5))
 
@@ -143,3 +150,18 @@ class QRCodeScanner:
             # Close cursor and connection
             cursor.close()
             conn.close()
+    def ask_lock(self):
+        from custom_messagebox import CustomMessageBox
+        from lockunlock import LockUnlock
+        self.top.destroy()
+        message_box = CustomMessageBox(
+            root=self.parent,
+            title="Proceed Lock",
+            message="Are you finished withdrawing and wants\nto proceed on locking the door?.",
+            color="red",  # Background color for warning
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
+            yes_callback=lambda: (LockUnlock(self.parent, self.username, self.password, self.arduino, 'lock', 'lock'), message_box.destroy()),
+            no_callback=lambda: (message_box.destroy(), QRCodeScanner(self.parent, self.username, self.password, self.arduino, 'lock'))
+            
+        )
+
