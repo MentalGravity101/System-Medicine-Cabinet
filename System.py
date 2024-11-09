@@ -43,7 +43,7 @@ def establish_connection():
         print(f"Error: {err}")
         conn = None  # Set to None if connection fails
 
-INACTIVITY_PERIOD = 300000 #automatic logout timer in milliseconds
+INACTIVITY_PERIOD = 10000 #automatic logout timer in milliseconds
 inactivity_timer = None #initialization of idle timer
 root = None  # Global variable for root window
 
@@ -318,9 +318,7 @@ def logout_with_sensor_check(logout_type):
         # Step 3: Proceed based on the sensor check response
         if response == "Object detected":
             # Proceed with logout if sensors detect an object
-            logout(logout_type)  # Call logout with provided type
-            print("Closed the door successfully and logged-out successful")
-
+            LockUnlock(content_frame, Username, Password, arduino, "automatic_logout", "medicine inventory", container=root, exit_callback=lambda: logout(logout_type))
         else:
             # Recursive function to recheck the sensors
             def recheck_sensors(warning_box):
@@ -333,15 +331,14 @@ def logout_with_sensor_check(logout_type):
                     if response == "Object detected":
                         # Destroy warning and proceed with logout
                         warning_box.destroy()
-                        logout(logout_type)
-                        print("Closed the door successfully and logged-out successful")
+                        LockUnlock(content_frame, Username, Password, arduino, "automatic_logout", "medicine inventory", container=root, exit_callback=lambda: logout(logout_type))
                     else:
                         # Show warning again and recheck sensors
                         warning_box = CustomMessageBox(
                             root=content_frame,
                             title="Warning",
                             color='red',
-                            message="Doors are not properly closed.\nPlease close both the doors properly.",
+                            message="Doors are not properly closed.\nPlease close the doors properly before you automatically logged out.",
                             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
                             ok_callback=lambda: recheck_sensors(warning_box),
                             close_state=True
@@ -353,7 +350,7 @@ def logout_with_sensor_check(logout_type):
                 root=content_frame,
                 title="Warning",
                 color='red',
-                message="Doors are not properly closed.\nPlease close both the doors properly.",
+                message="Doors are not properly closed.\nPlease close the doors properly before the you automatically logged out.",
                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
                 ok_callback=lambda: recheck_sensors(warning_box),
                 close_state=True
@@ -559,7 +556,7 @@ def deposit_window(permission):
     cancel_button.grid(row=7, column=0, padx=(40, 60), pady=(50, 0))
 
     if permission == 'deposit_again':
-        cancel_button.config(command=lambda: (LockUnlock(root, Username, Password, arduino, "lock", "medicine inventory", container=root), deposit_Toplevel.destroy()))
+        cancel_button.config(command=lambda: (LockUnlock(content_frame, Username, Password, arduino, "lock", "medicine inventory", container=root), deposit_Toplevel.destroy()))
     else:
         cancel_button.config(command=lambda: (show_medicine_supply(), deposit_Toplevel.destroy()))
 
@@ -2125,6 +2122,10 @@ def main():
     root.overrideredirect(True)
     root.title("Electronic Medicine Cabinet Control System")
     root.state("zoomed")  # Maximize the window to full screen
+
+    root.bind("<Motion>", reset_timer)
+    root.bind("<KeyPress>", reset_timer)
+    root.bind("<ButtonPress>", reset_timer)
 
     container = tk.Frame(root)
     container.pack(fill="both", expand=True)

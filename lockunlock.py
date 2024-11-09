@@ -102,8 +102,10 @@ class LockUnlock:
         title_label = tk.Label(title_frame, text=self.action, font=('Arial', 15, 'bold'), bg=motif_color, fg='white', pady=12)
         title_label.pack(side=tk.LEFT, padx=(10, 20))
 
-        if self.action == 'successful_close':
+        if self.action == 'successful_close' or self.action == 'automatic_logout':
             title_label.config(text="Lock")
+        elif self.action == 'unlock':
+            title_label.config(text="Unlock")
 
         close_button = tk.Button(title_frame, image=self.close_img, command=self._exit_action, bg=motif_color, relief=tk.FLAT, bd=0)
         close_button.image = self.close_img  # Keep a reference to avoid garbage collection
@@ -229,7 +231,7 @@ class LockUnlock:
                 INSERT INTO door_logs (username, accountType, position, date, time, action_taken)
                 VALUES (%s, %s, %s, %s, %s, %s)
             """
-            if self.action == 'successful_close':
+            if self.action == 'successful_close' or self.action == 'automatic_logout':
                 cursor.execute(insert_query, (userName, accountType, position, datetime.now().date(), datetime.now().time(), 'Lock'))
             else: 
                 cursor.execute(insert_query, (userName, accountType, position, datetime.now().date(), datetime.now().time(), self.action))
@@ -270,6 +272,11 @@ class LockUnlock:
             elif self.action == "lock":
                 self.window.destroy()
                 self._lock_door()
+            elif self.action == 'automatic_logout':
+                self.window.destroy()
+                self.arduino.write(b'lock\n')
+                self.exit_callback()
+
         else:
             message_box = CustomMessageBox(
             root=self.keyboardFrame,
@@ -378,6 +385,7 @@ class LockUnlock:
                         elif self.action == "lock":
                             self.window.destroy()
                             self._lock_door()
+
                     else:
                         # If no match found, show an error
                         self.result_label.config(text="Invalid QR code or credentials.", fg="red")

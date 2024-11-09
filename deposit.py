@@ -17,6 +17,7 @@ TIMEOUT = 1
 
 motif_color = '#42a7f5'
 
+
 class MedicineDeposit:
     def __init__(self, name, generic_name, quantity, unit, expiration_date, dosage, db_connection, root, content_frame, keyboardFrame, Username, Password, arduino, action="unlock", yes_callback=None):
         self.root = root
@@ -44,11 +45,13 @@ class MedicineDeposit:
 
     def validate_inputs(self):
         # Check if all fields are filled
-        if not all([self.name, self.generic_name, self.quantity, self.unit, self.expiration_date, self.dosage_for_db]):
+        if not all([self.name, self.generic_name, self.quantity, self.unit, self.expiration_date, self.dosage]):
+            global message_box
             message_box = CustomMessageBox(
                 root=self.root,
                 title='Error',
-                message='All fields must be filled',
+                color='red',
+                message='Please fill-out all the fields',
                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
             )
             return False
