@@ -160,7 +160,7 @@ class QRCodeScanner:
             message="Are you finished withdrawing and wants\nto proceed on locking the door?.",
             color="red",  # Background color for warning
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
-            yes_callback=lambda: (LockUnlock(self.parent, self.username, self.password, self.arduino, 'lock', 'lock'), message_box.destroy()),
+            yes_callback=lambda: (LockUnlock(self.parent, self.username, self.password, self.arduino, 'lock', 'lock', type="withdraw"), message_box.destroy()),
             no_callback=lambda: (message_box.destroy(), QRCodeScanner(self.parent, self.username, self.password, self.arduino, 'lock'))
             
         )

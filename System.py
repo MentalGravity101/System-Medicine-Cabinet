@@ -43,7 +43,7 @@ def establish_connection():
         print(f"Error: {err}")
         conn = None  # Set to None if connection fails
 
-INACTIVITY_PERIOD = 10000 #automatic logout timer in milliseconds
+INACTIVITY_PERIOD = 60000 #automatic logout timer in milliseconds
 inactivity_timer = None #initialization of idle timer
 root = None  # Global variable for root window
 
@@ -56,6 +56,10 @@ active_bg_color = "#fff"  # Active background color
 default_bg_color = motif_color  # Default background color
 active_fg_color ='#000000' # Active foreground color
 default_fg_color="#fff" # Default foreground color
+
+door_path = os.path.join(os.getcwd(), "door_status", "door_status.txt")
+# Ensure the folder exists before writing the file
+os.makedirs(os.path.dirname(door_path), exist_ok=True)
 
 
 
@@ -307,6 +311,7 @@ def logout(reason):
         OnScreenKeyboard(content_frame).hide_keyboard()
 
 def logout_with_sensor_check(logout_type):
+    data = load_data()
     # Step 1: Check sensors before logging out
     arduino.write(b'check_sensors\n')
     time.sleep(0.1)  # Small delay for Arduino to respond
@@ -316,9 +321,14 @@ def logout_with_sensor_check(logout_type):
         response = arduino.readline().decode().strip()
 
         # Step 3: Proceed based on the sensor check response
-        if response == "Object detected":
-            # Proceed with logout if sensors detect an object
+        if data == "Unlocked":
+            # Destroy warning and proceed with logout
+            print("Door detected but the data is unlocked")
             LockUnlock(content_frame, Username, Password, arduino, "automatic_logout", "medicine inventory", container=root, exit_callback=lambda: logout(logout_type))
+        
+        elif data == "Locked":
+            logout('inactivity')
+            print("Logged Out and data is locked")
         else:
             # Recursive function to recheck the sensors
             def recheck_sensors(warning_box):
@@ -328,10 +338,14 @@ def logout_with_sensor_check(logout_type):
                 if arduino.in_waiting > 0:
                     response = arduino.readline().decode().strip()
                     
-                    if response == "Object detected":
+                    if response == "Object detected" and data == "Unlocked":
                         # Destroy warning and proceed with logout
+                        print("Door detected but the data is unlocked")
                         warning_box.destroy()
                         LockUnlock(content_frame, Username, Password, arduino, "automatic_logout", "medicine inventory", container=root, exit_callback=lambda: logout(logout_type))
+                    elif response == "Object detected" and data == "Locked":
+                        logout(logout_type)
+                        print("Logged Out and data is locked")
                     else:
                         # Show warning again and recheck sensors
                         warning_box = CustomMessageBox(
@@ -350,7 +364,7 @@ def logout_with_sensor_check(logout_type):
                 root=content_frame,
                 title="Warning",
                 color='red',
-                message="Doors are not properly closed.\nPlease close the doors properly before the you automatically logged out.",
+                message="Doors are not properly closed.\nPlease close the doors properly before you automatically logged out.",
                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
                 ok_callback=lambda: recheck_sensors(warning_box),
                 close_state=True
@@ -539,7 +553,7 @@ def deposit_window(permission):
         expiration_date = expiration_date_entry.get_date()
         keyboard.hide_keyboard()
 
-        deposit = MedicineDeposit(name, type_,  quantity, unit, expiration_date, dosage, conn, root, content_frame, content_frame, Username, Password, arduino, action="unlock", yes_callback=lambda: (print("Calling deposit_window with 'deposit_again'"), deposit_window('deposit_again'), deposit_Toplevel.destroy()))
+        deposit = MedicineDeposit(name, type_,  quantity, unit, expiration_date, dosage, conn, root, root, content_frame, Username, Password, arduino, action="unlock", yes_callback=lambda: (print("Calling deposit_window with 'deposit_again'"), deposit_window('deposit_again'), deposit_Toplevel.destroy()))
 
         if deposit.validate_inputs():
             deposit.save_to_database()
@@ -2112,6 +2126,13 @@ def get_current_datetime():
 def update_datetime():
     date_time_label.config(text=get_current_datetime())
     root.after(1000, update_datetime)
+
+def load_data():
+    try:
+        with open("door_status.txt", "r") as file:
+            return file.read().strip()  # Use strip() to remove any extra whitespace or newline
+    except FileNotFoundError:
+        return None
 
 
 #-----------------------------------------------MAIN------------------------------------------------------
