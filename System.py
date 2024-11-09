@@ -1533,7 +1533,6 @@ def add_user():
     position_option_menu.config(font=("Arial", 16), width=20, bg='white')
     position_option_menu.grid(row=4, column=1, padx=10, pady=10, sticky='ew')
 
-
     # Account Type OptionMenu
     tk.Label(input_frame, text="Account Type", font=("Arial", 14)).grid(row=5, column=0, padx=10, pady=10)
 
@@ -1576,7 +1575,7 @@ def add_user():
             new_accountType = selected_account_type.get()
 
             if validate_all_fields_filled(username_entry, password_entry, confirm_password_entry, selected_position, selected_account_type):
-                if validate_user_info('add', new_username, new_password, confirm_password, new_position, new_accountType, new_accountType):
+                if validate_user_info('add', new_username, new_password, confirm_password, new_position, new_accountType, new_accountType, new_position):
 
                     # Generate the QR code data string
                     qr_code_data = f"{new_username} - {new_position}"
@@ -1590,20 +1589,20 @@ def add_user():
                     conn.commit()
 
                     # Generate and save QR code image temporarily
-                    qr_path = generate_qrcode(qr_code_data, 'add')
+                    qr_path = generate_qrcode(qr_code_data, 'add', new_username)
 
-                else:
-                    message_box = CustomMessageBox(
-                        root=root,
-                        title="ERROR",
-                        message="Please fill in all the fields.",
-                        color="red",
-                        icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
-                        sound_file="sounds/FillAllFields.mp3"
-                    )
-                    message_box.window.bind("<Motion>", reset_timer)
-                    message_box.window.bind("<KeyPress>", reset_timer)
-                    message_box.window.bind("<ButtonPress>", reset_timer)
+            else:
+                message_box = CustomMessageBox(
+                    root=root,
+                    title="ERROR",
+                    message="Please fill in all the fields.",
+                    color="red",
+                    icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
+                    sound_file="sounds/FillAllFields.mp3"
+                )
+                message_box.window.bind("<Motion>", reset_timer)
+                message_box.window.bind("<KeyPress>", reset_timer)
+                message_box.window.bind("<ButtonPress>", reset_timer)
         except mysql.connector.Error as err:
             messagebox.showerror("Database Error", f"Error: {err}")
 
@@ -1617,7 +1616,140 @@ def add_user():
     save_button.image = save_img
     save_button.grid(row=7, column=1, padx=(60, 40), pady=(50, 0))
 
-def generate_qrcode(qr_data, mode):
+def edit_user(username):
+    # Clear the content_frame
+    for widget in content_frame.winfo_children():
+        widget.destroy()
+
+    # Retrieve the user information from the database
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, position, accountType, password, qrcode_data, username FROM users WHERE username = %s", [username])
+    user = cursor.fetchone()
+
+    title_label = tk.Label(content_frame, text="ACCOUNT SETTINGS", bg=motif_color, fg="white", font=('Arial', 25, 'bold'), height=2, relief='groove', bd=1)
+    title_label.pack(fill='both')
+
+    # Create input frame and ensure it expands horizontally
+    input_frame = tk.LabelFrame(content_frame, text='Edit User Account', font=('Arial', 14), pady=20, padx=10, relief='raised', bd=5)
+    input_frame.pack(pady=30, padx=20, anchor='center')
+
+    # Instantiate OnScreenKeyboard
+    keyboard = OnScreenKeyboard(content_frame)
+    keyboard.create_keyboard()
+    keyboard.hide_keyboard()  # Initially hide the keyboard
+
+    # Username entry
+    tk.Label(input_frame, text="Username", font=("Arial", 14)).grid(row=0, column=0, padx=10, pady=10)
+    username_entry = tk.Entry(input_frame, font=("Arial", 14))
+    username_entry.grid(row=0, column=1, padx=10, pady=10)
+    username_entry.insert(0, username)
+    
+    # Password entry
+    tk.Label(input_frame, text="Password", font=("Arial", 14)).grid(row=1, column=0, padx=10, pady=10)
+    password_entry = tk.Entry(input_frame, show="*", font=("Arial", 14))
+    password_entry.grid(row=1, column=1, padx=10, pady=10)
+    password_entry.insert(0, user[3])
+    
+    #Position OptionMenu
+    tk.Label(input_frame, text="Position", font=("Arial", 14)).grid(row=2, column=0, padx=10, pady=10)
+
+    # Define the positions and initialize with database value or placeholder
+    positions = ["Midwife", "Brgy Health Worker (BHW)", "Brgy Nutrition Scholar (BNS)", "Brgy Health Councilor"]
+    selected_position = tk.StringVar(value=user[1] if user[1] in positions else "Select Position")  # Set from DB or placeholder
+
+    position_option_menu = tk.OptionMenu(input_frame, selected_position, *positions)
+    position_option_menu.config(font=("Arial", 16), width=20, bg='white')
+    position_option_menu.grid(row=2, column=1, padx=10, pady=10, sticky='ew')
+
+    # Account Type OptionMenu
+    tk.Label(input_frame, text="Account Type", font=("Arial", 14)).grid(row=3, column=0, padx=10, pady=10)
+
+    # Define account types and initialize with database value or placeholder
+    account_types = ["Admin", "Staff"]
+    selected_account_type = tk.StringVar(value=user[2] if user[2] in account_types else "Select Account Type")  # Set from DB or placeholder
+
+    account_type_option_menu = tk.OptionMenu(input_frame, selected_account_type, *account_types)
+    account_type_option_menu.config(font=("Arial", 16), width=20, bg='white')
+    account_type_option_menu.grid(row=3, column=1, padx=10, pady=10, sticky='ew')
+
+    # Customize the dropdown menu styling
+    menu0 = position_option_menu["menu"]
+    menu0.config(font=("Arial", 18), activebackground="blue") 
+    menu1 = account_type_option_menu["menu"]
+    menu1.config(font=("Arial", 18), activebackground="blue")
+
+
+    # Optional validation to ensure user does not submit with a placeholder selected
+    def validate_selection(var, placeholder, valid_values):
+        if var.get() == placeholder:
+            var.set(valid_values[0])  # Set to a default valid value if needed
+
+
+    # Track changes to enforce valid selection for both fields
+    selected_position.trace_add("write", lambda *args: validate_selection(selected_position, "Select Position", positions))
+    selected_account_type.trace_add("write", lambda *args: validate_selection(selected_account_type, "Select Account Type", account_types))
+
+    # Save changes button
+    def save_changes():
+        new_username = username_entry.get()
+        new_password = password_entry.get()
+        new_position = selected_position.get()
+        new_accountType = selected_account_type.get()
+
+        if validate_user_info('edit', new_username, new_password, new_password, new_position, new_accountType, user[2], user[1]):
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE users
+                SET username = %s, password = %s, position = %s, accountType = %s
+                WHERE username = %s
+            """, [new_username, new_password, new_position, new_accountType, username])
+            conn.commit()
+
+            # Success message
+            message_box = CustomMessageBox(
+                root=root,
+                title="SUCCESS",
+                message="User account successfully configured.",
+                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'accountSetting_Icon.png'),
+            )
+            message_box.window.bind("<Motion>", reset_timer)
+            message_box.window.bind("<KeyPress>", reset_timer)
+            message_box.window.bind("<ButtonPress>", reset_timer)
+            show_account_setting()  # Refresh the user table
+
+        # New "Decode QR" button to generate QR based on existing QR data
+    def decode_and_generate_qr():
+        # Retrieve the qrcode_data from the database (it is stored as a string)
+        qr_data = user[4]  # Assuming `qrcode_data` is at index 3
+        
+        # Generate QR code with the decoded data (this is already a string)
+        qr_path = generate_qrcode(qr_data, 'edit', user[5])
+        
+        # You can optionally display or log the generated QR code path
+        print(f"QR code generated and saved at: {qr_path}")
+    
+    # Cancel button
+    cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
+    cancel_button = tk.Button(input_frame, text="Cancel", font=("Arial", 16), bg=motif_color, fg='white', command=show_account_setting, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=cancel_img, pady=5)
+    cancel_button.image = cancel_img
+    cancel_button.grid(row=5, column=0, pady=(50, 0))
+
+    # New "Decode QR" button between Cancel and Save
+    decode_qr_button = tk.Button(input_frame, text="Print QR", font=("Arial", 16), bg=motif_color, fg='white', command=decode_and_generate_qr, padx=20, relief="raised", bd=3, compound=tk.LEFT, pady=5)
+    decode_qr_button.grid(row=5, column=1, pady=(50, 0))  # Position the new button between Cancel and Save
+
+    # Save button
+    save_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'saveBlack_icon.png')).resize((25, 25), Image.LANCZOS))
+    save_button = tk.Button(input_frame, text="Save", font=("Arial", 16), bg=motif_color, fg='white', padx=20, relief="raised", bd=3, compound=tk.LEFT, image=save_img, pady=5, command=save_changes)
+    save_button.image = save_img
+    save_button.grid(row=5, column=2, pady=(50, 0))
+
+    # Bind the focus events to show/hide the keyboard for each widget
+    for widget in [username_entry, password_entry]:
+        widget.bind("<FocusIn>", lambda e: keyboard.show_keyboard())
+        widget.bind("<FocusOut>", lambda e: keyboard.hide_keyboard())
+
+def generate_qrcode(qr_data, mode, username):
     qr_dir = os.path.join(os.path.dirname(__file__), 'users')
     os.makedirs(qr_dir, exist_ok=True)
 
@@ -1635,7 +1767,7 @@ def generate_qrcode(qr_data, mode):
     qr_img.save(qr_path)
 
     # Combine QR with text
-    print_qr_code_with_text(qr_path, qr_data.split(' - ')[0], mode)
+    print_qr_code_with_text(qr_path, username, mode)
 
     return qr_path
 
@@ -1776,9 +1908,13 @@ def validate_all_fields_filled(*widgets):
         elif isinstance(widget, ttk.Combobox):
             if not widget.get():
                 return False
+        elif isinstance(widget, tk.StringVar):
+            # Check if the StringVar is holding a placeholder value
+            if widget.get() in ["Select Position", "Select Account Type"]:
+                return False
     return True
 
-def validate_user_info(mode, username, password, confirm_password, position, accountType, current_accountType):
+def validate_user_info(mode, username, password, confirm_password, position, accountType, current_accountType, current_position):
     # Check if passwords match
     if password != confirm_password:
         message_box = CustomMessageBox(
@@ -1829,6 +1965,23 @@ def validate_user_info(mode, username, password, confirm_password, position, acc
             message_box.window.bind("<KeyPress>", reset_timer)
             message_box.window.bind("<ButtonPress>", reset_timer)
             return False
+        
+    if mode == 'add' and position == 'Brgy Health Councilor':
+        cursor.execute("SELECT COUNT(*) FROM users WHERE position = 'Brgy Health Councilor'")
+        councilor_count = cursor.fetchone()[0]
+
+        if councilor_count >= 1:
+            message_box = CustomMessageBox(
+                root=root,
+                title="ERROR",
+                message="Can't add more Brgy Health Councilor account",
+                color="red",
+                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+            )
+            message_box.window.bind("<Motion>", reset_timer)
+            message_box.window.bind("<KeyPress>", reset_timer)
+            message_box.window.bind("<ButtonPress>", reset_timer)
+            return False
 
     # Check if position is being changed to "Admin" and there are already 2 Admins (Only for 'edit' mode)
     if mode == 'edit' and accountType == 'Admin' and current_accountType != 'Admin':
@@ -1847,141 +2000,30 @@ def validate_user_info(mode, username, password, confirm_password, position, acc
             message_box.window.bind("<KeyPress>", reset_timer)
             message_box.window.bind("<ButtonPress>", reset_timer)
             return False
+        
+    if mode == 'edit' and position == 'Brgy Health Councilor':
+        cursor.execute("SELECT COUNT(*) FROM users WHERE position = 'Brgy Health Councilor'")
+        councilor_count = cursor.fetchone()[0]
 
+        if councilor_count >= 1:
+            message_box = CustomMessageBox(
+                root=root,
+                title="ERROR",
+                message="Can't add more account for Brgy Health Councilor.",
+                color="red",
+                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+            )
+            message_box.window.bind("<Motion>", reset_timer)
+            message_box.window.bind("<KeyPress>", reset_timer)
+            message_box.window.bind("<ButtonPress>", reset_timer)
+            return False
+        
+    
     # All validations passed
     return True
 
 def toplevel_destroy(window):
         window.destroy()
-
-def edit_user(username):
-    # Clear the content_frame
-    for widget in content_frame.winfo_children():
-        widget.destroy()
-
-    # Retrieve the user information from the database
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, position, accountType, password, qrcode_data FROM users WHERE username = %s", [username])
-    user = cursor.fetchone()
-
-    title_label = tk.Label(content_frame, text="ACCOUNT SETTINGS", bg=motif_color, fg="white", font=('Arial', 25, 'bold'), height=2, relief='groove', bd=1)
-    title_label.pack(fill='both')
-
-    # Create input frame and ensure it expands horizontally
-    input_frame = tk.LabelFrame(content_frame, text='Edit User Account', font=('Arial', 14), pady=20, padx=10, relief='raised', bd=5)
-    input_frame.pack(pady=30, padx=20, anchor='center')
-
-    # Instantiate OnScreenKeyboard
-    keyboard = OnScreenKeyboard(content_frame)
-    keyboard.create_keyboard()
-    keyboard.hide_keyboard()  # Initially hide the keyboard
-  
-
-    # Username entry
-    tk.Label(input_frame, text="Username", font=("Arial", 14)).grid(row=0, column=0, padx=10, pady=10)
-    username_entry = tk.Entry(input_frame, font=("Arial", 14))
-    username_entry.grid(row=0, column=1, padx=10, pady=10)
-    username_entry.insert(0, username)
-    
-    # Password entry
-    tk.Label(input_frame, text="Password", font=("Arial", 14)).grid(row=1, column=0, padx=10, pady=10)
-    password_entry = tk.Entry(input_frame, show="*", font=("Arial", 14))
-    password_entry.grid(row=1, column=1, padx=10, pady=10)
-    password_entry.insert(0, user[3])
-    
-    #Position OptionMenu
-    tk.Label(input_frame, text="Position", font=("Arial", 14)).grid(row=2, column=0, padx=10, pady=10)
-
-    # Define the positions and initialize with database value or placeholder
-    positions = ["Midwife", "Brgy Health Worker (BHW)", "Brgy Nutrition Scholar (BNS)", "Brgy Health Councilor"]
-    selected_position = tk.StringVar(value=user[1] if user[1] in positions else "Select Position")  # Set from DB or placeholder
-
-    position_option_menu = tk.OptionMenu(input_frame, selected_position, *positions)
-    position_option_menu.config(font=("Arial", 14), width=20, bg='white')
-    position_option_menu.grid(row=2, column=1, padx=10, pady=10, sticky='ew')
-
-
-    # Account Type OptionMenu
-    tk.Label(input_frame, text="Account Type", font=("Arial", 14)).grid(row=3, column=0, padx=10, pady=10)
-
-    # Define account types and initialize with database value or placeholder
-    account_types = ["Admin", "Staff"]
-    selected_account_type = tk.StringVar(value=user[2] if user[2] in account_types else "Select Account Type")  # Set from DB or placeholder
-
-    account_type_option_menu = tk.OptionMenu(input_frame, selected_account_type, *account_types)
-    account_type_option_menu.config(font=("Arial", 14), width=20, bg='white')
-    account_type_option_menu.grid(row=3, column=1, padx=10, pady=10, sticky='ew')
-
-
-    # Optional validation to ensure user does not submit with a placeholder selected
-    def validate_selection(var, placeholder, valid_values):
-        if var.get() == placeholder:
-            var.set(valid_values[0])  # Set to a default valid value if needed
-
-
-    # Track changes to enforce valid selection for both fields
-    selected_position.trace_add("write", lambda *args: validate_selection(selected_position, "Select Position", positions))
-    selected_account_type.trace_add("write", lambda *args: validate_selection(selected_account_type, "Select Account Type", account_types))
-
-    # Save changes button
-    def save_changes():
-        new_username = username_entry.get()
-        new_password = password_entry.get()
-        new_position = selected_position.get()
-        new_accountType = selected_account_type.get()
-
-        if validate_user_info('edit', new_username, new_password, new_password, new_position, new_accountType, 'Admin'):
-            cursor = conn.cursor()
-            cursor.execute("""
-                UPDATE users
-                SET username = %s, password = %s, position = %s, accountType = %s
-                WHERE username = %s
-            """, [new_username, new_password, new_position, new_accountType, username])
-            conn.commit()
-
-            # Success message
-            message_box = CustomMessageBox(
-                root=root,
-                title="SUCCESS",
-                message="User account successfully configured.",
-                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'accountSetting_Icon.png'),
-            )
-            message_box.window.bind("<Motion>", reset_timer)
-            message_box.window.bind("<KeyPress>", reset_timer)
-            message_box.window.bind("<ButtonPress>", reset_timer)
-            show_account_setting()  # Refresh the user table
-
-        # New "Decode QR" button to generate QR based on existing QR data
-    def decode_and_generate_qr():
-        # Retrieve the qrcode_data from the database (it is stored as a string)
-        qr_data = user[4]  # Assuming `qrcode_data` is at index 3
-        
-        # Generate QR code with the decoded data (this is already a string)
-        qr_path = generate_qrcode(qr_data, 'edit')
-        
-        # You can optionally display or log the generated QR code path
-        print(f"QR code generated and saved at: {qr_path}")
-    
-    # Cancel button
-    cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
-    cancel_button = tk.Button(input_frame, text="Cancel", font=("Arial", 16), bg=motif_color, fg='white', command=show_account_setting, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=cancel_img, pady=5)
-    cancel_button.image = cancel_img
-    cancel_button.grid(row=5, column=0, pady=(50, 0))
-
-    # New "Decode QR" button between Cancel and Save
-    decode_qr_button = tk.Button(input_frame, text="Print QR", font=("Arial", 16), bg=motif_color, fg='white', command=decode_and_generate_qr, padx=20, relief="raised", bd=3, compound=tk.LEFT, pady=5)
-    decode_qr_button.grid(row=5, column=1, pady=(50, 0))  # Position the new button between Cancel and Save
-
-    # Save button
-    save_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'saveBlack_icon.png')).resize((25, 25), Image.LANCZOS))
-    save_button = tk.Button(input_frame, text="Save", font=("Arial", 16), bg=motif_color, fg='white', padx=20, relief="raised", bd=3, compound=tk.LEFT, image=save_img, pady=5, command=save_changes)
-    save_button.image = save_img
-    save_button.grid(row=5, column=2, pady=(50, 0))
-
-    # Bind the focus events to show/hide the keyboard for each widget
-    for widget in [username_entry, password_entry]:
-        widget.bind("<FocusIn>", lambda e: keyboard.show_keyboard())
-        widget.bind("<FocusOut>", lambda e: keyboard.hide_keyboard())
 
 #-----------------------------------------------OTHER FUNCTIONS------------------------------------------------------
 # Function that ensures users cannot type into the combobox  
