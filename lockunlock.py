@@ -100,6 +100,7 @@ class LockUnlock:
 
 
     def _create_ui(self):
+        from System import reset_timer
         
         # Title frame
         title_frame = tk.Frame(self.window, bg=motif_color)
@@ -220,6 +221,12 @@ class LockUnlock:
 
         # Bind the tab change event
         notebook.bind("<<NotebookTabChanged>>", self._on_tab_change)
+
+        self.window.bind("<Motion>", reset_timer)
+        self.window.bind("<KeyPress>", reset_timer)
+        self.window.bind("<ButtonPress>", reset_timer)
+
+
 
     #Function that validates user login credentials manually
     def _validate_credentials(self):

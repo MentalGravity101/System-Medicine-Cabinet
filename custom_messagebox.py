@@ -81,6 +81,7 @@ class CustomMessageBox:
         self.window.geometry(f"{window_width}x{required_height}+{position_x}+{position_y}")
 
     def _create_ui(self):
+        from System import reset_timer
         """Create UI components for the messagebox."""
         # Title frame
         title_frame = tk.Frame(self.window, bg=self.color)
@@ -126,6 +127,10 @@ class CustomMessageBox:
             self._create_yes_no_buttons(button_frame)
         else:
             self._create_ok_button(button_frame)
+        
+        self.window.bind("<ButtonPress>", reset_timer)
+        self.window.bind("<Motion>", reset_timer)
+        self.window.bind("<KeyPress>", reset_timer)
 
 
 
