@@ -8,6 +8,7 @@ motif_color = '#42a7f5'  # Primary color used for the theme
 
 class QRCodeScanner:
     def __init__(self, parent, username, password, arduino, lock):
+        from System import reset_timer
         print("QRCodeScanner initialized")  # Debugging statement
         # Create a new Toplevel window
         self.top = tk.Toplevel(parent, relief='raised', bd=5)
@@ -15,6 +16,10 @@ class QRCodeScanner:
         self.top.overrideredirect(True)  # Remove the title bar
         self.top.resizable(width=False, height=False)
         self.top.attributes('-topmost', True)
+
+        self.top.bind("<ButtonPress>", reset_timer)
+        self.top.bind("<KeyPress>", reset_timer)
+        self.top.bind("<Motion>", reset_timer)
 
         self.parent = parent
 

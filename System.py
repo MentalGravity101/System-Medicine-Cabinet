@@ -392,6 +392,7 @@ def start_timer():
 
 #Function that resets the idle timer if the user has an activity in the Main UI Frame or Toplevels
 def reset_timer(event=None):
+    print("Timer restart")
     start_timer()
 
 #Function for automatic logout during idle
@@ -565,12 +566,20 @@ def deposit_window(permission):
         deposit = MedicineDeposit(name, type_,  quantity, unit, expiration_date, dosage, conn, root, root, content_frame, Username, Password, arduino, action="unlock", yes_callback=lambda: (print("Calling deposit_window with 'deposit_again'"), deposit_window('deposit_again'), deposit_Toplevel.destroy()))
 
         if deposit.validate_inputs():
-            deposit.save_to_database()
             deposit_Toplevel.destroy()
-            show_medicine_supply()
-            # Check for soon-to-expire medicines on home page load
-            notification_manager = NotificationManager(root, asap=False)
-            notification_manager.check_soon_to_expire()  #Refreshes the notification logs if the deposited medicine is going to expire soon
+            message_box = CustomMessageBox(root=root,
+                             title="Deposit Medicine",
+                             message=f"Adding Medicine:\n\nGeneric Name: {deposit.generic_name}\nBrand Name: {deposit.name}\nQuantity: {deposit.quantity}\nUnit: {deposit.unit}\nDosage: {deposit.dosage_for_db}\nExpiration Date: {deposit.expiration_date}\n\nClick 'Yes' to continue depositing medicine.",
+                             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
+                             yes_callback=lambda: (proceed_depositing(), message_box.destroy()),
+                             no_callback=lambda: (message_box.destroy(), deposit_window()))
+            def proceed_depositing():
+                deposit.save_to_database()
+                deposit_Toplevel.destroy()
+                show_medicine_supply()
+                # Check for soon-to-expire medicines on home page load
+                notification_manager = NotificationManager(root, asap=False)
+                notification_manager.check_soon_to_expire()  #Refreshes the notification logs if the deposited medicine is going to expire soon
 
     # Cancel and Save buttons
     cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
@@ -2158,8 +2167,12 @@ class LockUnlock:
         self.window = tk.Toplevel(root, relief='raised', bd=5)
         self.window.overrideredirect(True)  # Remove the title bar
         self.window.resizable(width=False, height=False)
-        self.window.attributes('-topmost', True)
+        # self.window.attributes('-topmost', True)
         self.window.focus_set()
+
+        self.window.bind("<Motion>", reset_timer)
+        self.window.bind("<ButtonPress>", reset_timer)
+        self.window.bind("<KeyPress>", reset_timer)
 
         self.reference_window = root
 
@@ -2227,7 +2240,7 @@ class LockUnlock:
         title_frame = tk.Frame(self.window, bg=motif_color)
         title_frame.pack(fill='both')
         
-        title_label = tk.Label(title_frame, text=self.action, font=('Arial', 15, 'bold'), bg=motif_color, fg='white', pady=12)
+        title_label = tk.Label(title_frame, text=self.action, font=('Arial', 15, 'bold'), fg='white', bg=motif_color, pady=12)
         title_label.pack(side=tk.LEFT, padx=(10, 20))
 
         if self.action == 'successful_close' or self.action == 'automatic_logout' or self.action == 'lock':
@@ -2271,6 +2284,8 @@ class LockUnlock:
         if self.action == 'automatic_logout':
             manual_instruction = tk.Label(tab1, text="Please enter your username and password to lock the door now.", font=('Arial', 18))
             title_frame.config(bg='red')
+            close_button.config(bg='red')
+            title_label.config(bg='red')
         manual_instruction.pack(pady=10, anchor='center')
 
         username_label = tk.Label(tab1, text="Username", font=("Arial", 18))
@@ -2300,6 +2315,8 @@ class LockUnlock:
 
         enter_button = tk.Button(tab1, text="Enter", font=("Arial", 18, 'bold'), bg=motif_color, fg='white', relief="raised", bd=3, pady=7, padx=40, command=self._validate_credentials)
         enter_button.pack(anchor='center', pady=(0, 10))
+        if self.action == 'automatic_logout':
+            enter_button.config(bg='red')
 
         # Bind the FocusIn event to show the keyboard when focused
         self.username_entry.bind("<FocusIn>", lambda event : self._show_keyboard())
@@ -2343,14 +2360,11 @@ class LockUnlock:
         # Bind the tab change event
         notebook.bind("<<NotebookTabChanged>>", self._on_tab_change)
 
-        self.window.bind("<Motion>", reset_timer)
-        self.window.bind("<KeyPress>", reset_timer)
-        self.window.bind("<ButtonPress>", reset_timer)
-
 
 
     #Function that validates user login credentials manually
     def _validate_credentials(self):
+        from datetime import datetime
         conn = mysql.connector.connect(
             host="localhost",
             user="root",
@@ -2389,6 +2403,9 @@ class LockUnlock:
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
                     ok_callback=lambda: (message_box.destroy(), self._lock_door())
                 )
+                message_box.window.bind("<KeyPress>", reset_timer)
+                message_box.window.bind("<Motion>", reset_timer)
+                message_box.window.bind("<ButtonPress>", reset_timer)
             elif self.type== "withdraw" and self.action == "unlock":
                 from withdrawal import QRCodeScanner
                 self._unlock_door()
@@ -2400,6 +2417,10 @@ class LockUnlock:
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
                     ok_callback= lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame, self.user_Username, self.user_Password, self.arduino, 'lock'), self.window.destroy())
                 )
+                message_box.window.bind("<KeyPress>", reset_timer)
+                message_box.window.bind("<Motion>", reset_timer)
+                message_box.window.bind("<ButtonPress>", reset_timer)
+                
 
             elif self.action == "successful_close":
                 self.arduino.write(b'lock\n')
@@ -2413,6 +2434,9 @@ class LockUnlock:
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png'),
                     ok_callback=lambda: message_box.destroy()
                 )
+                message_box.window.bind("<KeyPress>", reset_timer)
+                message_box.window.bind("<Motion>", reset_timer)
+                message_box.window.bind("<ButtonPress>", reset_timer)
             elif self.action == "lock":
                 self.window.destroy()
                 self._lock_door()
@@ -2426,13 +2450,16 @@ class LockUnlock:
 
         else:
             message_box = CustomMessageBox(
-            root=self.keyboardFrame,
-            title="Error",
-            message="Invalid username or password.",
-            color="red",  # Background color for warning
-            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
-            sound_file="sounds/invalidLogin.mp3"
-        )
+                root=self.keyboardFrame,
+                title="Error",
+                message="Invalid username or password.",
+                color="red",  # Background color for warning
+                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
+                sound_file="sounds/invalidLogin.mp3"
+            )
+            message_box.window.bind("<KeyPress>", reset_timer)
+            message_box.window.bind("<Motion>", reset_timer)
+            message_box.window.bind("<ButtonPress>", reset_timer)
 
 
     def _on_tab_change(self, event):
@@ -2508,6 +2535,9 @@ class LockUnlock:
                                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
                                 ok_callback=lambda: (message_box.destroy(), self._lock_door())
                             )
+                            message_box.window.bind("<KeyPress>", reset_timer)
+                            message_box.window.bind("<Motion>", reset_timer)
+                            message_box.window.bind("<ButtonPress>", reset_timer)
                         elif self.type== "withdraw" and self.action == "unlock":
                             from withdrawal import QRCodeScanner
                             self._unlock_door()
@@ -2519,6 +2549,9 @@ class LockUnlock:
                                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
                                 ok_callback= lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame, self.user_Username, self.user_Password, self.arduino, 'lock'), self.window.destroy())
                             )
+                            message_box.window.bind("<KeyPress>", reset_timer)
+                            message_box.window.bind("<Motion>", reset_timer)
+                            message_box.window.bind("<ButtonPress>", reset_timer)
                         elif self.action == "successful_close":
                             self.arduino.write(b'lock\n')
                             self.window.destroy()
@@ -2529,6 +2562,9 @@ class LockUnlock:
                                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png'),
                                 ok_callback=lambda: message_box.destroy()
                             )
+                            message_box.window.bind("<KeyPress>", reset_timer)
+                            message_box.window.bind("<Motion>", reset_timer)
+                            message_box.window.bind("<ButtonPress>", reset_timer)
                         elif self.action == "lock":
                             self.window.destroy()
                             self._lock_door()
@@ -2567,8 +2603,10 @@ class LockUnlock:
                     message="Door is now properly closed and ready to lock.\nPlease click 'Ok' to process locking the door.",
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png'),
                     ok_callback=lambda: (LockUnlock(self.reference_window, self.user_Username, self.user_Password, self.arduino, 'successful_close', self.parentHeader), message_box.destroy())
-                    
                 )
+                message_box.window.bind("<KeyPress>", reset_timer)
+                message_box.window.bind("<Motion>", reset_timer)
+                message_box.window.bind("<ButtonPress>", reset_timer)
             elif response == "Object detected" and self.type == "withdraw":
                 self.arduino.write(b'lock\n')
                 with open(file_path, "w") as file:
@@ -2581,6 +2619,9 @@ class LockUnlock:
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png'),
                     ok_callback=lambda: message_box.destroy()
                 )
+                message_box.window.bind("<KeyPress>", reset_timer)
+                message_box.window.bind("<Motion>", reset_timer)
+                message_box.window.bind("<ButtonPress>", reset_timer)
             else:
                 # Recursive function to keep checking the sensors
                 def recheck_sensors(warning_box):
@@ -2596,8 +2637,10 @@ class LockUnlock:
                                 message="Door is now properly closed and ready to lock.\nPlease click 'Ok' to process locking the door.",
                                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png'),
                                 ok_callback=lambda: (LockUnlock(self.reference_window, self.user_Username, self.user_Password, self.arduino, 'successful_close', self.parentHeader), message_box.destroy())
-                                
                             )
+                            message_box.window.bind("<KeyPress>", reset_timer)
+                            message_box.window.bind("<Motion>", reset_timer)
+                            message_box.window.bind("<ButtonPress>", reset_timer)
                         elif response == "Object detected" and self.type == "withdraw":
                             self.arduino.write(b'lock\n')
                             with open(file_path, "w") as file:
@@ -2610,6 +2653,9 @@ class LockUnlock:
                                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png'),
                                 ok_callback=lambda: message_box.destroy()
                             )
+                            message_box.window.bind("<KeyPress>", reset_timer)
+                            message_box.window.bind("<Motion>", reset_timer)
+                            message_box.window.bind("<ButtonPress>", reset_timer)
                         else:
                             # Display warning again if doors are still not closed properly
                             warning_box = CustomMessageBox(
@@ -2620,6 +2666,9 @@ class LockUnlock:
                                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
                                 ok_callback=lambda: recheck_sensors(warning_box)  # Reattach recheck_sensors with warning_box as callback
                             )
+                            warning_box.window.bind("<KeyPress>", reset_timer)
+                            warning_box.window.bind("<Motion>", reset_timer)
+                            warning_box.window.bind("<ButtonPress>", reset_timer)
                             print("Rechecking sensors: No object detected.")
                 
                 # Show warning message with the recheck callback
@@ -2631,6 +2680,9 @@ class LockUnlock:
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
                     ok_callback=lambda: recheck_sensors(warning_box)  # Attach recheck_sensors with warning_box as callback
                 )
+                warning_box.window.bind("<KeyPress>", reset_timer)
+                warning_box.window.bind("<Motion>", reset_timer)
+                warning_box.window.bind("<ButtonPress>", reset_timer)
                 print("Lock command aborted: No object detected.")
 
 
@@ -2652,6 +2704,10 @@ class CustomMessageBox:
         self.window = tk.Toplevel(root, relief='raised', bd=5)
         self.window.overrideredirect(True)  # Remove the title bar
         self.window.resizable(width=False, height=False)
+
+        # self.window.bind("<ButtonPress>", reset_timer)
+        # self.window.bind("<Motion>", reset_timer)
+        # self.window.bind("<KeyPress>", reset_timer)
 
         self.window.attributes('-topmost', True)
         self.window.focus_set()
@@ -2765,10 +2821,6 @@ class CustomMessageBox:
             self._create_yes_no_buttons(button_frame)
         else:
             self._create_ok_button(button_frame)
-        
-        self.window.bind("<ButtonPress>", reset_timer)
-        self.window.bind("<Motion>", reset_timer)
-        self.window.bind("<KeyPress>", reset_timer)
 
 
 
