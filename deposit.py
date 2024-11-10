@@ -41,6 +41,8 @@ class MedicineDeposit:
             self.dosage_for_db = f"{self.dosage} mg"
         elif self.unit == 'syrup':
             self.dosage_for_db = f"{self.dosage} ml"
+        
+        
 
 
     def validate_inputs(self):

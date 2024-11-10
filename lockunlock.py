@@ -11,10 +11,11 @@ import mysql.connector
 from datetime import datetime
 import time
 
-door_path = os.path.join(os.getcwd(), "door_status", "door_status.txt")
+# Create a path to store the file in a 'door_status' folder within the current directory
+file_path = os.path.join(os.getcwd(), "door_status", "door_status.txt")
 
 # Ensure the folder exists before writing the file
-os.makedirs(os.path.dirname(door_path), exist_ok=True)
+os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
 
 motif_color = '#42a7f5'
@@ -147,7 +148,7 @@ class LockUnlock:
             manual_instruction = tk.Label(tab1, text=f'Enter your username and password manually\nto lock the door.', font=('Arial', 18))
         if self.action == 'automatic_logout':
             manual_instruction = tk.Label(tab1, text="Please enter your username and password to lock the door now.", font=('Arial', 18))
-            title_label.config(bg='red')
+            title_frame.config(bg='red')
         manual_instruction.pack(pady=10, anchor='center')
 
         username_label = tk.Label(tab1, text="Username", font=("Arial", 18))
@@ -274,7 +275,7 @@ class LockUnlock:
 
             elif self.action == "successful_close":
                 self.arduino.write(b'lock\n')
-                with open(door_path, "w") as file:
+                with open(file_path, "w") as file:
                     file.write("Locked")
                 self.window.destroy()
                 message_box = CustomMessageBox(
@@ -289,6 +290,8 @@ class LockUnlock:
                 self._lock_door()
 
             elif self.action == 'automatic_logout':
+                with open(file_path, "w") as file:
+                    file.write("Locked")
                 self.window.destroy()
                 self.arduino.write(b'lock\n')
                 self.exit_callback()
@@ -440,7 +443,7 @@ class LockUnlock:
                 )
             elif response == "Object detected" and self.type == "withdraw":
                 self.arduino.write(b'lock\n')
-                with open(door_path, "w") as file:
+                with open(file_path, "w") as file:
                     file.write("Locked")
                 self.window.destroy()
                 message_box = CustomMessageBox(
@@ -469,7 +472,7 @@ class LockUnlock:
                             )
                         elif response == "Object detected" and self.type == "withdraw":
                             self.arduino.write(b'lock\n')
-                            with open(door_path, "w") as file:
+                            with open(file_path, "w") as file:
                                 file.write("Locked")
                             self.window.destroy()
                             message_box = CustomMessageBox(
@@ -506,7 +509,7 @@ class LockUnlock:
     # Function to send the unlock command
     def _unlock_door(self):
         print("Unlock command sent")
-        with open(door_path, "w") as file:
+        with open(file_path, "w") as file:
             file.write("Unlocked")
         self.arduino.write(b'unlock\n')  # Send the "unlock" command to the Arduino
 

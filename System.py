@@ -43,7 +43,7 @@ def establish_connection():
         print(f"Error: {err}")
         conn = None  # Set to None if connection fails
 
-INACTIVITY_PERIOD = 60000 #automatic logout timer in milliseconds
+INACTIVITY_PERIOD = 20000 #automatic logout timer in milliseconds
 inactivity_timer = None #initialization of idle timer
 root = None  # Global variable for root window
 
@@ -57,9 +57,11 @@ default_bg_color = motif_color  # Default background color
 active_fg_color ='#000000' # Active foreground color
 default_fg_color="#fff" # Default foreground color
 
-door_path = os.path.join(os.getcwd(), "door_status", "door_status.txt")
+# Create a path to store the file in a 'door_status' folder within the current directory
+file_path = os.path.join(os.getcwd(), "door_status", "door_status.txt")
+
 # Ensure the folder exists before writing the file
-os.makedirs(os.path.dirname(door_path), exist_ok=True)
+os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
 
 
@@ -321,12 +323,12 @@ def logout_with_sensor_check(logout_type):
         response = arduino.readline().decode().strip()
 
         # Step 3: Proceed based on the sensor check response
-        if data == "Unlocked":
+        if data == "Unlocked" and response == "Object detected":
             # Destroy warning and proceed with logout
             print("Door detected but the data is unlocked")
             LockUnlock(content_frame, Username, Password, arduino, "automatic_logout", "medicine inventory", container=root, exit_callback=lambda: logout(logout_type))
         
-        elif data == "Locked":
+        elif data == "Locked" and response == "Object detected":
             logout('inactivity')
             print("Logged Out and data is locked")
         else:
@@ -2129,7 +2131,7 @@ def update_datetime():
 
 def load_data():
     try:
-        with open("door_status.txt", "r") as file:
+        with open(file_path, "r") as file:  # Use file_path here to load from the correct location
             return file.read().strip()  # Use strip() to remove any extra whitespace or newline
     except FileNotFoundError:
         return None
