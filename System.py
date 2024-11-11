@@ -508,6 +508,7 @@ def deposit_window(permission):
     tk.Label(input_frame, text="Dosage: ", font=("Arial", 16)).grid(row=2, column=0, padx=(30, 20), pady=10, sticky='e')
     dosage_spinbox= tk.Spinbox(input_frame, from_=0, to=1000, font=("Arial", 16), width=5)
     dosage_spinbox.grid(row=2, column=1, padx=(10, 10), pady=10, sticky='ew')
+    dosage_spinbox.delete(0, tk.END)
 
     # Unit OptionMenu
     tk.Label(input_frame, text="Unit: ", font=("Arial", 16)).grid(row=3, column=0, padx=(30, 20), pady=10, sticky='e')
@@ -536,6 +537,7 @@ def deposit_window(permission):
     tk.Label(input_frame, text="Quantity: ", font=("Arial", 16)).grid(row=4, column=0, padx=(30, 20), pady=10, sticky='e')
     quantity_spinbox = tk.Spinbox(input_frame, from_=0, to=100, font=("Arial", 16), width=20)
     quantity_spinbox.grid(row=4, column=1, padx=10, pady=(10, 1), sticky='ew')
+    quantity_spinbox.delete(0, tk.END)
 
     tk.Label(input_frame, text="For capsule or tablet box, input the pieces of blisters present in the box.\nFor syrup box, input the pieces of box/es to be deposited.", font=("Arial", 13), justify="center").grid(row=5, column=0, padx=(30, 10), pady=(0, 10), sticky='w', columnspan=2)
 
@@ -570,7 +572,7 @@ def deposit_window(permission):
             message_box = CustomMessageBox(root=root,
                              title="Deposit Medicine",
                              message=f"Adding Medicine:\n\nGeneric Name: {deposit.generic_name}\nBrand Name: {deposit.name}\nQuantity: {deposit.quantity}\nUnit: {deposit.unit}\nDosage: {deposit.dosage_for_db}\nExpiration Date: {deposit.expiration_date}\n\nClick 'Yes' to continue depositing medicine.",
-                             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
+                             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'drugs_icon.png'),
                              yes_callback=lambda: (proceed_depositing(), message_box.destroy()),
                              no_callback=lambda: (message_box.destroy(), deposit_window()))
             def proceed_depositing():

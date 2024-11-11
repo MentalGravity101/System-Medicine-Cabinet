@@ -58,20 +58,34 @@ class MedicineDeposit:
             )
             return False
 
-        # Check if quantity and dosage are not zero
-        if self.quantity <= 0:
+        # Check if quantity and dosage are numeric and greater than 0
+        try:
+            self.quantity = int(self.quantity)
+            self.dosage = int(self.dosage)
+            if self.quantity <= 0:
+                message_box = CustomMessageBox(
+                    root=self.root,
+                    title='Error',
+                    color='red',
+                    message="Quantity must be greater than 0.",
+                    icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+                )
+                return False
+            if self.dosage <= 0:
+                message_box = CustomMessageBox(
+                    root=self.root,
+                    title='Error',
+                    color='red',
+                    message="Dosage must be greater than 0.",
+                    icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+                )
+                return False
+        except ValueError:
             message_box = CustomMessageBox(
                 root=self.root,
                 title='Error',
-                message="Quantity must be greater than 0.",
-                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
-            )
-            return False
-        if self.dosage <= 0:
-            message_box = CustomMessageBox(
-                root=self.root,
-                title='Error',
-                message="Dosage must be greater than 0.",
+                color='red',
+                message="Quantity and Dosage must be numeric values greater than 0.",
                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
             )
             return False
@@ -82,6 +96,7 @@ class MedicineDeposit:
             message_box = CustomMessageBox(
                 root=self.root,
                 title='Error',
+                color='red',
                 message="Expiration date must be later than today.",
                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
             )
@@ -278,7 +293,7 @@ class MedicineDeposit:
         self.message_box = CustomMessageBox(
             root=self.root,
             title="Medicine Deposited",
-            message=f"Adding medicine: '{self.name.capitalize()}'\nPlease attach the printed QR Code with Exp. Date to the medicine.\nDo you want to add more medicine?",
+            message=f"Adding medicine: '{self.name.capitalize()}'\nPlease attach the printed QR Code with Exp. Date to the medicine.\n\nDo you want to add more medicine?",
             icon_path=qr_code_filepath,
             no_callback=lambda: (LockUnlock(self.root, self.Username, self.Password, self.arduino, self.action, "medicine inventory", type="deposit"), self.message_box.destroy()),
             yes_callback=lambda: (self._yes_action(), self.message_box.destroy())
