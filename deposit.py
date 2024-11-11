@@ -140,7 +140,9 @@ class MedicineDeposit:
             self.loading_window = None
 
     def print_qr_code(self, expiration_date):
-        """Prints the QR code and expiration date on the thermal printer, showing a loading window during the process."""
+        """Prints the QR code and expiration date on the thermal printer,
+        repeating the print if the unit is 'syrup' based on quantity,
+        and showing a loading window during the process."""
         try:
             # Show the loading window before starting the print task
             self.show_loading_window()
@@ -154,7 +156,7 @@ class MedicineDeposit:
 
             # Prepare expiration date text as an image with a larger, bold font
             expiration_text = f"{expiration_date.strftime('%Y-%m-%d')}"
-            
+
             # Load a bold TrueType font (adjust the path as needed for your system)
             font_path = "C:/Windows/Fonts/arialbd.ttf"  # Arial Bold on Windows
             font = ImageFont.truetype(font_path, 33)  # 33px for larger text
@@ -173,21 +175,31 @@ class MedicineDeposit:
             text_x_position = qr_image.width + 18  # Adjust padding here if needed
             draw.text((text_x_position, (combined_height - text_height) // 2), expiration_text, font=font, fill=0)
 
-            # Convert the combined image to ESC/POS format and print
+            # Convert the combined image to ESC/POS format for printing
             img_data = self.image_to_escpos_data(combined_image)
 
             # Define the print task in a separate thread to prevent UI freezing
             def print_task():
                 try:
                     with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=TIMEOUT) as printer:
-                        printer.write(img_data)
-                        printer.flush()
+                        # If the unit is 'syrup', repeat printing based on quantity
+                        if self.unit == 'syrup':
+                            for _ in range(self.quantity):
+                                printer.write(img_data)
+                                printer.flush()
+                                # Optional cut command if printer supports it
+                                printer.write(b'\x1d\x56\x42\x00')  # ESC i - Cut paper
+                                printer.flush()
+                                time.sleep(1)  # Slight delay if needed between prints
+                        else:
+                            # Print only once for 'capsule' or 'tablet'
+                            printer.write(img_data)
+                            printer.flush()
+                            # Optional cut command if printer supports it
+                            printer.write(b'\x1d\x56\x42\x00')  # ESC i - Cut paper
+                            printer.flush()
 
-                        # Optional cut command if printer supports it
-                        printer.write(b'\x1d\x56\x42\x00')  # ESC i - Cut paper
-                        printer.flush()
-
-                    print("QR code and expiration date printed with spacing successfully.")
+                        print("QR code and expiration date printed with spacing successfully.")
                 except serial.SerialException as e:
                     print(f"Printer communication error: {e}")
                 finally:
@@ -201,6 +213,8 @@ class MedicineDeposit:
         except Exception as e:
             print(f"An error occurred: {e}")
             self.close_loading_window()  # Ensure loading window is closed in case of error
+
+
 
     def save_to_database(self):
         # Generate QR code and get the image file path
