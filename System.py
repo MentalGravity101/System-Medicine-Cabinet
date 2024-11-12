@@ -216,7 +216,7 @@ def create_main_ui_frame(container):
     doorLogs_button.grid(row=2, column=0, sticky="we", columnspan=2)
     notification_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'notification_Icon.png')).resize((50, 50), Image.LANCZOS))
     global notification_button
-    notification_button = tk.Button(sidebar_frame, height=100, width=350, text="Notification", command=show_notification, font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=notification_img, justify="left", padx=10, anchor='w')
+    notification_button = tk.Button(sidebar_frame, height=100, width=350, text="Notification", command=show_notification_table, font=("Arial", 16), bg=motif_color, fg="white", bd=1, relief="sunken", compound=tk.LEFT, image=notification_img, justify="left", padx=10, anchor='w')
     notification_button.image = notification_img
     notification_button.grid(row=4, column=0, sticky="we", columnspan=2)
     
@@ -579,9 +579,6 @@ def deposit_window(permission):
                 deposit.save_to_database()
                 deposit_Toplevel.destroy()
                 show_medicine_supply()
-                # Check for soon-to-expire medicines on home page load
-                notification_manager = NotificationManager(root, asap=False)
-                notification_manager.check_soon_to_expire()  #Refreshes the notification logs if the deposited medicine is going to expire soon
 
     # Cancel and Save buttons
     cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
@@ -1220,15 +1217,21 @@ def show_doorLog():
 
     # Add the first new button (e.g., 'Button 1')
     lock_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'lockWhite_icon.png')).resize((25, 25), Image.LANCZOS))
-    lock_button = tk.Button(button_frame, text="Lock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=lock_icon, command=lambda: LockUnlock(root, content_frame, Username, Password, arduino, "lock", "door functions"))
+    lock_button = tk.Button(button_frame, text="Enable Lock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=lock_icon, command=lambda: LockUnlock(root, content_frame, Username, Password, arduino, "lock", "door functions"))
     lock_button.image = lock_icon
     lock_button.grid(row=0, column=0, padx=20, pady=(12, ), sticky='ew')
 
     # Add the second new button (e.g., 'Button 2')
     unlock_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'unlockWhite_icon.png')).resize((35, 35), Image.LANCZOS))
-    unlock_button = tk.Button(button_frame, text="Unlock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=unlock_icon, command=lambda: LockUnlock(root, Username, Password, arduino, "unlock", "door functions"))
+    unlock_button = tk.Button(button_frame, text="Disable Lock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=unlock_icon, command=lambda: LockUnlock(root, Username, Password, arduino, "unlock", "door functions"))
     unlock_button.image = unlock_icon
     unlock_button.grid(row=0, column=1, padx=20, pady=(12, 7), sticky='ew')
+
+    
+    if load_data() == 'Locked':
+        lock_button.config(state='disabled')
+    elif load_data == 'Unlocked':
+        unlock_button.config(state='disabled')
 
     # Extract CSV button
     extract_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'extract_icon.png')).resize((25, 25), Image.LANCZOS))
@@ -1245,6 +1248,9 @@ def show_doorLog():
 
 #--------------------------------------------------------- NOTIFICATION -----------------------------------------------------------       
 
+# Define the refresh interval in milliseconds 
+REFRESH_INTERVAL = 50000
+
 # Function to display selected row's data in a Toplevel window
 def on_row_select(event):
     # Get the selected item
@@ -1253,28 +1259,82 @@ def on_row_select(event):
     
     # Create a new Toplevel window to show the selected row's data
     if row_data:  # Only if a row is selected
-        text=f"A medicine is about to expire!\n\nMedicine Name: {row_data[0]}\nExpiration Date: {row_data[1]}\nNotification Date: {row_data[2]}\nDays Until Expiration: {row_data[3]}"
-        message_box = CustomMessageBox(root=content_frame,
-                        title="Medicine Expiration",
-                        color='red',
-                        message=text,
-                        icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'))
+        text = (f"A medicine is about to expire!\n\n"
+                f"Medicine Name: {row_data[0]}\nExpiration Date: {row_data[1]}\n"
+                f"Notification Date: {row_data[2]}\nDays Until Expiration: {row_data[3]}")
+        message_box = CustomMessageBox(
+            root=content_frame,
+            title="Medicine Expiration",
+            color='red',
+            message=text,
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+        )
         message_box.window.bind("<Motion>", reset_timer)
         message_box.window.bind("<KeyPress>", reset_timer)
         message_box.window.bind("<ButtonPress>", reset_timer)
 
+def fetch_notifications():
+    """Fetch notifications from the notification_logs table."""
+    notifications = []
+    try:
+        # Connect to the MySQL database
+        connection = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="",  # Replace with your MySQL password
+            database="db_medicine_cabinet"
+        )
 
-# Define the refresh interval in milliseconds (e.g., 60000ms for 1 minute)
-REFRESH_INTERVAL = 60000  
+        if connection.is_connected():
+            cursor = connection.cursor(dictionary=True)
+            
+            # Fetch data from notification_logs table
+            query = ("SELECT medicine_name, expiration_date, notification_date, days_until_expiration "
+                     "FROM notification_logs "
+                     "ORDER BY notification_date DESC, notification_time DESC")
+            cursor.execute(query)
+            notifications = cursor.fetchall()
 
-def show_notification():
+    except mysql.connector.Error as e:
+        print("Error while connecting to MySQL:", e)
+
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+            print("MySQL connection is closed")
+
+    return notifications
+
+def update_notification_logs():
+    """Fetches updated notification logs and refreshes the Treeview."""
+    # Clear existing rows in the Treeview
+    for item in tree.get_children():
+        tree.delete(item)
+
+    # Fetch new notification logs from the database
+    logs = fetch_notifications()
+
+    # Insert the new logs into the Treeview
+    if logs:
+        for log in logs:
+            tree.insert("", tk.END, values=(log['medicine_name'], log['expiration_date'], log['notification_date'], log['days_until_expiration']))
+    else:
+        # Display a message if there are no logs (optional)
+        tk.Label(content_frame, text="No notifications found.", font=('Arial', 14), pady=10).pack()
+
+    # Schedule the next update after the specified interval
+    content_frame.after(REFRESH_INTERVAL, update_notification_logs)
+
+def show_notification_table():
+    """Display the notification logs table in the Treeview."""
     clear_frame()
     reset_button_colors()
-    notification_button.config(bg=active_bg_color)
-    notification_button.config(fg=active_fg_color)
+    notification_button.config(bg=active_bg_color, fg=active_fg_color)
 
     # Add a header
-    tk.Label(content_frame, text="NOTIFICATION LOGS", bg=motif_color, fg="white", font=('Arial', 25, 'bold'), height=2, relief='groove', bd=1).pack(fill='x')
+    tk.Label(content_frame, text="NOTIFICATION LOGS", bg=motif_color, fg="white",
+             font=('Arial', 25, 'bold'), height=2, relief='groove', bd=1).pack(fill='x')
 
     # Create a Treeview to display the logs
     columns = ("Medicine Name", "Expiration Date", "Notification Date", "Days Until Expiration")
@@ -1291,37 +1351,11 @@ def show_notification():
     # Bind the <<TreeviewSelect>> event to trigger the on_row_select function
     tree.bind('<<TreeviewSelect>>', on_row_select)
 
+    # Apply custom style to the Treeview
     table_style('Notification')
-
-    def update_notification_logs():
-        """Fetches updated notification logs and refreshes the Treeview."""
-        # Clear existing rows in the Treeview
-        for item in tree.get_children():
-            tree.delete(item)
-
-        # Fetch new notification logs from the database
-        notification_manager = NotificationManager(root)
-        notification_manager.cursor.execute(
-            "SELECT medicine_name, expiration_date, notification_date, days_until_expiration "
-            "FROM notification_logs "
-            "ORDER BY notification_date DESC, notification_time DESC"
-        )
-        logs = notification_manager.cursor.fetchall()
-
-        # Insert the new logs into the Treeview
-        if logs:
-            for log in logs:
-                tree.insert("", tk.END, values=log)
-        else:
-            # Display a message if there are no logs (optional)
-            tk.Label(content_frame, text="No notifications found.", font=('Arial', 14), pady=10).pack()
-
-        # Schedule the next update after the specified interval
-        content_frame.after(REFRESH_INTERVAL, update_notification_logs)
 
     # Initial fetch and start automatic refresh
     update_notification_logs()
-
 
 #------------------------------------------------------ACCOUNT SETTINGS FRAME----------------------------------------------------------------------
 image_refs = []
