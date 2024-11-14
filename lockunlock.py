@@ -474,7 +474,7 @@ class LockUnlock:
                                 title="Success",
                                 message="Door is now properly closed and ready to lock.\nPlease click 'Ok' to process locking the door.",
                                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png'),
-                                ok_callback=lambda: (LockUnlock(self.reference_window, self.user_Username, self.user_Password, self.arduino, 'successful_close', self.parentHeader), message_box.destroy())
+                                ok_callback=lambda: (message_box.destroy(), LockUnlock(self.reference_window, self.user_Username, self.user_Password, self.arduino, 'successful_close', self.parentHeader))
                                 
                             )
                         elif response == "Object detected" and self.type == "withdraw":

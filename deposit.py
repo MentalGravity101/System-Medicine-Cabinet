@@ -8,7 +8,6 @@ import time
 import tkinter as tk
 from tkinter import messagebox
 from custom_messagebox import CustomMessageBox
-from lockunlock import LockUnlock
 import threading
 
 SERIAL_PORT = 'COM4'  # Update to your printer's COM port if different
@@ -290,12 +289,13 @@ class MedicineDeposit:
     def show_success_message(self, qr_code_filepath):
         """Display the custom messagebox after successfully adding the medicine."""
         self.close_loading_window()
+        from System import LockUnlock
         self.message_box = CustomMessageBox(
             root=self.root,
             title="Medicine Deposited",
             message=f"Adding medicine: '{self.name.capitalize()}'\nPlease attach the printed QR Code with Exp. Date to the medicine.\n\nDo you want to add more medicine?",
             icon_path=qr_code_filepath,
-            no_callback=lambda: (LockUnlock(self.root, self.Username, self.Password, self.arduino, self.action, "medicine inventory", type="deposit"), self.message_box.destroy()),
+            no_callback=lambda: (LockUnlock(self.root, self.Username, self.Password, self.arduino,"unlock", "medicine inventory", type="deposit"), self.message_box.destroy()),
             yes_callback=lambda: (self._yes_action(), self.message_box.destroy())
         )
 

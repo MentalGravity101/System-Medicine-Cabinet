@@ -9,8 +9,6 @@ from keyboard import *
 from custom_messagebox import CustomMessageBox
 from csv_exporter import *
 from notification import *
-from deposit import MedicineDeposit
-from withdrawal import QRCodeScanner
 from wifi_connect import WiFiConnectUI
 import socket
 import qrcode
@@ -45,7 +43,7 @@ def establish_connection():
         conn = None  # Set to None if connection fails
 
 INACTIVITY_PERIOD = 300000 #automatic logout timer in milliseconds
-inactivity_timer = None #initialization of idle timer
+inactivity_timer = 0 #initialization of idle timer
 root = None  # Global variable for root window
 
 motif_color = '#42a7f5'
@@ -455,27 +453,6 @@ def deposit_window(permission):
         password="",
         database="db_medicine_cabinet"
     )
-    # Fetch data from the database
-    def fetch_medicine_data():
-        cursor = db_connection.cursor()
-
-        # Fetch distinct names
-        cursor.execute("SELECT DISTINCT brand_name FROM medicine_list")
-        names = [row[0] for row in cursor.fetchall()]
-
-        # Fetch distinct types
-        cursor.execute("SELECT DISTINCT generic_name FROM medicine_list")
-        types = [row[0] for row in cursor.fetchall()]
-
-        # Fetch distinct units
-        cursor.execute("SELECT DISTINCT unit FROM medicine_list")
-        units = [row[0] for row in cursor.fetchall()]
-
-        cursor.close()
-        return names, types, units
-
-    # Retrieve data from the database
-    names, types, units = fetch_medicine_data()
 
     title_label = tk.Label(deposit_Toplevel, text="DEPOSIT MEDICINE", bg=motif_color, fg="white", font=('Arial', 25, 'bold'), height=2, relief='groove', bd=1)
     title_label.pack(fill='both')
@@ -564,7 +541,7 @@ def deposit_window(permission):
         expiration_date = expiration_date_entry.get_date()
         keyboard.hide_keyboard()
 
-        deposit = MedicineDeposit(name, type_,  quantity, unit, expiration_date, dosage, conn, root, root, content_frame, Username, Password, arduino, action="unlock", yes_callback=lambda: (print("Calling deposit_window with 'deposit_again'"), deposit_window('deposit_again'), deposit_Toplevel.destroy()))
+        deposit = MedicineDeposit(name, type_,  quantity, unit, expiration_date, dosage, conn, root, root, content_frame, Username, Password, arduino, action="unlock", yes_callback=lambda: (print("Calling deposit_window with 'deposit_again'"), deposit_window(permission), deposit_Toplevel.destroy()))
 
         if deposit.validate_inputs():
             deposit_Toplevel.destroy()
@@ -573,7 +550,7 @@ def deposit_window(permission):
                              message=f"Adding Medicine:\n\nGeneric Name: {deposit.generic_name}\nBrand Name: {deposit.name}\nQuantity: {deposit.quantity}\nUnit: {deposit.unit}\nDosage: {deposit.dosage_for_db}\nExpiration Date: {deposit.expiration_date}\n\nClick 'Yes' to continue depositing medicine.",
                              icon_path=os.path.join(os.path.dirname(__file__), 'images', 'drugs_icon.png'),
                              yes_callback=lambda: (proceed_depositing(), message_box.destroy()),
-                             no_callback=lambda: (message_box.destroy(), deposit_window()))
+                             no_callback=lambda: (message_box.destroy(), deposit_Toplevel.destroy()))
             def proceed_depositing():
                 deposit.save_to_database()
                 deposit_Toplevel.destroy()
@@ -586,7 +563,7 @@ def deposit_window(permission):
     cancel_button.grid(row=7, column=0, padx=(40, 60), pady=(50, 0))
 
     if permission == 'deposit_again':
-        cancel_button.config(command=lambda: (LockUnlock(content_frame, Username, Password, arduino, "lock", "medicine inventory", container=root), deposit_Toplevel.destroy()))
+        cancel_button.config(command=lambda: (LockUnlock(root, Username, Password, arduino, "lock", "medicine inventory", container=root), deposit_Toplevel.destroy()))
     else:
         cancel_button.config(command=lambda: (show_medicine_supply(), deposit_Toplevel.destroy()))
 
@@ -2211,6 +2188,8 @@ class LockUnlock:
 
         self.reference_window = root
 
+        self.warning_box = None
+
         # Update the window to get its correct size
         self.window.update_idletasks()
 
@@ -2248,7 +2227,7 @@ class LockUnlock:
 
         # Bind the <Configure> event to the centering function
         self.window.bind("<Configure>", lambda e: self._center_toplevel(self.window))
-
+        self.warning_box = None
         
         self._create_ui()
 
@@ -2442,7 +2421,6 @@ class LockUnlock:
                 message_box.window.bind("<Motion>", reset_timer)
                 message_box.window.bind("<ButtonPress>", reset_timer)
             elif self.type== "withdraw" and self.action == "unlock":
-                from withdrawal import QRCodeScanner
                 self._unlock_door()
                 self.window.destroy()
                 message_box = CustomMessageBox(
@@ -2463,7 +2441,7 @@ class LockUnlock:
                     file.write("Locked")
                 self.window.destroy()
                 message_box = CustomMessageBox(
-                    root=self.keyboardFrame,
+                    root=root,
                     title="Success",
                     message="Door is now locked.",
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png'),
@@ -2482,6 +2460,7 @@ class LockUnlock:
                 self.window.destroy()
                 self.arduino.write(b'lock\n')
                 self.exit_callback()
+                
             if self.action == "unlock" and self.type == "disable":
                 self.window.destroy()
                 self._unlock_door()
@@ -2587,7 +2566,6 @@ class LockUnlock:
                             message_box.window.bind("<Motion>", reset_timer)
                             message_box.window.bind("<ButtonPress>", reset_timer)
                         elif self.type== "withdraw" and self.action == "unlock":
-                            from withdrawal import QRCodeScanner
                             self._unlock_door()
                             self.window.destroy()
                             message_box = CustomMessageBox(
@@ -2604,7 +2582,7 @@ class LockUnlock:
                             self.arduino.write(b'lock\n')
                             self.window.destroy()
                             message_box = CustomMessageBox(
-                                root=self.keyboardFrame,
+                                root=root,
                                 title="Success",
                                 message="Door is now locked.",
                                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png'),
@@ -2635,103 +2613,92 @@ class LockUnlock:
     # Function to send the lock command
     def _lock_door(self):
         # Step 1: Check the sensors before sending the lock command
-        self.arduino.write(b'check_sensors\n')  # Send "check_sensors" command to Arduino
+        self.arduino.write(b'check_sensors\n')
         time.sleep(0.1)  # Brief delay to allow Arduino to process and respond
 
         # Step 2: Read Arduino's response
         if self.arduino.in_waiting > 0:
             response = self.arduino.readline().decode().strip()
-            
+
             # Step 3: Proceed based on the sensor check response
             if response == "Object detected" and self.type == "deposit":
-                self.window.destroy()
-                message_box = CustomMessageBox(
-                    root=self.keyboardFrame,
-                    title="Success",
-                    message="Door is now properly closed and ready to lock.\nPlease click 'Ok' to process locking the door.",
-                    icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png'),
-                    ok_callback=lambda: (LockUnlock(self.reference_window, self.user_Username, self.user_Password, self.arduino, 'successful_close', self.parentHeader), message_box.destroy())
-                )
-                message_box.window.bind("<KeyPress>", reset_timer)
-                message_box.window.bind("<Motion>", reset_timer)
-                message_box.window.bind("<ButtonPress>", reset_timer)
+                self._show_success_message("Door is now properly closed and ready to lock.\nPlease click 'Ok' to process locking the door.")
+                # Trigger further action for a successful close (for deposit type)
+                LockUnlock(self.reference_window, self.user_Username, self.user_Password, self.arduino, 'successful_close', self.parentHeader)
+            
+            elif response == "Object detected" and self.type == "withdraw":
+                # Send lock command and update lock status for withdraw type
+                self.arduino.write(b'lock\n')
+                self._update_lock_status()
+                self._show_success_message("Door is now locked.")
+
+            else:
+                # If sensors indicate an issue, display warning and recheck sensors
+                self._show_warning_and_recheck()
+
+    def _show_success_message(self, message):
+        """Display a success message and close relevant windows."""
+        self._close_existing_windows()
+        message_box = CustomMessageBox(
+            root=root,
+            title="Success",
+            message=message,
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png'),
+            ok_callback=lambda: message_box.destroy()
+        )
+        message_box.window.bind("<KeyPress>", reset_timer)
+        message_box.window.bind("<Motion>", reset_timer)
+        message_box.window.bind("<ButtonPress>", reset_timer)
+
+    def _show_warning_and_recheck(self):
+        """Display a warning message box if doors are not closed properly and recheck sensors."""
+        # Destroy any existing warning box to avoid duplicates
+        if hasattr(self, 'warning_box') and self.warning_box:
+            self.warning_box.destroy()
+            self.warning_box = None
+
+        self.warning_box = CustomMessageBox(
+            root=root,
+            title="Warning",
+            color='red',
+            message="Doors are not properly closed\nPlease close both the doors properly.",
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
+            ok_callback=lambda: (self.warning_box.destroy(), self._recheck_sensors())
+        )
+        self.warning_box.window.bind("<KeyPress>", reset_timer)
+        self.warning_box.window.bind("<Motion>", reset_timer)
+        self.warning_box.window.bind("<ButtonPress>", reset_timer)
+
+    def _recheck_sensors(self):
+        """Rechecks sensors by sending the 'check_sensors' command to Arduino and responds accordingly."""
+        self.arduino.write(b'check_sensors\n')
+        time.sleep(0.1)
+        if self.arduino.in_waiting > 0:
+            response = self.arduino.readline().decode().strip()
+
+            if response == "Object detected" and self.type == "deposit":
+                self._show_success_message("Door is now properly closed and ready to lock.\nPlease click 'Ok' to process locking the door.")
+                LockUnlock(root, self.user_Username, self.user_Password, self.arduino, 'successful_close', self.parentHeader)
+
             elif response == "Object detected" and self.type == "withdraw":
                 self.arduino.write(b'lock\n')
-                with open(file_path, "w") as file:
-                    file.write("Locked")
-                self.window.destroy()
-                message_box = CustomMessageBox(
-                    root=self.keyboardFrame,
-                    title="Success",
-                    message="Door is now locked.",
-                    icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png'),
-                    ok_callback=lambda: message_box.destroy()
-                )
-                message_box.window.bind("<KeyPress>", reset_timer)
-                message_box.window.bind("<Motion>", reset_timer)
-                message_box.window.bind("<ButtonPress>", reset_timer)
+                self._update_lock_status()
+                self._show_success_message("Door is now locked.")
+            
             else:
-                # Recursive function to keep checking the sensors
-                def recheck_sensors(warning_box):
-                    self.arduino.write(b'check_sensors\n')
-                    time.sleep(0.1)
-                    if self.arduino.in_waiting > 0:
-                        response = self.arduino.readline().decode().strip()
-                        if response == "Object detected" and self.type == "deposit":
-                            self.window.destroy()
-                            message_box = CustomMessageBox(
-                                root=self.keyboardFrame,
-                                title="Success",
-                                message="Door is now properly closed and ready to lock.\nPlease click 'Ok' to process locking the door.",
-                                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png'),
-                                ok_callback=lambda: (LockUnlock(self.reference_window, self.user_Username, self.user_Password, self.arduino, 'successful_close', self.parentHeader), message_box.destroy())
-                            )
-                            message_box.window.bind("<KeyPress>", reset_timer)
-                            message_box.window.bind("<Motion>", reset_timer)
-                            message_box.window.bind("<ButtonPress>", reset_timer)
-                        elif response == "Object detected" and self.type == "withdraw":
-                            self.arduino.write(b'lock\n')
-                            with open(file_path, "w") as file:
-                                file.write("Locked")
-                            self.window.destroy()
-                            message_box = CustomMessageBox(
-                                root=self.keyboardFrame,
-                                title="Success",
-                                message="Door is now locked.",
-                                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png'),
-                                ok_callback=lambda: message_box.destroy()
-                            )
-                            message_box.window.bind("<KeyPress>", reset_timer)
-                            message_box.window.bind("<Motion>", reset_timer)
-                            message_box.window.bind("<ButtonPress>", reset_timer)
-                        else:
-                            # Display warning again if doors are still not closed properly
-                            warning_box = CustomMessageBox(
-                                root=self.keyboardFrame,
-                                title="Warning",
-                                color='red',
-                                message="Doors are not properly closed\nPlease close both the doors properly.",
-                                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
-                                ok_callback=lambda: recheck_sensors(warning_box)  # Reattach recheck_sensors with warning_box as callback
-                            )
-                            warning_box.window.bind("<KeyPress>", reset_timer)
-                            warning_box.window.bind("<Motion>", reset_timer)
-                            warning_box.window.bind("<ButtonPress>", reset_timer)
-                            print("Rechecking sensors: No object detected.")
-                
-                # Show warning message with the recheck callback
-                warning_box = CustomMessageBox(
-                    root=self.keyboardFrame,
-                    title="Warning",
-                    color='red',
-                    message="Doors are not properly closed\nPlease close both the doors properly.",
-                    icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
-                    ok_callback=lambda: recheck_sensors(warning_box)  # Attach recheck_sensors with warning_box as callback
-                )
-                warning_box.window.bind("<KeyPress>", reset_timer)
-                warning_box.window.bind("<Motion>", reset_timer)
-                warning_box.window.bind("<ButtonPress>", reset_timer)
-                print("Lock command aborted: No object detected.")
+                # Show warning if sensors still indicate an issue
+                self._show_warning_and_recheck()
+
+    def _update_lock_status(self):
+        """Update the lock status and perform cleanup."""
+        with open(file_path, "w") as file:
+            file.write("Locked")
+        self._close_existing_windows()
+
+    def _close_existing_windows(self):
+        """Closes the main window and any top-level windows."""
+        self.window.destroy()
+
 
 
     # Function to send the unlock command
@@ -2745,6 +2712,464 @@ class LockUnlock:
         """Trigger the no callback and close the window."""
         if self.exit_callback:
             self.exit_callback()
+
+class QRCodeScanner:
+    def __init__(self, parent, username, password, arduino, lock):
+        from System import reset_timer
+        print("QRCodeScanner initialized")  # Debugging statement
+        # Create a new Toplevel window
+        self.top = tk.Toplevel(parent, relief='raised', bd=5)
+
+        self.top.overrideredirect(True)  # Remove the title bar
+        self.top.resizable(width=False, height=False)
+        self.top.attributes('-topmost', True)
+
+        self.top.bind("<ButtonPress>", reset_timer)
+        self.top.bind("<KeyPress>", reset_timer)
+        self.top.bind("<Motion>", reset_timer)
+
+        self.parent = parent
+
+        self.username = username
+        self.password = password
+        self.arduino = arduino
+        self.lock = lock
+
+        self.top.focus_set()
+        self.top.grab_set()
+
+        # Title Frame
+        self.title_frame = tk.Frame(self.top, bg=motif_color)
+        self.title_frame.pack(fill=tk.X, expand=True, pady=(0, 10))
+
+        # Title Label
+        title_label = tk.Label(self.title_frame, text="  Withdraw Medicine", font=('Arial', 15, 'bold'), fg='white', bg=motif_color, pady=12)
+        title_label.pack(side=tk.LEFT)
+
+        # Add the close button icon at the top-right corner
+        self.close_icon_path = os.path.join(os.path.dirname(__file__), 'images', 'cancel_icon.png')
+        if os.path.exists(self.close_icon_path):
+            self.close_img = ImageTk.PhotoImage(Image.open(self.close_icon_path).resize((18, 18), Image.LANCZOS))
+        else:
+            self.close_img = None
+
+        close_button = tk.Button(self.title_frame, image=self.close_img, command=self.ask_lock, relief=tk.FLAT, bd=0, bg=motif_color, activebackground=motif_color)
+        close_button.image = self.close_img  # Keep a reference to avoid garbage collection
+        close_button.pack(side=tk.RIGHT, padx=(0, 5))
+
+        # Content Frame
+        content_frame = tk.Frame(self.top)
+        content_frame.pack(pady=(10, 2))
+
+        # QR Code Scanner Icon
+        original_logo_img = Image.open(os.path.join(os.path.dirname(__file__), 'images', 'scanning_icon.png')).resize((170, 170), Image.LANCZOS)
+        logo_img = ImageTk.PhotoImage(original_logo_img)
+        logo_label = tk.Label(content_frame, image=logo_img)
+        logo_label.image = logo_img  # Keep reference to avoid garbage collection
+        logo_label.pack(side=tk.TOP, pady=(10, 10))
+
+        # Instruction Message
+        instruction_label = tk.Label(content_frame, text="Please scan the medicine QR code to withdraw", font=("Arial", 14), fg='black')
+        instruction_label.pack(pady=10)
+
+        # QR Code Entry Frame
+        entry_frame = tk.Frame(self.top)
+        entry_frame.pack(pady=(5, 3))
+
+        # Entry widget to capture QR code input
+        self.qr_entry = tk.Entry(content_frame, font=("Arial", 14), justify='center', width=35, relief='sunken', bd=3)
+        self.qr_entry.pack(pady=(10, 5))
+        self.qr_entry.focus_set()
+
+        # Label to display the medicine withdrawn
+        self.result_label = tk.Label(self.top, text="", font=("Arial", 15), fg='green', pady=2, height=5)
+        self.result_label.pack()
+
+        # Bind the Enter key to process the QR code when scanned
+        self.qr_entry.bind("<Return>", self.process_qrcode)
+
+        self._adjust_window_height()
+
+    def _adjust_window_height(self):
+        """Adjust window height based on the message length while keeping the width fixed."""
+        # Fixed width, dynamic height
+        window_width = 450  # Adjusted width to fit better
+        self.top.update_idletasks()
+
+        required_height = self.top.winfo_reqheight()
+
+        screen_width = self.top.winfo_screenwidth()
+        screen_height = self.top.winfo_screenheight()
+
+        # Calculate the position to center the window
+        position_x = int((screen_width / 2) - (window_width / 2))
+        position_y = int((screen_height / 2) - (required_height / 2))
+
+        # Set the new geometry with fixed width and dynamic height
+        self.top.geometry(f"{window_width}x{required_height}+{position_x}+{position_y}")
+
+    def process_qrcode(self, event):
+        if self.qr_entry.winfo_exists():
+            scanned_qr_code = self.qr_entry.get().strip()
+            print(f"Final scanned QR code: {scanned_qr_code}")  # Debugging statement
+
+            if scanned_qr_code:
+                # Clear the Entry widget for the next scan
+                self.qr_entry.delete(0, tk.END)
+                # Proceed with withdrawal process if the QR code is scanned
+                self.withdraw_medicine(scanned_qr_code)
+            else:
+                self.result_label.config(text="No QR code data scanned.", fg="red")
+
+    def withdraw_medicine(self, qr_code):
+        print(f"Withdrawing medicine with QR code: {qr_code}")
+
+        try:
+            # Connect to the MySQL database
+            conn = mysql.connector.connect(
+                host="localhost",
+                user="root",
+                password="",  # Your MySQL password
+                database="db_medicine_cabinet"
+            )
+            cursor = conn.cursor()
+
+            # Query to check if the medicine exists and retrieve name, quantity, type, and unit
+            cursor.execute("SELECT name, quantity, type, unit FROM medicine_inventory WHERE qr_code = %s", (qr_code,))
+            result = cursor.fetchone()
+
+            if result:
+                medicine_name, current_quantity, medicine_type, medicine_unit = result
+                if current_quantity > 0:
+                    # Deduct 1 from quantity
+                    new_quantity = current_quantity - 1
+                    cursor.execute("UPDATE medicine_inventory SET quantity = %s WHERE qr_code = %s", (new_quantity, qr_code))
+                    conn.commit()
+
+                    # Update the result label with the new multi-line format
+                    self.result_label.config(text=f"You Withdrawn:\nMedicine: {medicine_name}\nType: {medicine_type}\nNew Quantity: {new_quantity}\nUnit: {medicine_unit}", fg="green", height=20, pady=2)
+                else:
+                    self.result_label.config(text=f"No more {medicine_name} ({medicine_type})\navailable to withdraw.", fg="red", height=5)
+                    cursor.execute("DELETE FROM medicine_inventory WHERE qr_code = %s", (qr_code,))
+                    conn.commit()
+            else:
+                self.result_label.config(text="QR code not found in the database.", fg="red")
+
+        except mysql.connector.Error as err:
+            self.result_label.config(text=f"Database Error: {err}", fg="red")
+
+        finally:
+            # Close cursor and connection
+            cursor.close()
+            conn.close()
+    def ask_lock(self):
+        from custom_messagebox import CustomMessageBox
+        self.top.destroy()
+        message_box = CustomMessageBox(
+            root=root,
+            title="Proceed Lock",
+            message="Are you finished withdrawing and wants\nto proceed on locking the door?.",
+            color="red",  # Background color for warning
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
+            yes_callback=lambda: (LockUnlock(root, self.username, self.password, self.arduino, 'lock', 'lock', type="withdraw"), message_box.destroy()),
+            no_callback=lambda: (message_box.destroy(), QRCodeScanner(self.parent, self.username, self.password, self.arduino, 'lock'))
+        )
+
+SERIAL_PORT = 'COM4'  # Update to your printer's COM port if different
+BAUD_RATE = 9600
+TIMEOUT = 1
+
+motif_color = '#42a7f5'
+
+
+class MedicineDeposit:
+    def __init__(self, name, generic_name, quantity, unit, expiration_date, dosage, db_connection, root, content_frame, keyboardFrame, Username, Password, arduino, action="unlock", yes_callback=None):
+        self.root = root
+        self.name = name.lower()
+        self.generic_name = generic_name.lower()
+        self.quantity = int(quantity)
+        self.unit = unit.lower()
+        self.expiration_date = expiration_date
+        self.dosage = int(dosage)
+        self.db_connection = db_connection
+        self.content_frame = content_frame
+        self.keyboardFrame = keyboardFrame
+        self.Username = Username
+        self.Password = Password
+        self.arduino = arduino
+        self.action = action
+        self.yes_callback = yes_callback
+
+        self.reference_window = root 
+        if self.unit == 'capsule' or self.unit == 'tablet':
+            self.dosage_for_db = f"{self.dosage} mg"
+        elif self.unit == 'syrup':
+            self.dosage_for_db = f"{self.dosage} ml"
+        
+        
+
+
+    def validate_inputs(self):
+        # Check if all fields are filled
+        if not all([self.name, self.generic_name, self.quantity, self.unit, self.expiration_date, self.dosage]):
+            global message_box
+            message_box = CustomMessageBox(
+                root=self.root,
+                title='Error',
+                color='red',
+                message='Please fill-out all the fields',
+                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+            )
+            return False
+
+        # Check if quantity and dosage are numeric and greater than 0
+        try:
+            self.quantity = int(self.quantity)
+            self.dosage = int(self.dosage)
+            if self.quantity <= 0:
+                message_box = CustomMessageBox(
+                    root=self.root,
+                    title='Error',
+                    color='red',
+                    message="Quantity must be greater than 0.",
+                    icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+                )
+                return False
+            if self.dosage <= 0:
+                message_box = CustomMessageBox(
+                    root=self.root,
+                    title='Error',
+                    color='red',
+                    message="Dosage must be greater than 0.",
+                    icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+                )
+                return False
+        except ValueError:
+            message_box = CustomMessageBox(
+                root=self.root,
+                title='Error',
+                color='red',
+                message="Quantity and Dosage must be numeric values greater than 0.",
+                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+            )
+            return False
+
+        # Check if expiration date is in the future
+        today = datetime.datetime.now().date()
+        if self.expiration_date <= today:
+            message_box = CustomMessageBox(
+                root=self.root,
+                title='Error',
+                color='red',
+                message="Expiration date must be later than today.",
+                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+            )
+            return False
+
+        return True
+
+    def generate_qr_code(self):
+        # Combine name and expiration date to create a unique identifier for the QR code
+        qr_code_data = f"{self.name}_{self.dosage_for_db}_{self.expiration_date}"
+        qr = qrcode.QRCode(version=1, box_size=10, border=5)
+        qr.add_data(qr_code_data)
+        qr.make(fit=True)
+        qr_image = qr.make_image(fill='black', back_color='white')
+
+        # Save the generated QR code image
+        qr_code_filename = f"qr_{self.name}_{self.expiration_date}.png"
+        qr_code_filepath = os.path.join(os.path.dirname(__file__), 'qr_codes', qr_code_filename)
+        qr_image.save(qr_code_filepath)
+
+        # Update the QR code label in the UI
+        self.update_qr_code_image(qr_code_filepath)
+
+        return qr_code_filepath
+
+    def update_qr_code_image(self, qr_code_filepath):
+        # Load the new QR code image
+        qr_image = Image.open(qr_code_filepath)
+        qr_image_resized = qr_image.resize((450, 450), Image.LANCZOS)
+        qr_image_tk = ImageTk.PhotoImage(qr_image_resized)
+        # Add code here to update the label widget if necessary
+
+    def show_loading_window(self):
+        """Display a Toplevel window with a 'Loading...' message."""
+        self.loading_window = tk.Toplevel(self.root, relief='raised', bd=5)
+        self.loading_window.title("Printing")
+        self.loading_window.geometry("500x300")
+        self.loading_window.resizable(False, False)
+        self.loading_window.attributes('-topmost', True)
+        self.loading_window.focus_set()
+        self.loading_window.grab_set()  # Make it modal (disable interaction with main window)
+        self.loading_window.overrideredirect(True)  # Remove the title bar
+        
+        # Center the loading window
+        x = self.root.winfo_x() + (self.root.winfo_width() // 2) - 100
+        y = self.root.winfo_y() + (self.root.winfo_height() // 2) - 50
+        self.loading_window.geometry(f"+{x}+{y}")
+
+        loading_label = tk.Label(self.loading_window, text="Loading...", font=("Arial", 18, 'bold'), bg=motif_color, fg='white')
+        loading_label.pack(expand=True, fill='both')
+
+    def close_loading_window(self):
+        """Close the loading window."""
+        if self.loading_window:
+            self.loading_window.destroy()
+            self.loading_window = None
+
+    def print_qr_code(self, expiration_date):
+        """Prints the QR code and expiration date on the thermal printer,
+        repeating the print if the unit is 'syrup' based on quantity,
+        and showing a loading window during the process."""
+        try:
+            # Show the loading window before starting the print task
+            self.show_loading_window()
+
+            # Generate QR code image
+            qr_code_filepath = self.generate_qr_code()
+            qr_image = Image.open(qr_code_filepath)
+
+            # Resize QR code to fit with text beside it (adjust as needed)
+            qr_image = qr_image.resize((170, 170), Image.LANCZOS)
+
+            # Prepare expiration date text as an image with a larger, bold font
+            expiration_text = f"{expiration_date.strftime('%Y-%m-%d')}"
+
+            # Load a bold TrueType font (adjust the path as needed for your system)
+            font_path = "C:/Windows/Fonts/arialbd.ttf"  # Arial Bold on Windows
+            font = ImageFont.truetype(font_path, 33)  # 33px for larger text
+            text_width, text_height = font.getbbox(expiration_text)[2:]
+
+            # Create a new blank image with space for both the QR and expiration text
+            combined_width = qr_image.width + text_width + 20  # 20px padding between QR and text
+            combined_height = max(qr_image.height, text_height)
+            combined_image = Image.new('1', (combined_width, combined_height + 60), 255)  # Add 30px padding below
+
+            # Place the QR code on the left
+            combined_image.paste(qr_image, (0, 0))
+
+            # Add the expiration date text to the right of the QR code
+            draw = ImageDraw.Draw(combined_image)
+            text_x_position = qr_image.width + 18  # Adjust padding here if needed
+            draw.text((text_x_position, (combined_height - text_height) // 2), expiration_text, font=font, fill=0)
+
+            # Convert the combined image to ESC/POS format for printing
+            img_data = self.image_to_escpos_data(combined_image)
+
+            # Define the print task in a separate thread to prevent UI freezing
+            def print_task():
+                try:
+                    with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=TIMEOUT) as printer:
+                        # If the unit is 'syrup', repeat printing based on quantity
+                        if self.unit == 'syrup':
+                            for _ in range(self.quantity):
+                                printer.write(img_data)
+                                printer.flush()
+                                # Optional cut command if printer supports it
+                                printer.write(b'\x1d\x56\x42\x00')  # ESC i - Cut paper
+                                printer.flush()
+                                time.sleep(1)  # Slight delay if needed between prints
+                        else:
+                            # Print only once for 'capsule' or 'tablet'
+                            printer.write(img_data)
+                            printer.flush()
+                            # Optional cut command if printer supports it
+                            printer.write(b'\x1d\x56\x42\x00')  # ESC i - Cut paper
+                            printer.flush()
+
+                        print("QR code and expiration date printed with spacing successfully.")
+                except serial.SerialException as e:
+                    print(f"Printer communication error: {e}")
+                finally:
+                    # Ensure both the loading window is closed and success message is shown after printing
+                    self.close_loading_window()
+                    self.show_success_message(qr_code_filepath)
+
+            # Start the print task in a new thread
+            threading.Thread(target=print_task).start()
+
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            self.close_loading_window()  # Ensure loading window is closed in case of error
+
+
+
+    def save_to_database(self):
+        # Generate QR code and get the image file path
+        qr_code_filepath = self.generate_qr_code()
+        qr_code_data = f"{self.name}_{self.dosage_for_db}_{self.expiration_date}"
+
+        # Convert name and type to Title Case for database insertion
+        name_for_db = self.name.capitalize()
+        type_for_db = self.generic_name.capitalize()
+        
+        # Save the medicine data to the database
+        try:
+            cursor = self.db_connection.cursor()
+            insert_query = """
+                INSERT INTO medicine_inventory (name, type, quantity, unit, dosage, expiration_date, date_stored, qr_code)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            cursor.execute(insert_query, (name_for_db, type_for_db, self.quantity, self.unit.capitalize(), self.dosage_for_db,
+                                        self.expiration_date, datetime.datetime.now().date(), qr_code_data))
+            self.db_connection.commit()
+
+            # Start printing process after database save
+            print("Attempting to print expiration date on thermal printer...")
+            self.print_qr_code(self.expiration_date)
+
+        except mysql.connector.Error as err:
+            messagebox.showerror("Error", f"Database error: {err}")
+        finally:
+            cursor.close()
+
+    def image_to_escpos_data(self, img):
+        """Converts a monochrome image to ESC/POS format."""
+        width, height = img.size
+        bytes_per_row = (width + 7) // 8  # 1 bit per pixel, so 8 pixels per byte
+        img_data = b''
+
+        # ESC/POS command for image printing
+        img_data += b'\x1d\x76\x30\x00' + bytes([bytes_per_row % 256, bytes_per_row // 256, height % 256, height // 256])
+
+        # Loop through pixels and convert to ESC/POS data
+        for y in range(height):
+            row_data = 0
+            byte = 0
+            for x in range(width):
+                if img.getpixel((x, y)) == 0:  # Pixel is black
+                    byte |= (1 << (7 - row_data))
+                row_data += 1
+                if row_data == 8:
+                    img_data += bytes([byte])
+                    row_data = 0
+                    byte = 0
+            if row_data > 0:  # Remaining bits in the row
+                img_data += bytes([byte])
+
+        return img_data
+
+
+    def show_success_message(self, qr_code_filepath):
+        """Display the custom messagebox after successfully adding the medicine."""
+        self.close_loading_window()
+        from System import LockUnlock
+        self.message_box = CustomMessageBox(
+            root=self.root,
+            title="Medicine Deposited",
+            message=f"Adding medicine: '{self.name.capitalize()}'\nPlease attach the printed QR Code with Exp. Date to the medicine.\n\nDo you want to add more medicine?",
+            icon_path=qr_code_filepath,
+            no_callback=lambda: (LockUnlock(root, self.Username, self.Password, self.arduino,"unlock", "medicine inventory", type="deposit"), self.message_box.destroy()),
+            yes_callback=lambda: (self._yes_action(), self.message_box.destroy())
+        )
+
+    def _yes_action(self):
+        """Trigger the yes callback and close the window."""
+        print("yes Callback called")
+        if self.yes_callback:
+            self.yes_callback()
+
 
 
 class CustomMessageBox:
@@ -2920,7 +3345,7 @@ def main():
     global root, arduino, container
     root = tk.Tk()
     root.resizable(width=False, height=False)
-    root.overrideredirect(True)
+    # root.overrideredirect(True)
     root.title("Electronic Medicine Cabinet Control System")
     root.state("zoomed")  # Maximize the window to full screen
 
