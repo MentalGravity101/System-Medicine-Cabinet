@@ -392,7 +392,6 @@ def start_timer():
 
 #Function that resets the idle timer if the user has an activity in the Main UI Frame or Toplevels
 def reset_timer(event=None):
-    print("Timer restart")
     start_timer()
 
 #Function for automatic logout during idle
@@ -1217,13 +1216,13 @@ def show_doorLog():
 
     # Add the first new button (e.g., 'Button 1')
     lock_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'lockWhite_icon.png')).resize((25, 25), Image.LANCZOS))
-    lock_button = tk.Button(button_frame, text="Enable Lock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=lock_icon, command=lambda: LockUnlock(root, content_frame, Username, Password, arduino, "lock", "door functions"))
+    lock_button = tk.Button(button_frame, text="Lock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=lock_icon, command=lambda: LockUnlock(root, Username, Password, arduino, "lock", "medicine inventory", container=root, type="disable"))
     lock_button.image = lock_icon
     lock_button.grid(row=0, column=0, padx=20, pady=(12, ), sticky='ew')
 
     # Add the second new button (e.g., 'Button 2')
     unlock_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'unlockWhite_icon.png')).resize((35, 35), Image.LANCZOS))
-    unlock_button = tk.Button(button_frame, text="Disable Lock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=unlock_icon, command=lambda: LockUnlock(root, Username, Password, arduino, "unlock", "door functions"))
+    unlock_button = tk.Button(button_frame, text="Unlock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=unlock_icon, command=lambda: LockUnlock(root, Username, Password, arduino, "unlock", "medicine inventory", container=root, type="disable", exit_callback=logout('disable-unlock')))
     unlock_button.image = unlock_icon
     unlock_button.grid(row=0, column=1, padx=20, pady=(12, 7), sticky='ew')
 
@@ -2483,6 +2482,19 @@ class LockUnlock:
                 self.window.destroy()
                 self.arduino.write(b'lock\n')
                 self.exit_callback()
+            if self.action == "unlock" and self.type == "disable":
+                self.window.destroy()
+                self._unlock_door()
+                message_box = CustomMessageBox(
+                    root=self.keyboardFrame,
+                    title="Disable Lock",
+                    message="Lock functionality is now disabled temporarily",
+                    icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
+                    ok_callback=lambda: (message_box.destroy(), self._exit_action()),
+                )
+                message_box.window.bind("<KeyPress>", reset_timer)
+                message_box.window.bind("<Motion>", reset_timer)
+                message_box.window.bind("<ButtonPress>", reset_timer)
 
         else:
             message_box = CustomMessageBox(
