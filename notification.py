@@ -3,11 +3,14 @@ from mysql.connector import Error
 from datetime import datetime, timedelta
 from custom_messagebox import CustomMessageBox
 import os
+import tkinter as tk
+from tkinter import ttk
 
 class NotificationManager:
     def __init__(self, root, asap=True):
         self.root = root
         self.asap = asap
+        self.message_box = None
         try:
             self.conn = mysql.connector.connect(
                 host="localhost",
@@ -28,7 +31,7 @@ class NotificationManager:
             return
 
         today = datetime.now().date()
-        soon_date = today + timedelta(days=7)
+        soon_date = today + timedelta(days=31)
 
         try:
             # Query the database for soon-to-expire medicines
@@ -65,13 +68,14 @@ class NotificationManager:
     def create_notification_popup(self, medicine_name, expiration_date, days_left, notification_count):
         """Create a notification popup with the notification count in the title."""
         try:
-            CustomMessageBox(
+            self.message_box = CustomMessageBox(
                 root=self.root,
                 title=f"Notification ({notification_count})",
                 message=f"The medicine '{medicine_name}' is expiring soon!\nExpiration Date: {expiration_date}\nDays left: {days_left}",
                 color='red',
                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
             )
+
         except Exception as e:
             print(f"Error displaying notification popup: {e}")
 

@@ -20,6 +20,7 @@ from loginQrCode import QRLogin
 import threading
 import datetime
 import pygame
+from notification import NotificationManager
 
 conn = mysql.connector.connect(
   host="localhost",
@@ -1303,6 +1304,9 @@ def update_notification_logs():
     content_frame.after(REFRESH_INTERVAL, update_notification_logs)
 
 def show_notification_table():
+    notify = NotificationManager(root)
+    notify.check_soon_to_expire()
+
     """Display the notification logs table in the Treeview."""
     clear_frame()
     reset_button_colors()
