@@ -85,7 +85,7 @@ def authenticate_user(username, password):
         configure_sidebar(user_role)
         update_datetime()
         # Check for soon-to-expire medicines on home page load
-        notification_manager = NotificationManager(root)
+        notification_manager = NotificationManager(root, asap=True)
         notification_manager.check_soon_to_expire()  # Automatically check and pop-up notifications
     else:
         message_box = CustomMessageBox(
@@ -1231,8 +1231,12 @@ REFRESH_INTERVAL = 50000
 # Function to display selected row's data in a Toplevel window
 def on_row_select(event):
     # Get the selected item
-    selected_item = tree.focus()
-    row_data = tree.item(selected_item, 'values')
+    selected_item = tree_notif.focus()
+    row_data = tree_notif.item(selected_item, 'values')
+
+    # Row styling
+    tree_notif.tag_configure('oddrow', background="white")
+    tree_notif.tag_configure('evenrow', background="#f2f2f2")
     
     # Create a new Toplevel window to show the selected row's data
     if row_data:  # Only if a row is selected
@@ -1286,16 +1290,19 @@ def fetch_notifications():
 def update_notification_logs():
     """Fetches updated notification logs and refreshes the Treeview."""
     # Clear existing rows in the Treeview
-    for item in tree.get_children():
-        tree.delete(item)
+    for item in tree_notif.get_children():
+        tree_notif.delete(item)
 
     # Fetch new notification logs from the database
     logs = fetch_notifications()
 
-    # Insert the new logs into the Treeview
+    # Insert the new logs into the Treeview with alternating row colors
     if logs:
-        for log in logs:
-            tree.insert("", tk.END, values=(log['medicine_name'], log['expiration_date'], log['notification_date'], log['days_until_expiration']))
+        for index, log in enumerate(logs):
+            tag = 'oddrow' if index % 2 == 0 else 'evenrow'
+            tree_notif.insert("", tk.END, values=(
+                log['medicine_name'], log['expiration_date'], log['notification_date'], log['days_until_expiration']),
+                tags=(tag,))
     else:
         # Display a message if there are no logs (optional)
         tk.Label(content_frame, text="No notifications found.", font=('Arial', 14), pady=10).pack()
@@ -1304,7 +1311,10 @@ def update_notification_logs():
     content_frame.after(REFRESH_INTERVAL, update_notification_logs)
 
 def show_notification_table():
-    notify = NotificationManager(root)
+    # Apply table style
+    table_style()
+    global tree_notif
+    notify = NotificationManager(root, asap=False)
     notify.check_soon_to_expire()
 
     """Display the notification logs table in the Treeview."""
@@ -1316,23 +1326,43 @@ def show_notification_table():
     tk.Label(content_frame, text="NOTIFICATION LOGS", bg=motif_color, fg="white",
              font=('Arial', 25, 'bold'), height=2, relief='groove', bd=1).pack(fill='x')
 
-    # Create a Treeview to display the logs
-    columns = ("Medicine Name", "Expiration Date", "Notification Date", "Days Until Expiration")
-    global tree  # Make the tree global so it can be accessed in the on_row_select function
-    tree = ttk.Treeview(content_frame, columns=columns, show="headings")
+    tree_frame = tk.Frame(content_frame, bg="#f0f0f0")
+    tree_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-    # Define headings for the columns
+    # Custom scrollbar for the treeview
+    tree_scroll = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL)
+    tree_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+
+    table_style()
+
+     # Create the Treeview to display the door logs
+    columns = ("Medicine Name", "Expiration Date", "Notification Time", "Days Until Exp")
+    tree_notif = ttk.Treeview(tree_frame, columns=columns, show="headings", height=10)
+
+    # Define columns
+    tree_scroll.config(command=tree_notif.yview)
+
+    # Column headings
     for col in columns:
-        tree.heading(col, text=col)
-        tree.column(col, anchor='center')
+        tree_notif.heading(col, text=col.capitalize())
 
-    tree.pack(fill="both", expand=True, padx=20, pady=10)
+    # Column configurations    for col in columns:
+    for col in columns:
+        tree_notif.column(col, anchor=tk.CENTER, width=100)
 
-    # Bind the <<TreeviewSelect>> event to trigger the on_row_select function
-    tree.bind('<<TreeviewSelect>>', on_row_select)
+    # Row styling
+    tree_notif.tag_configure('oddrow', background="white")
+    tree_notif.tag_configure('evenrow', background="#f2f2f2")
 
-    # Apply custom style to the Treeview
-    table_style('Notification')
+    # Mouse wheel support
+    def on_mouse_wheel(event):
+        tree_notif.yview_scroll(int(-1*(event.delta/120)), "units")
+
+    tree_notif.bind("<<TreeviewSelect>>", on_row_select)
+
+    tree_notif.bind_all("<MouseWheel>", on_mouse_wheel)
+
+    tree_notif.pack(side=tk.LEFT, fill="both", expand=True)
 
     # Initial fetch and start automatic refresh
     update_notification_logs()
