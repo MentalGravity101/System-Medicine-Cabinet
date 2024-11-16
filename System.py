@@ -699,7 +699,7 @@ def show_medicine_supply():
         search_entry.config(fg='grey')
         populate_treeview()
 
-    def populate_treeview(order_by="date_stored", sort="ASC"):
+    def populate_treeview(order_by="name", sort="ASC"):
         global latest_timestamp
         # Clear the Treeview
         for row in tree.get_children():
@@ -843,7 +843,6 @@ def show_medicine_supply():
                               command=lambda: sort_treeview("expiration_date", sort_button_5), relief="raised", bd=4, font=(font_style, font_size), width=10)
     sort_button_5.grid(row=0, column=7, padx=6, pady=10, sticky="e")
     buttons.append(sort_button_5)
-
 
     activate_button(sort_button_1)
 
@@ -1601,7 +1600,7 @@ def add_user():
     tk.Label(input_frame, text="Position", font=("Arial", 14)).grid(row=4, column=0, padx=10, pady=10)
 
     # Define positions and set placeholder
-    positions = ["Midwife", "Brgy Health Worker (BHW)", "Brgy Nutrition Scholar (BNS)", "Brgy Health Councilor"]
+    positions = ["Midwife", "BHW", "BNS", "BHC"]
     selected_position = tk.StringVar(value="Select Position")  # Placeholder
 
     position_option_menu = tk.OptionMenu(input_frame, selected_position, *positions)
@@ -1729,7 +1728,7 @@ def edit_user(username):
     tk.Label(input_frame, text="Position", font=("Arial", 14)).grid(row=2, column=0, padx=10, pady=10)
 
     # Define the positions and initialize with database value or placeholder
-    positions = ["Midwife", "Brgy Health Worker (BHW)", "Brgy Nutrition Scholar (BNS)", "Brgy Health Councilor"]
+    positions = ["Midwife", "BHW", "BNS", "BHC"]
     selected_position = tk.StringVar(value=user[1] if user[1] in positions else "Select Position")  # Set from DB or placeholder
 
     position_option_menu = tk.OptionMenu(input_frame, selected_position, *positions)
@@ -2041,8 +2040,8 @@ def validate_user_info(mode, username, password, confirm_password, position, acc
             message_box.window.bind("<ButtonPress>", reset_timer)
             return False
         
-    if mode == 'add' and position == 'Brgy Health Councilor':
-        cursor.execute("SELECT COUNT(*) FROM users WHERE position = 'Brgy Health Councilor'")
+    if mode == 'add' and position == 'BHC':
+        cursor.execute("SELECT COUNT(*) FROM users WHERE position = 'BHC'")
         councilor_count = cursor.fetchone()[0]
 
         if councilor_count >= 1:
@@ -2076,8 +2075,8 @@ def validate_user_info(mode, username, password, confirm_password, position, acc
             message_box.window.bind("<ButtonPress>", reset_timer)
             return False
         
-    if mode == 'edit' and position == 'Brgy Health Councilor':
-        cursor.execute("SELECT COUNT(*) FROM users WHERE position = 'Brgy Health Councilor'")
+    if mode == 'edit' and position == 'BHC':
+        cursor.execute("SELECT COUNT(*) FROM users WHERE position = 'BHC'")
         councilor_count = cursor.fetchone()[0]
 
         if councilor_count >= 1:
