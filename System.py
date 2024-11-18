@@ -1239,9 +1239,10 @@ def show_doorLog():
 
     # Add the second new button (e.g., 'Button 2')
     unlock_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'unlockWhite_icon.png')).resize((35, 35), Image.LANCZOS))
-    unlock_button = tk.Button(button_frame, text="Unlock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=unlock_icon, command=lambda: LockUnlock(root, Username, Password, arduino, "unlock", "medicine inventory", container=root, type="disable", exit_callback=logout('disable-unlock')))
+    unlock_button = tk.Button(button_frame, text="Disable lock", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=unlock_icon, command=display_disable_unlock)
     unlock_button.image = unlock_icon
     unlock_button.grid(row=0, column=1, padx=20, pady=(12, 7), sticky='ew')
+
 
     
     if load_data() == 'Locked':
@@ -1260,6 +1261,13 @@ def show_doorLog():
     refresh_button = tk.Button(button_frame, text="Reload All", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=refresh_img, command=clear_search)
     refresh_button.image = refresh_img
     refresh_button.grid(row=0, column=3, padx=20, pady=(12, 7), sticky='ew')
+
+def display_disable_unlock():
+    message_box = CustomMessageBox(root=root, title="Disable Unlock", color='red', message="Are you sure to disable lock mechanism?\n\nNOTE: This feauture is dedicated only for power interruptions.", yes_callback=disable_unlock, no_callback=lambda: print("Dsestroyed"), icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'))
+
+
+def disable_unlock():
+    LockUnlock(root, Username, Password, arduino, "unlock", "medicine inventory", container=root, type="disable", exit_callback=logout('disable-unlock'))
 
 
 #--------------------------------------------------------- NOTIFICATION -----------------------------------------------------------       
