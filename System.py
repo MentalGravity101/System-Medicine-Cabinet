@@ -970,7 +970,7 @@ def show_doorLog():
         search_entry.config(fg='grey')
         populate_treeview()
 
-    def populate_treeview(order_by="date", sort="DESC"):
+    def populate_treeview(order_by="username", sort="ASC"):
         # Clear the Treeview
         for row in tree.get_children():
             tree.delete(row)
@@ -1026,17 +1026,22 @@ def show_doorLog():
             
             # Convert date and time again for displaying
             date_str = date.strftime("%b %d, %Y") if date else "N/A"
+            # Convert time (timedelta) to a 12-hour format with AM/PM
             if time:
-                total_seconds = int(time.total_seconds())
+                total_seconds = int(time.total_seconds())  # Convert timedelta to total seconds
                 hours, remainder = divmod(total_seconds, 3600)
                 minutes, seconds = divmod(remainder, 60)
-                time_str = f"{hours:02}:{minutes:02}:{seconds:02}"
+                
+                # Convert to 12-hour format
+                period = "AM" if hours < 12 else "PM"
+                hours = hours % 12 or 12  # Convert 0 to 12 for midnight
+                time_str = f"{hours:02}:{minutes:02}:{seconds:02} {period}"
             else:
                 time_str = "N/A"
 
             # Alternate row colors using tags
             tag = 'evenrow' if i % 2 == 0 else 'oddrow'
-            tree.insert("", "end", values=(date_str, time_str, username, accountType, position, action_taken), tags=(tag,))
+            tree.insert("", "end", values=(username, date_str, time_str, accountType, position, action_taken), tags=(tag,))
 
     def sort_treeview(column, clicked_button):
         global active_column, sort_order
@@ -1047,6 +1052,11 @@ def show_doorLog():
 
         # Set the clicked button to active style and disable it
         clicked_button.config(bg="white", fg="black", state="disabled")
+
+        if column == 'date':
+            sort_order = 'DESC'
+        else:
+            sort_order = 'ASC'
 
         # Check if we're clicking the same column to toggle sort order
         if active_column == column:
@@ -1117,15 +1127,14 @@ def show_doorLog():
     # Combined Sorting Button for Date & Time
     tk.Label(header_frame, text="Sort by:", bg=motif_color, fg='white', padx=10, pady=5, font=(font_style, font_size)).grid(row=0, column=1, padx=(50, 5), pady=10, sticky="e")
 
-
     sort_button_date_time = tk.Button(header_frame, text="Date & Time", bg="white", fg='black', padx=10, pady=5,
-                                    command=lambda: sort_treeview("date", sort_button_date_time), relief="raised", bd=4, font=(font_style, font_size), state="disabled", width=10)
-    sort_button_date_time.grid(row=0, column=2, padx=5, pady=10, sticky="e")
+                                    command=lambda: sort_treeview("date", sort_button_date_time), relief="raised", bd=4, font=(font_style, font_size), width=10)
+    sort_button_date_time.grid(row=0, column=3, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_date_time)
 
     sort_button_1 = tk.Button(header_frame, text="Username", bg=motif_color, fg="white", padx=10, pady=5,
-                              command=lambda: sort_treeview("username", sort_button_1), relief="raised", bd=4, font=(font_style, font_size), width=10)
-    sort_button_1.grid(row=0, column=3, padx=5, pady=10, sticky="e")
+                              command=lambda: sort_treeview("username", sort_button_1), relief="raised", bd=4, font=(font_style, font_size), width=10, state="disabled")
+    sort_button_1.grid(row=0, column=2, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_1)
 
     sort_button_2 = tk.Button(header_frame, text="Account Type", bg=motif_color, fg="white", padx=10, pady=5,
@@ -1143,6 +1152,8 @@ def show_doorLog():
     sort_button_6.grid(row=0, column=6, padx=5, pady=10, sticky="e")
     buttons.append(sort_button_6)
 
+    activate_button(sort_button_1)
+
     tree_frame = tk.Frame(content_frame, bg="#f0f0f0")
     tree_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
@@ -1153,7 +1164,7 @@ def show_doorLog():
     table_style()
 
      # Create the Treeview to display the door logs
-    columns = ("Date", "Time", "Username", "Account Type", "Position", "Action Taken")
+    columns = ("Username", "Date", "Time", "Account Type", "Position", "Action Taken")
     tree = ttk.Treeview(tree_frame, columns=columns, show="headings", height=10)
 
     # Define columns
