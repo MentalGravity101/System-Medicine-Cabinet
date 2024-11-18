@@ -701,6 +701,7 @@ def show_medicine_supply():
 
     def populate_treeview(order_by="name", sort="ASC"):
         global latest_timestamp
+
         # Clear the Treeview
         for row in tree.get_children():
             tree.delete(row)
@@ -716,6 +717,20 @@ def show_medicine_supply():
         query = f"SELECT name, type, dosage, quantity, unit, date_stored, expiration_date FROM medicine_inventory WHERE quantity <> 0 ORDER BY {order_by} {sort}"
         cursor.execute(query)
         medicine = cursor.fetchall()
+
+        # Find the maximum length of data for each column
+        column_lengths = [len(col) for col in columns]  # Start with header lengths
+        for med in medicine:
+            for i, value in enumerate(med):
+                value_str = str(value)
+                column_lengths[i] = max(column_lengths[i], len(value_str))
+
+        # Set the width of each column based on its maximum length
+        char_width = 8  # Approximate width of a character in pixels
+        padding = 20    # Add padding to each column
+        for i, col in enumerate(columns):
+            column_width = (column_lengths[i] * char_width) + padding
+            tree.column(col, width=column_width, anchor=tk.CENTER)
 
         # Filter data in Python based on the search term
         filtered_medicine = []
@@ -741,12 +756,20 @@ def show_medicine_supply():
                 filtered_medicine.append(med)
 
         # Use the filtered results to populate the Treeview
-        for i, med in enumerate(filtered_medicine):
-            name, type, dosage, quantity, unit, date_stored, expiration_date = med
-            date_stored_str = date_stored.strftime("%b %d, %Y") if date_stored else "N/A"
-            expiration_date_str = expiration_date.strftime("%b %d, %Y") if expiration_date else "N/A"
-            tag = 'evenrow' if i % 2 == 0 else 'oddrow'
-            tree.insert("", "end", values=(name, type, dosage, quantity, unit, date_stored_str, expiration_date_str), tags=(tag,))
+        if filtered_medicine:
+            for i, med in enumerate(filtered_medicine):
+                name, type, dosage, quantity, unit, date_stored, expiration_date = med
+                date_stored_str = date_stored.strftime("%b %d, %Y") if date_stored else "N/A"
+                expiration_date_str = expiration_date.strftime("%b %d, %Y") if expiration_date else "N/A"
+                tag = 'evenrow' if i % 2 == 0 else 'oddrow'
+                tree.insert("", "end", values=(name, type, dosage, quantity, unit, date_stored_str, expiration_date_str), tags=(tag,))
+        else:
+            # Insert a placeholder row if no matches are found
+            tree.insert("", "end", values=("", "", "", "No Search Match", "", "", ""), tags=('no_match',))
+
+        # Style the 'no match' row
+        tree.tag_configure('no_match', background="#f5c6cb", foreground="#721c24")
+
 
 
     def sort_treeview(column, clicked_button):
@@ -1019,6 +1042,12 @@ def show_doorLog():
                 search_term_lower in action_taken.lower()
             ):
                 filtered_logs.append(log)
+
+        # If no matches are found, display a "No search match" message
+        if not filtered_logs:
+            tree.insert("", "end", values=("    ", "    ", "        No search match", "", "", ""), tags=('nomatch',))
+            tree.tag_configure('nomatch', background="#f5c6cb", foreground="#721c24")  # Styling for the no match row
+            return
 
         # Populate the Treeview with the filtered results
         for i, log in enumerate(filtered_logs):
@@ -2996,6 +3025,27 @@ class MedicineDeposit:
                 title='Error',
                 color='red',
                 message='Please fill-out all the fields',
+                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+            )
+            return False
+        
+        # Check length of name and generic_name
+        if len(self.name) > 20:
+            message_box = CustomMessageBox(
+                root=self.root,
+                title='Error',
+                color='red',
+                message="Brand name cannot exceed 20 characters.",
+                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+            )
+            return False
+
+        if len(self.generic_name) > 20:
+            message_box = CustomMessageBox(
+                root=self.root,
+                title='Error',
+                color='red',
+                message="Generic name cannot exceed 20 characters.",
                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
             )
             return False
