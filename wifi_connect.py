@@ -6,7 +6,7 @@ from pywifi import const
 from keyboard import OnScreenKeyboard
 from PIL import Image, ImageTk
 import os
-from custom_messagebox import CustomMessageBox
+
 
 motif_color = '#42a7f5'
 
@@ -119,6 +119,7 @@ class WiFiConnectUI(tk.Toplevel):
             self.password_entry.config(show="*")
 
     def connect_to_wifi(self):
+        from System import CustomMessageBox
         selected_network = self.network_combobox.get()
         password = self.password_entry.get()
 
@@ -160,6 +161,7 @@ class WiFiConnectUI(tk.Toplevel):
             connected_image = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'connected_icon.png')).resize((300, 300), Image.LANCZOS))
             self.wifi_image_status.config(image=connected_image)
             self.wifi_image_status.image = connected_image
+            
 
             message_box = CustomMessageBox(
                 root=self,

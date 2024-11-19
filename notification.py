@@ -1,7 +1,6 @@
 import mysql.connector
 from mysql.connector import Error
 from datetime import datetime, timedelta
-from custom_messagebox import CustomMessageBox
 import os
 import tkinter as tk
 from tkinter import ttk
@@ -67,6 +66,7 @@ class NotificationManager:
 
     def create_notification_popup(self, medicine_name, med_type, dosage, expiration_date, days_left, notification_count):
         """Create a notification popup with the notification count in the title."""
+        from System import CustomMessageBox
         try:
             self.message_box = CustomMessageBox(
                 root=self.root,

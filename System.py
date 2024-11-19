@@ -6,7 +6,6 @@ from tkinter import messagebox
 from tkcalendar import DateEntry
 import mysql.connector
 from keyboard import *
-from custom_messagebox import CustomMessageBox
 from csv_exporter import *
 from notification import *
 from wifi_connect import WiFiConnectUI
@@ -72,13 +71,16 @@ os.makedirs(os.path.dirname(file_path), exist_ok=True)
 #function for authentication during the login frame
 def authenticate_user(username, password):
     global Username, Password
+    validate_url = "http://localhost:5000/api/user_select"
     Username = username
     Password = password
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users WHERE username = %s AND password = %s", [username, password])
-    user = cursor.fetchone()
-    if user:
-        user_role = user[3]
+
+    # Send a POST request to the Flask app to validate credentials
+    response = requests.post(validate_url, json={'username': username, 'password': password})
+    data = response.json()
+    
+    if data['status'] == 'success':
+        user_role = data['accountType']
         main_ui_frame = create_main_ui_frame(container) 
         main_ui_frame.tkraise()
         reset_timer()
@@ -2461,51 +2463,44 @@ class LockUnlock:
 
 
 
-    #Function that validates user login credentials manually
+    # Function that validates user login credentials
     def _validate_credentials(self):
-        from datetime import datetime
-        conn = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="",
-            database="db_medicine_cabinet"
-            )
-        cursor = conn.cursor()
-
+        # URL of the Flask app's validate_credentials endpoint
+        validate_url = "http://localhost:5000/api/user_select"
+        
         username = self.username_entry.get()
         password = self.password_entry.get()
 
-        if username == self.user_Username and password == self.user_Password:
+        # Send a POST request to the Flask app to validate credentials
+        response = requests.post(validate_url, json={'username': username, 'password': password})
+        data = response.json()
 
-            search_query = "SELECT username, accountType, position FROM users WHERE username = %s AND password = %s"
-            cursor.execute(search_query, (username, password))
-            result = cursor.fetchone()
-            userName, accountType, position = result
+        if data['status'] == 'success':
+            # If the credentials are valid, get the user details
+            userName = data['username']
+            accountType = data['accountType']
+            position = data['position']
 
-            insert_query = """
-                INSERT INTO door_logs (username, accountType, position, date, time, action_taken)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """
-            if self.action == 'successful_close' or self.action == 'automatic_logout':
-                cursor.execute(insert_query, (userName, accountType, position, datetime.now().date(), datetime.now().time(), 'Lock'))
-            else: 
-                cursor.execute(insert_query, (userName, accountType, position, datetime.now().date(), datetime.now().time(), self.action))
-            conn.commit()
-            self._exit_action()
+            # Now send the door log data to the Flask app for insertion
+            action_taken = 'Lock' if self.action in ['successful_close', 'automatic_logout'] else self.action
+            self._insert_door_log(userName, accountType, position, action_taken)
+            
+            # Handle actions based on the door status
             if self.action == "unlock" and self.type == "deposit":
                 self.window.destroy()
                 self._unlock_door()
                 message_box = CustomMessageBox(
                     root=self.keyboardFrame,
                     title="Success",
-                    message="Door is now unlocked.\nPlease insert your medicine inside the Cabinet.\nPress ok if your finished inserting medicine to proceed on\nlocking the door.",
+                    message="Door is now unlocked.\nPlease insert your medicine inside the Cabinet.\nPress ok if you're finished inserting medicine to proceed on\nlocking the door.",
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
                     ok_callback=lambda: (message_box.destroy(), self._lock_door())
                 )
                 message_box.window.bind("<KeyPress>", reset_timer)
                 message_box.window.bind("<Motion>", reset_timer)
                 message_box.window.bind("<ButtonPress>", reset_timer)
-            elif self.type== "withdraw" and self.action == "unlock":
+
+            elif self.type == "withdraw" and self.action == "unlock":
                 self._unlock_door()
                 self.window.destroy()
                 message_box = CustomMessageBox(
@@ -2513,12 +2508,11 @@ class LockUnlock:
                     title="Success",
                     message="Door is now unlocked\nYou may now proceed to withdraw medicine.",
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
-                    ok_callback= lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame, self.user_Username, self.user_Password, self.arduino, 'lock'), self.window.destroy())
+                    ok_callback=lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame, self.user_Username, self.user_Password, self.arduino, 'lock'), self.window.destroy())
                 )
                 message_box.window.bind("<KeyPress>", reset_timer)
                 message_box.window.bind("<Motion>", reset_timer)
                 message_box.window.bind("<ButtonPress>", reset_timer)
-                
 
             elif self.action == "successful_close":
                 self.arduino.write(b'lock\n')
@@ -2535,6 +2529,7 @@ class LockUnlock:
                 message_box.window.bind("<KeyPress>", reset_timer)
                 message_box.window.bind("<Motion>", reset_timer)
                 message_box.window.bind("<ButtonPress>", reset_timer)
+
             elif self.action == "lock":
                 self.window.destroy()
                 self._lock_door()
@@ -2545,7 +2540,7 @@ class LockUnlock:
                 self.window.destroy()
                 self.arduino.write(b'lock\n')
                 self.exit_callback()
-                
+
             if self.action == "unlock" and self.type == "disable":
                 self.window.destroy()
                 self._unlock_door()
@@ -2561,6 +2556,7 @@ class LockUnlock:
                 message_box.window.bind("<ButtonPress>", reset_timer)
 
         else:
+            # If credentials are invalid, show an error message
             message_box = CustomMessageBox(
                 root=self.keyboardFrame,
                 title="Error",
@@ -2572,6 +2568,32 @@ class LockUnlock:
             message_box.window.bind("<KeyPress>", reset_timer)
             message_box.window.bind("<Motion>", reset_timer)
             message_box.window.bind("<ButtonPress>", reset_timer)
+
+    def _insert_door_log(self, userName, accountType, position, action_taken):
+        url = "http://localhost:5000/api/insert_door_log"
+        payload = {
+            "username": userName,
+            "accountType": accountType,
+            "position": position,
+            "action_taken": action_taken
+        }
+        
+        try:
+            response = requests.post(url, json=payload)
+            # Check if the response status code is 200 (OK)
+            if response.status_code == 200:
+                try:
+                    # Try to parse the JSON response
+                    data = response.json()
+                except ValueError:
+                    # Handle the case when JSON is not returned
+                    print("Error: The response is not in JSON format.")
+                    print("Response content:", response.text)  # Print the actual response for debugging
+            else:
+                print(f"Error: Received status code {response.status_code}")
+                print("Response content:", response.text)
+        except requests.exceptions.RequestException as e:
+            print(f"Error occurred: {e}")
 
 
     def _on_tab_change(self, event):
