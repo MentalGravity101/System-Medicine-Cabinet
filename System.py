@@ -21,6 +21,8 @@ import threading
 import datetime
 import pygame
 from notification import NotificationManager
+import json
+import requests
 
 conn = mysql.connector.connect(
   host="localhost",
@@ -1255,7 +1257,7 @@ def show_doorLog():
     extract_button = tk.Button(button_frame, text="Extract CSV", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=extract_img, command=lambda: export_to_csv(root, 'door_logs'))
     extract_button.image = extract_img
     extract_button.grid(row=0, column=2, padx=20, pady=(12, 7), sticky='ew')
-
+    
     # Reload All button
     refresh_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'refresh_icon.png')).resize((25, 25), Image.LANCZOS))
     refresh_button = tk.Button(button_frame, text="Reload All", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=refresh_img, command=clear_search)
@@ -3229,36 +3231,86 @@ class MedicineDeposit:
             print(f"An error occurred: {e}")
             self.close_loading_window()  # Ensure loading window is closed in case of error
 
-
-
     def save_to_database(self):
         # Generate QR code and get the image file path
         qr_code_filepath = self.generate_qr_code()
         qr_code_data = f"{self.name}_{self.dosage_for_db}_{self.expiration_date}"
 
-        # Convert name and type to Title Case for database insertion
-        name_for_db = self.name.capitalize()
-        type_for_db = self.generic_name.capitalize()
-        
-        # Save the medicine data to the database
+        # Prepare data payload for Flask server
+        payload = {
+            "name": self.name.capitalize(),
+            "type": self.generic_name.capitalize(),
+            "quantity": self.quantity,
+            "unit": self.unit.capitalize(),
+            "dosage": self.dosage_for_db,
+            "expiration_date": str(self.expiration_date),
+            "date_stored": str(datetime.datetime.now().date()),
+            "qr_code": qr_code_data
+        }
+
         try:
-            cursor = self.db_connection.cursor()
-            insert_query = """
-                INSERT INTO medicine_inventory (name, type, quantity, unit, dosage, expiration_date, date_stored, qr_code)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            """
-            cursor.execute(insert_query, (name_for_db, type_for_db, self.quantity, self.unit.capitalize(), self.dosage_for_db,
-                                        self.expiration_date, datetime.datetime.now().date(), qr_code_data))
-            self.db_connection.commit()
+            # Send data to Flask endpoint
+            response = requests.post(
+                "http://127.0.0.1:5000/api/add_medicine",  # Replace with your Flask endpoint URL
+                json=payload
+            )
 
-            # Start printing process after database save
-            print("Attempting to print expiration date on thermal printer...")
-            self.print_qr_code(self.expiration_date)
+            # Check response from the Flask server
+            if response.status_code == 200:
+                print("Data successfully sent to the Flask server.")
+                self.print_qr_code(self.expiration_date)  # Start printing process
+            elif response.status_code == 404:
+                print(
+                    "Error",
+                    "404 Error: The requested endpoint was not found. Please check the server URL."
+                )
+            else:
+                print(
+                    "Error",
+                    f"Failed to send data to the server. Status code: {response.status_code}\n{response.text}"
+                )
 
-        except mysql.connector.Error as err:
-            messagebox.showerror("Error", f"Database error: {err}")
-        finally:
-            cursor.close()
+        except requests.ConnectionError:
+            print(
+                "Error",
+                "Could not connect to the server. Please check your internet connection or server status."
+            )
+        except requests.RequestException as e:
+            print(
+                "Error",
+                f"An unexpected error occurred while sending data to the server:\n{e}"
+    )
+
+
+
+    # def save_to_database(self):
+    #     # Generate QR code and get the image file path
+    #     qr_code_filepath = self.generate_qr_code()
+    #     qr_code_data = f"{self.name}_{self.dosage_for_db}_{self.expiration_date}"
+
+    #     # Convert name and type to Title Case for database insertion
+    #     name_for_db = self.name.capitalize()
+    #     type_for_db = self.generic_name.capitalize()
+        
+    #     # Save the medicine data to the database
+    #     try:
+    #         cursor = self.db_connection.cursor()
+    #         insert_query = """
+    #             INSERT INTO medicine_inventory (name, type, quantity, unit, dosage, expiration_date, date_stored, qr_code)
+    #             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+    #         """
+    #         cursor.execute(insert_query, (name_for_db, type_for_db, self.quantity, self.unit.capitalize(), self.dosage_for_db,
+    #                                     self.expiration_date, datetime.datetime.now().date(), qr_code_data))
+    #         self.db_connection.commit()
+
+    #         # Start printing process after database save
+    #         print("Attempting to print expiration date on thermal printer...")
+    #         self.print_qr_code(self.expiration_date)
+
+    #     except mysql.connector.Error as err:
+    #         messagebox.showerror("Error", f"Database error: {err}")
+    #     finally:
+    #         cursor.close()
 
     def image_to_escpos_data(self, img):
         """Converts a monochrome image to ESC/POS format."""
