@@ -704,76 +704,58 @@ def show_medicine_supply():
         populate_treeview()
 
     def populate_treeview(order_by="name", sort="ASC"):
-        global latest_timestamp
+        global search_term
 
         # Clear the Treeview
         for row in tree.get_children():
             tree.delete(row)
 
-        # Fetch all data from the database first
-        conn = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="",
-            database="db_medicine_cabinet"
-        )
-        cursor = conn.cursor()
-        query = f"SELECT name, type, dosage, quantity, unit, date_stored, expiration_date FROM medicine_inventory WHERE quantity <> 0 ORDER BY {order_by} {sort}"
-        cursor.execute(query)
-        medicine = cursor.fetchall()
+        try:
+            # Fetch data from the Flask server
+            response = requests.get("http://127.0.0.1:5000/api/medicine_inventory")
+            response.raise_for_status()  # Raise an error for bad HTTP responses
+            medicine = response.json()
 
-        # Find the maximum length of data for each column
-        column_lengths = [len(col) for col in columns]  # Start with header lengths
-        for med in medicine:
-            for i, value in enumerate(med):
-                value_str = str(value)
-                column_lengths[i] = max(column_lengths[i], len(value_str))
+            # Sort the data (if not already sorted by the API)
+            medicine = sorted(medicine, key=lambda x: x[order_by], reverse=(sort == "DESC"))
 
-        # Set the width of each column based on its maximum length
-        char_width = 8  # Approximate width of a character in pixels
-        padding = 20    # Add padding to each column
-        for i, col in enumerate(columns):
-            column_width = (column_lengths[i] * char_width) + padding
-            tree.column(col, width=column_width, anchor=tk.CENTER)
+            # Filter the data based on the search term
+            search_term_lower = search_term.lower()
+            filtered_medicine = [
+                med for med in medicine
+                if search_term_lower in med["name"].lower() or
+                search_term_lower in med["type"].lower() or
+                search_term_lower in med["unit"].lower() or
+                search_term_lower in med["dosage"].lower() or
+                search_term_lower in str(med["quantity"]).lower() or
+                search_term_lower in med["date_stored"].lower() or
+                search_term_lower in med["expiration_date"].lower()
+            ]
 
-        # Filter data in Python based on the search term
-        filtered_medicine = []
-        search_term_lower = search_term.lower()
+            # Populate the Treeview with the filtered data
+            if filtered_medicine:
+                for i, med in enumerate(filtered_medicine):
+                    tag = 'evenrow' if i % 2 == 0 else 'oddrow'
+                    tree.insert("", "end", values=(
+                        med["name"],
+                        med["type"],
+                        med["dosage"],
+                        med["quantity"],
+                        med["unit"],
+                        med["date_stored"] or "N/A",
+                        med["expiration_date"] or "N/A"
+                    ), tags=(tag,))
+            else:
+                # Insert a placeholder row if no matches are found
+                tree.insert("", "end", values=("", "", "", "No Search Match", "", "", ""), tags=('no_match',))
 
-        for med in medicine:
-            name, type, dosage, quantity, unit, date_stored, expiration_date = med
+            # Style the 'no match' row
+            tree.tag_configure('no_match', background="#f5c6cb", foreground="#721c24")
 
-            # Convert date objects to strings (handling NoneType)
-            date_stored_str = date_stored.strftime("%b %d, %Y").lower() if date_stored else "N/A"
-            expiration_date_str = expiration_date.strftime("%b %d, %Y").lower() if expiration_date else "N/A"
-
-            # Check if the search term matches any of the fields
-            if (
-                search_term_lower in name.lower() or
-                search_term_lower in type.lower() or
-                search_term_lower in unit.lower() or
-                search_term_lower in dosage.lower() or
-                search_term_lower in str(quantity).lower() or
-                search_term_lower in date_stored_str or
-                search_term_lower in expiration_date_str
-            ):
-                filtered_medicine.append(med)
-
-        # Use the filtered results to populate the Treeview
-        if filtered_medicine:
-            for i, med in enumerate(filtered_medicine):
-                name, type, dosage, quantity, unit, date_stored, expiration_date = med
-                date_stored_str = date_stored.strftime("%b %d, %Y") if date_stored else "N/A"
-                expiration_date_str = expiration_date.strftime("%b %d, %Y") if expiration_date else "N/A"
-                tag = 'evenrow' if i % 2 == 0 else 'oddrow'
-                tree.insert("", "end", values=(name, type, dosage, quantity, unit, date_stored_str, expiration_date_str), tags=(tag,))
-        else:
-            # Insert a placeholder row if no matches are found
-            tree.insert("", "end", values=("", "", "", "No Search Match", "", "", ""), tags=('no_match',))
-
-        # Style the 'no match' row
-        tree.tag_configure('no_match', background="#f5c6cb", foreground="#721c24")
-
+        except requests.RequestException as e:
+            print(f"Error fetching data: {e}")
+            tree.insert("", "end", values=("", "", "", "Error fetching data", "", "", ""), tags=('error',))
+            tree.tag_configure('error', background="#f8d7da", foreground="#721c24")
 
 
     def sort_treeview(column, clicked_button):
