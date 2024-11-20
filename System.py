@@ -984,79 +984,61 @@ def show_doorLog():
         for row in tree.get_children():
             tree.delete(row)
 
-        # Fetch all data from the database first
-        conn = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="",
-            database="db_medicine_cabinet"
-        )
-        cursor = conn.cursor()
-        query = f"SELECT username, accountType, position, date, time, action_taken FROM door_logs ORDER BY {order_by} {sort}"
-        cursor.execute(query)
-        logs = cursor.fetchall()
+        try:
+            # Fetch data from Flask API
+            response = requests.get(
+                f'http://127.0.0.1:5000/api/door_logs',
+                params={'order_by': order_by, 'sort': sort}
+            )
+            response.raise_for_status()  # Raise an error for bad responses
+            logs = response.json()
 
-        cursor.close()  # Close the cursor
-        conn.close()  # Close the connection
+            filtered_logs = []
+            search_term_lower = search_term.lower()
 
-        # Filter data in Python based on the search term
-        filtered_logs = []
-        search_term_lower = search_term.lower()
-
-        for log in logs:
-            username, accountType, position, date, time, action_taken = log
-
-            # Convert date to string
-            date_str = date.strftime("%b %d, %Y").lower() if date else "N/A"
-
-            # Convert time (timedelta) to hours, minutes, and seconds
-            if time:
-                total_seconds = int(time.total_seconds())  # Convert timedelta to total seconds
-                hours, remainder = divmod(total_seconds, 3600)
-                minutes, seconds = divmod(remainder, 60)
-                time_str = f"{hours:02}:{minutes:02}:{seconds:02}"
-            else:
+            for log in logs:
                 time_str = "N/A"
+                if log['time'] is not None:
+                    total_seconds = int(log['time'])
+                    hours, remainder = divmod(total_seconds, 3600)
+                    minutes, seconds = divmod(remainder, 60)
+                    period = "AM" if hours < 12 else "PM"
+                    hours = hours % 12 or 12  # Convert 0 to 12 for midnight
+                    time_str = f"{hours:02}:{minutes:02}:{seconds:02} {period}"
 
-            # Check if the search term matches any of the fields
-            if (
-                search_term_lower in username.lower() or
-                search_term_lower in accountType.lower() or
-                search_term_lower in position.lower() or
-                search_term_lower in date_str or
-                search_term_lower in time_str or
-                search_term_lower in action_taken.lower()
-            ):
-                filtered_logs.append(log)
+                if (
+                    search_term_lower in log['username'].lower() or
+                    search_term_lower in log['accountType'].lower() or
+                    search_term_lower in log['position'].lower() or
+                    search_term_lower in log['date'].lower() or
+                    search_term_lower in time_str.lower() or
+                    search_term_lower in log['action_taken'].lower()
+                ):
+                    filtered_logs.append(log)
 
-        # If no matches are found, display a "No search match" message
-        if not filtered_logs:
-            tree.insert("", "end", values=("    ", "    ", "        No search match", "", "", ""), tags=('nomatch',))
-            tree.tag_configure('nomatch', background="#f5c6cb", foreground="#721c24")  # Styling for the no match row
-            return
+            if not filtered_logs:
+                tree.insert("", "end", values=("    ", "    ", "        No search match", "", "", ""), tags=('nomatch',))
+                tree.tag_configure('nomatch', background="#f5c6cb", foreground="#721c24")
+                return
 
-        # Populate the Treeview with the filtered results
-        for i, log in enumerate(filtered_logs):
-            username, accountType, position, date, time, action_taken = log
-            
-            # Convert date and time again for displaying
-            date_str = date.strftime("%b %d, %Y") if date else "N/A"
-            # Convert time (timedelta) to a 12-hour format with AM/PM
-            if time:
-                total_seconds = int(time.total_seconds())  # Convert timedelta to total seconds
-                hours, remainder = divmod(total_seconds, 3600)
-                minutes, seconds = divmod(remainder, 60)
-                
-                # Convert to 12-hour format
-                period = "AM" if hours < 12 else "PM"
-                hours = hours % 12 or 12  # Convert 0 to 12 for midnight
-                time_str = f"{hours:02}:{minutes:02}:{seconds:02} {period}"
-            else:
-                time_str = "N/A"
-
-            # Alternate row colors using tags
-            tag = 'evenrow' if i % 2 == 0 else 'oddrow'
-            tree.insert("", "end", values=(username, date_str, time_str, accountType, position, action_taken), tags=(tag,))
+            for i, log in enumerate(filtered_logs):
+                tag = 'evenrow' if i % 2 == 0 else 'oddrow'
+                tree.insert(
+                    "",
+                    "end",
+                    values=(
+                        log['username'],
+                        log['date'],
+                        time_str,
+                        log['accountType'],
+                        log['position'],
+                        log['action_taken']
+                    ),
+                    tags=(tag,)
+                )
+        except requests.exceptions.RequestException as e:
+            tree.insert("", "end", values=("Error", "Could not fetch data", str(e), "", "", ""), tags=('error',))
+            tree.tag_configure('error', background="#f8d7da", foreground="#721c24")
 
     def sort_treeview(column, clicked_button):
         global active_column, sort_order
