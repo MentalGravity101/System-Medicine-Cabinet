@@ -6,6 +6,7 @@ from custom_messagebox import *
 import win32file
 import win32con
 import ctypes
+import requests     
 
 # Define constants for volume control
 FSCTL_LOCK_VOLUME = 0x00090018
@@ -84,15 +85,15 @@ def get_flash_drive_path():
         return removable_drives[0]
     return None
 
-# CSV export function
 def export_to_csv(root, table_name):
+    from System import CustomMessageBox
     flash_drive_path = get_flash_drive_path()
     if not flash_drive_path:
         CustomMessageBox(
-            root, 
-            title="Warning", 
+            root,
+            title="Warning",
             color='red',
-            message="Please insert a flash drive to extract.", 
+            message="Please insert a flash drive to extract.",
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
         )
         return
@@ -102,35 +103,40 @@ def export_to_csv(root, table_name):
     file_path = os.path.join(flash_drive_path, file_name)
 
     try:
-        conn = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="",
-            database="db_medicine_cabinet"
-        )
-        cursor = conn.cursor()
+        # Flask API endpoint to fetch data
+        api_url = f"http://127.0.0.1:5000/api/get_table_data/{table_name}"
 
-        # Use the passed table_name to query the correct table
-        query = f"SELECT * FROM {table_name}"
-        cursor.execute(query)
-        rows = cursor.fetchall()
+        # Request the data from Flask API
+        response = requests.get(api_url)
+        if response.status_code != 200:
+            raise Exception(f"Failed to fetch data from the server. Status Code: {response.status_code}")
 
-        # Get column names dynamically from the cursor description
-        column_names = [i[0] for i in cursor.description]
+        # Parse the data from the response
+        data = response.json()
+        if not data or 'columns' not in data or 'rows' not in data:
+            raise Exception("Invalid data format received from the server.")
+
+        columns = data['columns']  # Column names
+        rows = data['rows']        # Row data
 
         # Write the data to a CSV file on the flash drive
         with open(file_path, mode='w', newline='') as file:
             writer = csv.writer(file)
-            writer.writerow(column_names)  # Write column headers
-            for row in rows:
-                writer.writerow(row)
+            writer.writerow(columns)  # Write column headers
+            writer.writerows(rows)    # Write all rows
 
         # Function to show the ejection confirmation after success message
         def show_eject_confirmation():
             def eject_yes_callback():
                 drive_letter = flash_drive_path[0]  # Extract drive letter (e.g., 'E' from 'E:/')
                 safely_eject_drive(drive_letter)
-                CustomMessageBox(root=root, title="Success", message=f"Flash Drive {drive_letter} safely ejected.", ok_callback=success_message_box.destroy(), icon_path=os.path.join(os.path.dirname(__file__), 'images', 'okGrey_icon.png'))
+                CustomMessageBox(
+                    root=root,
+                    title="Success",
+                    message=f"Flash Drive {drive_letter} safely ejected.",
+                    ok_callback=success_message_box.destroy(),
+                    icon_path=os.path.join(os.path.dirname(__file__), 'images', 'okGrey_icon.png')
+                )
                 return
 
             def eject_no_callback():
@@ -144,36 +150,26 @@ def export_to_csv(root, table_name):
                 root,
                 title="Eject Flash Drive",
                 message="Do you want to safely eject the flash drive?",
-                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'ejectFlashdrive_icon.png'),  # Add your icon path
+                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'ejectFlashdrive_icon.png'),
                 yes_callback=eject_yes_callback,
                 no_callback=eject_no_callback
             )
 
         # Show the success message first, then the eject confirmation
         success_message_box = CustomMessageBox(
-            root, 
-            title="Success", 
+            root,
+            title="Success",
             message=f"CSV file has been created successfully at \n{file_path}!",
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'okGrey_icon.png'),
             ok_callback=show_eject_confirmation  # Trigger ejection confirmation after clicking "OK"
         )
 
-    except mysql.connector.Error as err:
-        CustomMessageBox(
-            root, 
-            title="Database Error",
-            color='red', 
-            message=f"Error: {err}",
-            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
-        )
     except Exception as e:
         CustomMessageBox(
-            root, 
+            root,
             title="Error",
-            message='red', 
+            color='red',
+            message=f"An error occurred: {e}",
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
         )
-    finally:
-        if conn:
-            cursor.close()
-            conn.close()
+        print('Error: ', e)
