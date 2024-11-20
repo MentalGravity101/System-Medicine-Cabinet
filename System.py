@@ -1383,34 +1383,7 @@ def show_notification_table():
     update_notification_logs()
 
 #------------------------------------------------------ACCOUNT SETTINGS FRAME----------------------------------------------------------------------
-image_refs = []
 def show_account_setting():
-    global conn
-    try:
-        # Ensure the connection is active
-        if conn.is_connected() == False:
-            conn = mysql.connector.connect(
-                host="localhost",
-                user="root",
-                password="",
-                database="db_medicine_cabinet"
-            )
-    except mysql.connector.Error as err:
-        print(f"Error reconnecting to the database: {err}")
-        message_box = CustomMessageBox(
-            root=root,
-            title="ERROR",
-            message="Database connection lost. Reconnecting...",
-            color="red",
-            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
-        )
-        message_box.window.bind("<Motion>", reset_timer)
-        message_box.window.bind("<KeyPress", reset_timer)
-        message_box.window.bind("<ButtonPress>", reset_timer)
-        return
-    
-    cursor = conn.cursor()
-
     clear_frame()
     reset_button_colors()
     if account_setting_button:
@@ -1423,7 +1396,7 @@ def show_account_setting():
     tree_frame = tk.Frame(content_frame)
     tree_frame.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
 
-    table_style() #Call the function for styling the treeview
+    table_style()  # Call the function for styling the treeview
 
     # Define the treeview with a maximum height of 7 rows
     columns = ("username", "position", "accountType")
@@ -1439,17 +1412,31 @@ def show_account_setting():
     tree.column("position", width=150, anchor=tk.CENTER)
     tree.column("accountType", width=150, anchor=tk.CENTER)
 
-    # Insert data into the treeview with alternating row colors
-    # conn = sqlite3.connect('Medicine Cabinet.db')
-    cursor = conn.cursor()
-    
-    cursor.execute("SELECT username, position, accountType FROM users ORDER BY accountType ASC")
-    users = cursor.fetchall()
+    try:
+        # Fetch data from Flask API
+        response = requests.get("http://127.0.0.1:5000/api/users")
+        response.raise_for_status()  # Raise an error for bad status codes
+        users = response.json()
 
-    for i, user in enumerate(users):
-        username, position, accountType = user
-        tag = 'evenrow' if i % 2 == 0 else 'oddrow'
-        tree.insert("", "end", values=(username, position, accountType), tags=(tag,))
+        for i, user in enumerate(users):
+            username = user['username']
+            position = user['position']
+            accountType = user['accountType']
+            tag = 'evenrow' if i % 2 == 0 else 'oddrow'
+            tree.insert("", "end", values=(username, position, accountType), tags=(tag,))
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching data from API: {e}")
+        message_box = CustomMessageBox(
+            root=root,
+            title="ERROR",
+            message="Failed to fetch user data from server.",
+            color="red",
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+        )
+        message_box.window.bind("<Motion>", reset_timer)
+        message_box.window.bind("<KeyPress>", reset_timer)
+        message_box.window.bind("<ButtonPress>", reset_timer)
+        return
 
     # Configure the row tags for alternating colors
     tree.tag_configure('evenrow', background='#ebebeb')
@@ -1460,10 +1447,9 @@ def show_account_setting():
 
     # Create a frame for the buttons below the Treeview
     button_frame = tk.Frame(content_frame)
-    button_frame.pack(padx=50, pady=10, fill=tk.X)  # Ensure this frame is packed below
+    button_frame.pack(padx=50, pady=10, fill=tk.X)
 
-    # Use grid layout for equally spaced buttons
-    button_frame.columnconfigure([0, 1, 2], weight=1)  # Equal weight to all columns
+    button_frame.columnconfigure([0, 1, 2], weight=1)
 
     add_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'add_icon.png')).resize((25, 25), Image.LANCZOS))
     add_button = tk.Button(button_frame, text="Add User", font=("Arial", 15), pady=20, padx=25, bg=motif_color, fg='white', height=25, relief="raised", bd=3, compound=tk.LEFT, image=add_img, command=add_user)
@@ -1481,22 +1467,25 @@ def show_account_setting():
     delete_button.grid(row=0, column=2, padx=30, pady=10, sticky="ew")
 
 
-def delete_selected_user(tree, authenticated_user, conn):
+def delete_selected_user(tree, authenticated_user, flask_url):
     selected_item = tree.selection()  # Get selected item
     if not selected_item:
         return
 
     username = tree.item(selected_item, "values")[0]
     account_type = tree.item(selected_item, "values")[2]  # Account type for the selected user
-    cursor = conn.cursor()
 
-    # Check the number of admin accounts
-    cursor.execute("SELECT COUNT(*) FROM users WHERE accountType = 'Admin'")
-    admin_count = cursor.fetchone()[0]
+    # Get admin count from Flask API
+    try:
+        response = requests.get(f"http://localhost:5000/api/admin_count")
+        response.raise_for_status()
+        admin_count = response.json().get('admin_count', 0)
+    except requests.RequestException as e:
+        print(f"Error fetching admin count: {e}")
+        return
 
     # Define callbacks for deletion confirmation
     def yes_delete():
-        # If user confirms deleting own account, check if it’s the last admin
         if username == authenticated_user and account_type == "Admin" and admin_count <= 1:
             message_box = CustomMessageBox(
                 root=tree, 
@@ -1506,13 +1495,17 @@ def delete_selected_user(tree, authenticated_user, conn):
                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
             )
             message_box.window.bind("<Motion>", reset_timer)
-            message_box.window.bind("<KeyPress>", reset_timer)
-            message_box.window.bind("<ButtonPress>", reset_timer)
             return
-        
-        # Proceed with deletion
-        cursor.execute("DELETE FROM users WHERE username = %s", (username,))
-        conn.commit()
+
+        # Delete user via Flask API
+        try:
+            delete_response = requests.post(f"http://localhost:5000/api/delete_user_account", json={"username": username})
+            delete_response.raise_for_status()
+            print(delete_response.json().get('message'))
+        except requests.RequestException as e:
+            print(f"Error deleting user: {e}")
+            return
+
         if username == authenticated_user:
             logout_with_sensor_check("delete own")
         else:
@@ -1521,9 +1514,8 @@ def delete_selected_user(tree, authenticated_user, conn):
     def no_delete():
         print("User deletion canceled.")
 
-    # Check if the selected account is the user’s own account
+    # Confirmation message
     if username == authenticated_user:
-        # Ask for confirmation to delete own account
         message_box = CustomMessageBox(
             root=tree, 
             title="Confirm Delete", 
@@ -1534,10 +1526,7 @@ def delete_selected_user(tree, authenticated_user, conn):
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
         )
         message_box.window.bind("<Motion>", reset_timer)
-        message_box.window.bind("<KeyPress>", reset_timer)
-        message_box.window.bind("<ButtonPress>", reset_timer)
     else:
-        # If it's another user, check if they're the last admin and confirm deletion
         if account_type == "Admin" and admin_count <= 1:
             message_box = CustomMessageBox(
                 root=tree, 
@@ -1547,11 +1536,8 @@ def delete_selected_user(tree, authenticated_user, conn):
                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
             )
             message_box.window.bind("<Motion>", reset_timer)
-            message_box.window.bind("<KeyPress>", reset_timer)
-            message_box.window.bind("<ButtonPress>", reset_timer)
             return
 
-        # Ask for confirmation to delete other user's account
         message_box = CustomMessageBox(
             root=tree, 
             title="Confirm Delete", 
@@ -1559,12 +1545,9 @@ def delete_selected_user(tree, authenticated_user, conn):
             color="red", 
             yes_callback=yes_delete, 
             no_callback=no_delete,
-            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
-            sound_file=os.path.join(os.path.dirname(__file__), 'sounds', 'confirmDelete.mp3')
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
         )
         message_box.window.bind("<Motion>", reset_timer)
-        message_box.window.bind("<KeyPress>", reset_timer)
-        message_box.window.bind("<ButtonPress>", reset_timer)
 
 def add_user():
     global conn
