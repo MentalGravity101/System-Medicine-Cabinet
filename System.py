@@ -1645,25 +1645,42 @@ def add_user():
             new_password = password_entry.get()
             confirm_password = confirm_password_entry.get()
             new_position = selected_position.get()
-            new_accountType = selected_account_type.get()
+            new_account_type = selected_account_type.get()
 
+            # Validate fields are filled
             if validate_all_fields_filled(username_entry, password_entry, confirm_password_entry, selected_position, selected_account_type):
-                if validate_user_info('add', new_username, new_password, confirm_password, new_position, new_accountType, new_accountType, new_position):
+                # Validate user input
+                if validate_user_info('add', new_username, new_password, confirm_password, new_position, new_account_type, new_account_type, new_position):
 
-                    # Generate the QR code data string
                     qr_code_data = f"{new_username} - {new_position}"
+                    # Flask API URL
+                    flask_url = "http://localhost:5000/api/add_user_account"  # Replace with your actual API URL
+                    
+                    # Prepare data for the POST request
+                    data = {
+                        "username": new_username,
+                        "password": new_password,
+                        "position": new_position,
+                        "accountType": new_account_type,
+                        "qr_code_data": qr_code_data
+                    }
 
-                    # Insert the user into the database with qrcode_data
-                    cursor = conn.cursor()
-                    cursor.execute("""
-                        INSERT INTO users (username, password, position, accountType, qrcode_data)
-                        VALUES (%s, %s, %s, %s, %s)
-                    """, (new_username, new_password, new_position, new_accountType, qr_code_data))
-                    conn.commit()
+                    try:
+                        # Send data to Flask API
+                        response = requests.post(flask_url, json=data)
+                        response.raise_for_status()  # Raise error for bad HTTP status codes
 
-                    # Generate and save QR code image temporarily
-                    qr_path = generate_qrcode(qr_code_data, 'add', new_username)
+                        # Process API response
+                        api_response = response.json()
+                        if api_response.get("success"):
+                            qr_path = generate_qrcode(qr_code_data, 'add', new_username)
+                        else:
+                            messagebox.showerror("Error", f"Failed to add user: {api_response.get('message')}")
 
+                    except requests.RequestException as e:
+                        messagebox.showerror("API Error", f"Error connecting to the server: {e}")
+                else:
+                    messagebox.showerror("Validation Error", "Invalid user input.")
             else:
                 message_box = CustomMessageBox(
                     root=root,
@@ -1676,8 +1693,9 @@ def add_user():
                 message_box.window.bind("<Motion>", reset_timer)
                 message_box.window.bind("<KeyPress>", reset_timer)
                 message_box.window.bind("<ButtonPress>", reset_timer)
-        except mysql.connector.Error as err:
-            messagebox.showerror("Database Error", f"Error: {err}")
+
+        except Exception as e:
+            messagebox.showerror("Unexpected Error", f"An error occurred: {e}")
 
     cancel_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'cancelBlack_icon.png')).resize((25, 25), Image.LANCZOS))
     cancel_button = tk.Button(input_frame, text="Cancel", font=("Arial", 16), bg=motif_color, fg='white', command=show_account_setting, width=130, padx=20, relief="raised", bd=3, compound=tk.LEFT, image=cancel_img, pady=5)
