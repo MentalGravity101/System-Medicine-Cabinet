@@ -71,7 +71,7 @@ os.makedirs(os.path.dirname(file_path), exist_ok=True)
 #function for authentication during the login frame
 def authenticate_user(username, password):
     global Username, Password
-    validate_url = "http://localhost:5000/api/user_select"
+    validate_url = "https://emc-san-mateo.com/api/user_select"
     Username = username
     Password = password
 
@@ -712,7 +712,7 @@ def show_medicine_supply():
 
         try:
             # Fetch data from the Flask server
-            response = requests.get("http://127.0.0.1:5000/api/medicine_inventory")
+            response = requests.get("https://emc-san-mateo.com/api/medicine_inventory")
             response.raise_for_status()  # Raise an error for bad HTTP responses
             medicine = response.json()
 
@@ -987,7 +987,7 @@ def show_doorLog():
         try:
             # Fetch data from Flask API
             response = requests.get(
-                f'http://127.0.0.1:5000/api/door_logs',
+                f'https://emc-san-mateo.com/api/door_logs',
                 params={'order_by': order_by, 'sort': sort}
             )
             response.raise_for_status()  # Raise an error for bad responses
@@ -1414,7 +1414,7 @@ def show_account_setting():
 
     try:
         # Fetch data from Flask API
-        response = requests.get("http://127.0.0.1:5000/api/users")
+        response = requests.get("https://emc-san-mateo.com/api/users")
         response.raise_for_status()  # Raise an error for bad status codes
         users = response.json()
 
@@ -1477,7 +1477,7 @@ def delete_selected_user(tree, authenticated_user, flask_url):
 
     # Get admin count from Flask API
     try:
-        response = requests.get(f"http://localhost:5000/api/admin_count")
+        response = requests.get(f"https://emc-san-mateo.com/api/admin_count")
         response.raise_for_status()
         admin_count = response.json().get('admin_count', 0)
     except requests.RequestException as e:
@@ -1499,7 +1499,7 @@ def delete_selected_user(tree, authenticated_user, flask_url):
 
         # Delete user via Flask API
         try:
-            delete_response = requests.post(f"http://localhost:5000/api/delete_user_account", json={"username": username})
+            delete_response = requests.post(f"https://emc-san-mateo.com/api/delete_user_account", json={"username": username})
             delete_response.raise_for_status()
             print(delete_response.json().get('message'))
         except requests.RequestException as e:
@@ -1654,7 +1654,7 @@ def add_user():
 
                     qr_code_data = f"{new_username} - {new_position}"
                     # Flask API URL
-                    flask_url = "http://localhost:5000/api/add_user_account"  # Replace with your actual API URL
+                    flask_url = "https://emc-san-mateo.com/api/add_user_account"  # Replace with your actual API URL
                     
                     # Prepare data for the POST request
                     data = {
@@ -2431,7 +2431,7 @@ class LockUnlock:
     # Function that validates user login credentials
     def _validate_credentials(self):
         # URL of the Flask app's validate_credentials endpoint
-        validate_url = "http://localhost:5000/api/user_select"
+        validate_url = "https://emc-san-mateo.com/api/user_select"
         
         username = self.username_entry.get()
         password = self.password_entry.get()
@@ -2535,7 +2535,7 @@ class LockUnlock:
             message_box.window.bind("<ButtonPress>", reset_timer)
 
     def _insert_door_log(self, userName, accountType, position, action_taken):
-        url = "http://localhost:5000/api/insert_door_log"
+        url = "https://emc-san-mateo.com/api/insert_door_log"
         payload = {
             "username": userName,
             "accountType": accountType,
@@ -3238,7 +3238,7 @@ class MedicineDeposit:
         try:
             # Send data to Flask endpoint
             response = requests.post(
-                "http://127.0.0.1:5000/api/add_medicine",  # Replace with your Flask endpoint URL
+                "https://emc-san-mateo.com/api/add_medicine",  # Replace with your Flask endpoint URL
                 json=payload
             )
 
@@ -3543,7 +3543,7 @@ def main():
     def connect_to_arduino():
         global arduino
         try:
-            arduino = serial.Serial('COM5', 9600)  # Port of the Arduino
+            arduino = serial.Serial('COM11', 9600)  # Port of the Arduino
             time.sleep(2)  # Wait for the connection to establish
             print("\nSerial connection established")
             # Once connected, proceed to show login_frame
