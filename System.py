@@ -1712,13 +1712,19 @@ def edit_user(username):
     for widget in content_frame.winfo_children():
         widget.destroy()
 
-    # Retrieve the user information from the database
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, position, accountType, password, qrcode_data, username FROM users WHERE username = %s", [username])
-    user = cursor.fetchone()
+        api_url = f"https://emc-san-mateo.com/api/user/{username}"
 
-    title_label = tk.Label(content_frame, text="ACCOUNT SETTINGS", bg=motif_color, fg="white", font=('Arial', 25, 'bold'), height=2, relief='groove', bd=1)
-    title_label.pack(fill='both')
+    try:
+        # Fetch user data from API
+        response = requests.get(api_url)
+        response.raise_for_status()  # Raise exception for HTTP errors
+        user_data = response.json()  # Store the API response as a dictionary
+    except requests.exceptions.RequestException as e:
+        messagebox.showerror("Error", f"Failed to retrieve user data: {e}")
+        return
+    except KeyError:
+        messagebox.showerror("Error", "Unexpected response format from server")
+        return
 
     # Create input frame and ensure it expands horizontally
     input_frame = tk.LabelFrame(content_frame, text='Edit User Account', font=('Arial', 14), pady=20, padx=10, relief='raised', bd=5)
@@ -1729,45 +1735,41 @@ def edit_user(username):
     keyboard.create_keyboard()
     keyboard.hide_keyboard()  # Initially hide the keyboard
 
-    # Username entry
+    # Username Entry
     tk.Label(input_frame, text="Username", font=("Arial", 14)).grid(row=0, column=0, padx=10, pady=10)
     username_entry = tk.Entry(input_frame, font=("Arial", 14))
     username_entry.grid(row=0, column=1, padx=10, pady=10)
-    username_entry.insert(0, username)
-    
-    # Password entry
+    username_entry.insert(0, user_data['username'])  # Use API data
+
+    # Password Entry
     tk.Label(input_frame, text="Password", font=("Arial", 14)).grid(row=1, column=0, padx=10, pady=10)
     password_entry = tk.Entry(input_frame, show="*", font=("Arial", 14))
     password_entry.grid(row=1, column=1, padx=10, pady=10)
-    password_entry.insert(0, user[3])
-    
-    #Position OptionMenu
+    password_entry.insert(0, user_data['password'])  # Use API data
+
+    # Position OptionMenu
     tk.Label(input_frame, text="Position", font=("Arial", 14)).grid(row=2, column=0, padx=10, pady=10)
-
-    # Define the positions and initialize with database value or placeholder
     positions = ["Midwife", "BHW", "BNS", "BHC"]
-    selected_position = tk.StringVar(value=user[1] if user[1] in positions else "Select Position")  # Set from DB or placeholder
-
+    selected_position = tk.StringVar(
+        value=user_data['position'] if user_data['position'] in positions else "Select Position"
+    )  # Use API data
     position_option_menu = tk.OptionMenu(input_frame, selected_position, *positions)
     position_option_menu.config(font=("Arial", 16), width=20, bg='white')
     position_option_menu.grid(row=2, column=1, padx=10, pady=10, sticky='ew')
 
     # Account Type OptionMenu
     tk.Label(input_frame, text="Account Type", font=("Arial", 14)).grid(row=3, column=0, padx=10, pady=10)
-
-    # Define account types and initialize with database value or placeholder
     account_types = ["Admin", "Staff"]
-    selected_account_type = tk.StringVar(value=user[2] if user[2] in account_types else "Select Account Type")  # Set from DB or placeholder
-
+    selected_account_type = tk.StringVar(
+        value=user_data['accountType'] if user_data['accountType'] in account_types else "Select Account Type"
+    )  # Use API data
     account_type_option_menu = tk.OptionMenu(input_frame, selected_account_type, *account_types)
     account_type_option_menu.config(font=("Arial", 16), width=20, bg='white')
     account_type_option_menu.grid(row=3, column=1, padx=10, pady=10, sticky='ew')
 
     # Customize the dropdown menu styling
-    menu0 = position_option_menu["menu"]
-    menu0.config(font=("Arial", 18), activebackground="blue") 
-    menu1 = account_type_option_menu["menu"]
-    menu1.config(font=("Arial", 18), activebackground="blue")
+    position_option_menu["menu"].config(font=("Arial", 18), activebackground="blue")
+    account_type_option_menu["menu"].config(font=("Arial", 18), activebackground="blue")
 
 
     # Optional validation to ensure user does not submit with a placeholder selected
@@ -1787,34 +1789,41 @@ def edit_user(username):
         new_position = selected_position.get()
         new_accountType = selected_account_type.get()
 
-        if validate_user_info('edit', new_username, new_password, new_password, new_position, new_accountType, user[2], user[1]):
-            cursor = conn.cursor()
-            cursor.execute("""
-                UPDATE users
-                SET username = %s, password = %s, position = %s, accountType = %s
-                WHERE username = %s
-            """, [new_username, new_password, new_position, new_accountType, username])
-            conn.commit()
+        if validate_user_info('edit', new_username, new_password, new_password, new_position, new_accountType, user_data['accountType'], user_data['position']):
+            update_data = {
+                "username": new_username,
+                "password": new_password,
+                "position": new_position,
+                "accountType": new_accountType
+            }
 
-            # Success message
-            message_box = CustomMessageBox(
-                root=root,
-                title="SUCCESS",
-                message="User account successfully configured.",
-                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'accountSetting_Icon.png'),
-            )
-            message_box.window.bind("<Motion>", reset_timer)
-            message_box.window.bind("<KeyPress>", reset_timer)
-            message_box.window.bind("<ButtonPress>", reset_timer)
-            show_account_setting()  # Refresh the user table
+            try:
+                update_response = requests.put(api_url, json=update_data)
+                update_response.raise_for_status()
+
+                # Success message
+                message_box = CustomMessageBox(
+                    root=root,
+                    title="SUCCESS",
+                    message="User account successfully configured.",
+                    icon_path=os.path.join(os.path.dirname(__file__), 'images', 'accountSetting_Icon.png'),
+                )
+                message_box.window.bind("<Motion>", reset_timer)
+                message_box.window.bind("<KeyPress>", reset_timer)
+                message_box.window.bind("<ButtonPress>", reset_timer)
+                show_account_setting()  # Refresh the user table
+
+            except requests.exceptions.RequestException as e:
+                tk.messagebox.showerror("Error", f"Failed to update user data: {e}")
+            show_account_setting()
 
         # New "Decode QR" button to generate QR based on existing QR data
     def decode_and_generate_qr():
         # Retrieve the qrcode_data from the database (it is stored as a string)
-        qr_data = user[4]  # Assuming `qrcode_data` is at index 3
+        qr_data = user_data["qrcode_data"] 
         
         # Generate QR code with the decoded data (this is already a string)
-        qr_path = generate_qrcode(qr_data, 'edit', user[5])
+        qr_path = generate_qrcode(qr_data, 'edit', user_data[5])
         
         # You can optionally display or log the generated QR code path
         print(f"QR code generated and saved at: {qr_path}")
