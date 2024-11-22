@@ -2006,111 +2006,110 @@ def validate_all_fields_filled(*widgets):
     return True
 
 def validate_user_info(mode, username, password, confirm_password, position, accountType, current_accountType, current_position):
+    API_URL = "https://emc-san-mateo.com/api/query"
+    # Helper function to display errors
+    def show_error(message):
+        message_box = CustomMessageBox(
+            root=root,
+            title="ERROR",
+            message=message,
+            color="red",
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+        )
+        message_box.window.bind("<Motion>", reset_timer)
+        message_box.window.bind("<KeyPress>", reset_timer)
+        message_box.window.bind("<ButtonPress>", reset_timer)
+
     # Check if passwords match
     if password != confirm_password:
-        message_box = CustomMessageBox(
-            root=root,
-            title="ERROR",
-            message="Passwords do not match.",
-            color="red",
-            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
-        )
-        message_box.window.bind("<Motion>", reset_timer)
-        message_box.window.bind("<KeyPress>", reset_timer)
-        message_box.window.bind("<ButtonPress>", reset_timer)
+        show_error("Passwords do not match.")
         return False
 
-    # Check if username already exists (for adding users only)
-    cursor = conn.cursor()
-    cursor.execute("SELECT username FROM users WHERE username = %s", [username])
-    user_exists = cursor.fetchone()
+    # Check if username already exists (for 'add' mode only)
+    if mode == 'add':
+        query = "SELECT username FROM users WHERE username = %s"
+        response = requests.post(API_URL, json={'query': query, 'params': [username]})
+        if not response.ok:
+            show_error("Error communicating with the server.")
+            return False
 
-    # If mode is 'add' and the username exists, show error
-    if mode == 'add' and user_exists:
-        message_box = CustomMessageBox(
-            root=root,
-            title="ERROR",
-            message="Username already exists.",
-            color="red",
-            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
-        )
-        message_box.window.bind("<Motion>", reset_timer)
-        message_box.window.bind("<KeyPress>", reset_timer)
-        message_box.window.bind("<ButtonPress>", reset_timer)
-        return False
+        data = response.json()
+        if not data['success']:
+            show_error("Error checking username: " + data['error'])
+            return False
 
-    # Check if accountType is Admin and if there are already 2 Admins (Only for 'add' mode)
+        if data['data']:
+            show_error("Username already exists.")
+            return False
+
+    # Check if adding a new Admin would exceed the limit (for 'add' mode only)
     if mode == 'add' and accountType == 'Admin':
-        cursor.execute("SELECT COUNT(*) FROM users WHERE accountType = 'Admin'")
-        admin_count = cursor.fetchone()[0]
-
-        if admin_count >= 2:
-            message_box = CustomMessageBox(
-                root=root,
-                title="ERROR",
-                message="There are already 2 admin accounts. You cannot add more.",
-                color="red",
-                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
-            )
-            message_box.window.bind("<Motion>", reset_timer)
-            message_box.window.bind("<KeyPress>", reset_timer)
-            message_box.window.bind("<ButtonPress>", reset_timer)
+        query = "SELECT COUNT(*) FROM users WHERE accountType = 'Admin'"
+        response = requests.post(API_URL, json={'query': query})
+        if not response.ok:
+            show_error("Error communicating with the server.")
             return False
-        
+
+        data = response.json()
+        if not data['success']:
+            show_error("Error checking admin count: " + data['error'])
+            return False
+
+        if data['data'][0][0] >= 2:
+            show_error("There are already 2 admin accounts. You cannot add more.")
+            return False
+
+    # Check if adding a new Brgy Health Councilor (BHC) would exceed the limit
     if mode == 'add' and position == 'BHC':
-        cursor.execute("SELECT COUNT(*) FROM users WHERE position = 'BHC'")
-        councilor_count = cursor.fetchone()[0]
-
-        if councilor_count >= 1:
-            message_box = CustomMessageBox(
-                root=root,
-                title="ERROR",
-                message="Can't add more Brgy Health Councilor account",
-                color="red",
-                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
-            )
-            message_box.window.bind("<Motion>", reset_timer)
-            message_box.window.bind("<KeyPress>", reset_timer)
-            message_box.window.bind("<ButtonPress>", reset_timer)
+        query = "SELECT COUNT(*) FROM users WHERE position = 'BHC'"
+        response = requests.post(API_URL, json={'query': query})
+        if not response.ok:
+            show_error("Error communicating with the server.")
             return False
 
-    # Check if position is being changed to "Admin" and there are already 2 Admins (Only for 'edit' mode)
+        data = response.json()
+        if not data['success']:
+            show_error("Error checking BHC count: " + data['error'])
+            return False
+
+        if data['data'][0][0] >= 1:
+            show_error("Can't add more Brgy Health Councilor accounts.")
+            return False
+
+    # Check if editing an account to Admin would exceed the limit
     if mode == 'edit' and accountType == 'Admin' and current_accountType != 'Admin':
-        cursor.execute("SELECT COUNT(*) FROM users WHERE accountType = 'Admin'")
-        admin_count = cursor.fetchone()[0]
-
-        if admin_count >= 2:
-            message_box = CustomMessageBox(
-                root=root,
-                title="ERROR",
-                message="There are already 2 admin accounts. You cannot make more admins.",
-                color="red",
-                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
-            )
-            message_box.window.bind("<Motion>", reset_timer)
-            message_box.window.bind("<KeyPress>", reset_timer)
-            message_box.window.bind("<ButtonPress>", reset_timer)
+        query = "SELECT COUNT(*) FROM users WHERE accountType = 'Admin'"
+        response = requests.post(API_URL, json={'query': query})
+        if not response.ok:
+            show_error("Error communicating with the server.")
             return False
-        
-    if mode == 'edit' and position == 'BHC':
-        cursor.execute("SELECT COUNT(*) FROM users WHERE position = 'BHC'")
-        councilor_count = cursor.fetchone()[0]
 
-        if councilor_count >= 1:
-            message_box = CustomMessageBox(
-                root=root,
-                title="ERROR",
-                message="Can't add more account for Brgy Health Councilor.",
-                color="red",
-                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
-            )
-            message_box.window.bind("<Motion>", reset_timer)
-            message_box.window.bind("<KeyPress>", reset_timer)
-            message_box.window.bind("<ButtonPress>", reset_timer)
+        data = response.json()
+        if not data['success']:
+            show_error("Error checking admin count: " + data['error'])
             return False
-        
-    
-    # All validations passed
+
+        if data['data'][0][0] >= 2:
+            show_error("There are already 2 admin accounts. You cannot make more admins.")
+            return False
+
+    # Check if editing an account to Brgy Health Councilor (BHC) would exceed the limit
+    if mode == 'edit' and position == 'BHC' and current_position != 'BHC':
+        query = "SELECT COUNT(*) FROM users WHERE position = 'BHC'"
+        response = requests.post(API_URL, json={'query': query})
+        if not response.ok:
+            show_error("Error communicating with the server.")
+            return False
+
+        data = response.json()
+        if not data['success']:
+            show_error("Error checking BHC count: " + data['error'])
+            return False
+
+        if data['data'][0][0] >= 1:
+            show_error("Can't add more accounts for Brgy Health Councilor.")
+            return False
+
     return True
 
 def toplevel_destroy(window):
@@ -2426,8 +2425,6 @@ class LockUnlock:
         # Bind the tab change event
         notebook.bind("<<NotebookTabChanged>>", self._on_tab_change)
 
-
-
     # Function that validates user login credentials
     def _validate_credentials(self):
         # URL of the Flask app's validate_credentials endpoint
@@ -2542,7 +2539,6 @@ class LockUnlock:
             "position": position,
             "action_taken": action_taken
         }
-        
         try:
             response = requests.post(url, json=payload)
             # Check if the response status code is 200 (OK)
@@ -2560,13 +2556,11 @@ class LockUnlock:
         except requests.exceptions.RequestException as e:
             print(f"Error occurred: {e}")
 
-
     def _on_tab_change(self, event):
         # Check if the selected tab is tab2 and hide the keyboard
         notebook = event.widget
         if notebook.index(notebook.select()) == 1:  # Index 1 for tab2
             self._hide_keyboard()
-
 
     def _show_keyboard(self):
         """Show the keyboard and move the window up."""
@@ -2792,8 +2786,6 @@ class LockUnlock:
     def _close_existing_windows(self):
         """Closes the main window and any top-level windows."""
         self.window.destroy()
-
-
 
     # Function to send the unlock command
     def _unlock_door(self):
