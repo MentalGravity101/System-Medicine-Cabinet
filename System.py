@@ -3143,6 +3143,7 @@ class MedicineDeposit:
             self.loading_window.destroy()
             self.loading_window = None
 
+
     def print_qr_code(self, expiration_date):
         """Prints the QR code and expiration date on the thermal printer,
         repeating the print if the unit is 'syrup' based on quantity,
@@ -3182,10 +3183,43 @@ class MedicineDeposit:
             # Convert the combined image to ESC/POS format for printing
             img_data = self.image_to_escpos_data(combined_image)
 
+            def check_paper(printer):
+                # Send ESC/POS command to query printer status (check for paper)
+                command = b'\x10\x14\x02'  # Example: Query paper status command (specific to printer model)
+                
+                try:
+                    # Send the query command to check paper status
+                    printer.write(command)
+                    printer.flush()
+                    time.sleep(0.5)  # Allow time for response
+
+                    # Read multiple bytes of the printer's response (adjust this as needed)
+                    response = printer.read(8)  # Reading 8 bytes, you can increase if necessary
+
+                    # Print the response for debugging
+                    print("Printer response:", response)
+
+                    # Check for specific response bytes indicating paper status
+                    # Adjust the comparison logic based on the actual response format
+                    if b'\x00' in response:  # Paper is available (example response byte)
+                        return True
+                    elif b'\x01' in response:  # Out of paper (example response byte)
+                        print("Error: Out of paper.")
+                        return False
+                    else:
+                        print("Unknown response from printer:", response)
+                        return False
+                except serial.SerialException as e:
+                    print(f"Error querying printer status: {e}")
+                    return False
+
             # Define the print task in a separate thread to prevent UI freezing
             def print_task():
                 try:
                     with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=TIMEOUT) as printer:
+
+                        if not check_paper(printer):
+                            return  # Abort printing if no paper is found
                         # If the unit is 'syrup', repeat printing based on quantity
                         if self.unit == 'syrup':
                             for _ in range(self.quantity):
@@ -3268,37 +3302,6 @@ class MedicineDeposit:
                 f"An unexpected error occurred while sending data to the server:\n{e}"
     )
 
-
-
-    # def save_to_database(self):
-    #     # Generate QR code and get the image file path
-    #     qr_code_filepath = self.generate_qr_code()
-    #     qr_code_data = f"{self.name}_{self.dosage_for_db}_{self.expiration_date}"
-
-    #     # Convert name and type to Title Case for database insertion
-    #     name_for_db = self.name.capitalize()
-    #     type_for_db = self.generic_name.capitalize()
-        
-    #     # Save the medicine data to the database
-    #     try:
-    #         cursor = self.db_connection.cursor()
-    #         insert_query = """
-    #             INSERT INTO medicine_inventory (name, type, quantity, unit, dosage, expiration_date, date_stored, qr_code)
-    #             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-    #         """
-    #         cursor.execute(insert_query, (name_for_db, type_for_db, self.quantity, self.unit.capitalize(), self.dosage_for_db,
-    #                                     self.expiration_date, datetime.datetime.now().date(), qr_code_data))
-    #         self.db_connection.commit()
-
-    #         # Start printing process after database save
-    #         print("Attempting to print expiration date on thermal printer...")
-    #         self.print_qr_code(self.expiration_date)
-
-    #     except mysql.connector.Error as err:
-    #         messagebox.showerror("Error", f"Database error: {err}")
-    #     finally:
-    #         cursor.close()
-
     def image_to_escpos_data(self, img):
         """Converts a monochrome image to ESC/POS format."""
         width, height = img.size
@@ -3332,10 +3335,11 @@ class MedicineDeposit:
         self.message_box = CustomMessageBox(
             root=root,
             title="Medicine Deposited",
-            message=f"Adding medicine: '{self.name.capitalize()}'\nPlease attach the printed QR Code with Exp. Date to the medicine.\n\nDo you want to add more medicine?",
+            message=f"Adding medicine: '{self.name.capitalize()}'\nPlease attach the printed QR Code with Exp. Date to the medicine.\n\nClick 'Yes' to add more medicine.\nClick 'Reprint' if printing of QR Code with Exp failed.\nClick 'No' if you dont want to add more medicine.",
             icon_path=qr_code_filepath,
             no_callback=lambda: (LockUnlock(root, self.Username, self.Password, self.arduino,"unlock", "medicine inventory", type="deposit"), self.message_box.destroy()),
-            yes_callback=lambda: (self._yes_action(), self.message_box.destroy(), deposit_window(permission='deposit_again'))
+            yes_callback=lambda: (self._yes_action(), self.message_box.destroy(), deposit_window(permission='deposit_again')),
+            reprint=lambda: self.print_qr_code(self.expiration_date)
         )
 
     def _yes_action(self):
@@ -3347,7 +3351,7 @@ class MedicineDeposit:
 
 
 class CustomMessageBox:
-    def __init__(self, root, title, message, color=motif_color, icon_path=None, sound_file=None, ok_callback=None, yes_callback=None, no_callback=None, close_icon_path=None, page='Home', close_state=None):
+    def __init__(self, root, title, message, color=motif_color, icon_path=None, sound_file=None, ok_callback=None, yes_callback=None, no_callback=None, close_icon_path=None, page='Home', close_state=None, reprint=None):
         self.window = tk.Toplevel(root, relief='raised', bd=5)
         self.window.overrideredirect(True)  # Remove the title bar
         self.window.resizable(width=False, height=False)
@@ -3376,6 +3380,7 @@ class CustomMessageBox:
         self.no_callback = no_callback
         self.page = page
         self.close_state = close_state
+        self.reprint = reprint
 
         # Initialize pygame mixer
         if self.sound_file:
@@ -3466,6 +3471,8 @@ class CustomMessageBox:
 
         if self.yes_callback and self.no_callback:
             self._create_yes_no_buttons(button_frame)
+        elif self.yes_callback and self.no_callback and self.reprint:
+            self._create_yes_print_no_buttons(button_frame)
         else:
             self._create_ok_button(button_frame)
 
@@ -3485,6 +3492,23 @@ class CustomMessageBox:
         button_frame.grid_columnconfigure(0, weight=1)
         button_frame.grid_columnconfigure(1, weight=1)
 
+    def _create_yes_print_no_buttons(self, button_frame):
+        """Create Yes/No buttons for confirmation dialogs."""
+        # Set both buttons to the same width using 'sticky' and grid configuration
+        yes_button = tk.Button(button_frame, text="Add More", font=("Arial", 20), bg='white', fg='black', relief="raised", bd=3, padx=20, pady=7, command=self._yes_action)
+        print_button = tk.Button(button_frame, text="Reprint", font=("Arial", 20), bg='white', fg='black', relief="raised", bd=3, padx=20, pady=7, command=self._reprint_action)
+        no_button = tk.Button(button_frame, text="Finish", font=("Arial", 20), bg='white', fg='black', relief="raised", bd=3, padx=20, pady=7, command=self._no_action)
+
+        # Make both buttons take the same grid space with sticky="ew"
+        yes_button.grid(row=0, column=0, padx=50, pady=18, sticky="ew")
+        print_button.grid(row=0, column=1, padx=50, pady=18, sticky="ew")
+        no_button.grid(row=0, column=2, padx=50, pady=18, sticky="ew")
+
+        # Set equal column weight to ensure equal button size
+        button_frame.grid_columnconfigure(0, weight=1)
+        button_frame.grid_columnconfigure(1, weight=1)
+        button_frame.grid_columnconfigure(2, weight=1)
+
     def _create_ok_button(self, button_frame):
         """Create an OK button if the messagebox is just an information dialog."""
         ok_button = tk.Button(button_frame, text="OK", font=("Arial", 20), bg='white', fg='black', relief="raised", bd=3, padx=20, pady=7, command=self.ok_callback)
@@ -3502,6 +3526,11 @@ class CustomMessageBox:
         if self.no_callback:
             self.no_callback()
         self.window.destroy()
+
+    def _reprint_action(self):
+        """Trigger the print callback and close the window."""
+        if self.reprint:
+            self.reprint()
         
 
     def _default_ok_callback(self):
@@ -3543,7 +3572,7 @@ def main():
     def connect_to_arduino():
         global arduino
         try:
-            arduino = serial.Serial('COM11', 9600)  # Port of the Arduino
+            arduino = serial.Serial('COM5', 9600)  # Port of the Arduino
             time.sleep(2)  # Wait for the connection to establish
             print("\nSerial connection established")
             # Once connected, proceed to show login_frame

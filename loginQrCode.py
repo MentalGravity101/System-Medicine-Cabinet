@@ -4,6 +4,7 @@ import mysql.connector
 import os
 from PIL import Image, ImageTk, ImageSequence
 import time
+import requests
 
 motif_color = '#42a7f5'  # Primary color used for the theme
 
@@ -92,39 +93,34 @@ class QRLogin:
                 # Clear the Entry widget for the next scan
                 self.qr_entry.delete(0, tk.END)
 
-                # Connect to the MySQL database
+                # Communicate with the Flask API
                 try:
-                    conn = mysql.connector.connect(
-                        host="localhost",
-                        user="root",
-                        password="",
-                        database="db_medicine_cabinet"
+                    response = requests.post(
+                        "https://emc-san-mateo.com/api/validate_qrCODE",
+                        json={"qr_code": scanned_qr_code},
+                        timeout=10,
+                        headers={'Content-type': 'application/json'}
                     )
-                    cursor = conn.cursor()
 
-                    # Check if the scanned QR code matches any user in the database
-                    cursor.execute("SELECT username, password FROM users WHERE qrcode_data = %s", (scanned_qr_code,))
-                    result = cursor.fetchone()
+                    print(f"Response status code: {response.status_code}")
+                    print(f"Response text: {response.text}")
 
-                    if result:
-                        self.qr_entry.delete(0, tk.END)
+                    if response.status_code == 200:
+                        data = response.json()
+                        username = data["username"]
+                        password = data["password"]
+
                         self.result_label.config(text="QR Code is Valid.", fg="green")
-                        username, password = result
                         time.sleep(1)
                         self.callback(username, password)
                         self.window.destroy()
                     else:
-                        # If no match found, show an error
-                        self.result_label.config(text="Invalid QR code or credentials.", fg="red")
+                        error_message = response.json().get("error", "Unknown error")
+                        self.result_label.config(text=error_message, fg="red")
 
-                except mysql.connector.Error as err:
-                    print(f"Error: {err}")
-                    messagebox.showerror("Database Error", "Could not connect to the database.")
-
-                finally:
-                    # Close the cursor and connection
-                    cursor.close()
-                    conn.close()
+                except requests.exceptions.RequestException as e:
+                    print(f"Error: {e}")
+                    messagebox.showerror("Connection Error", "Could not connect to the server.")
             else:
                 self.result_label.config(text="No QR code data scanned.", fg="red")
 
