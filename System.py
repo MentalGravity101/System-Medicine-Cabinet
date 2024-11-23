@@ -29,20 +29,6 @@ conn = mysql.connector.connect(
   password="",
   database="db_medicine_cabinet"
 )
-# Function to establish/re-establish MySQL connection
-def establish_connection():
-    global conn
-    try:
-        conn = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="",
-            database="db_medicine_cabinet"
-        )
-        print("MySQL connection established.")
-    except mysql.connector.Error as err:
-        print(f"Error: {err}")
-        conn = None  # Set to None if connection fails
 
 INACTIVITY_PERIOD = 300000 #automatic logout timer in milliseconds
 inactivity_timer = 0 #initialization of idle timer
@@ -3320,13 +3306,14 @@ class CustomMessageBox:
 
         # Calculate the required height of the message label
         required_height = self.window.winfo_reqheight()
+        required_width = self.window.winfo_reqwidth()
 
         # Center the window on the screen with the new height
         screen_width = self.window.winfo_screenwidth()
         screen_height = self.window.winfo_screenheight()
 
         # Calculate the position to center the window
-        position_x = int((screen_width / 2) - (window_width / 2))
+        position_x = int((screen_width / 2) - (required_width / 2))
         position_y = int((screen_height / 2) - (required_height / 2))
 
         # Set the new geometry with fixed width and dynamic height
