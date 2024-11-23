@@ -2550,7 +2550,7 @@ class LockUnlock:
                                 message_box = CustomMessageBox(
                                     root=self.keyboardFrame,
                                     title="Success",
-                                    message="Door is now unlocked.\nPlease insert your medicine inside the Cabinet.\nPress ok if your finished inserting medicine to proceed on\nlocking the door.",
+                                    message="Door is now unlocked.\nPlease insert your medicine inside the Cabinet.\nPress ok if your finished inserting medicine to proceed on locking the door.",
                                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
                                     ok_callback=lambda: (message_box.destroy(), self._lock_door())
                                 )
@@ -2637,7 +2637,6 @@ class LockUnlock:
 
             # Step 3: Proceed based on the sensor check response
             if response == "Object detected" and self.type == "deposit":
-                self._show_success_message("Door is now properly closed and ready to lock.\nPlease click 'Ok' to process locking the door.")
                 # Trigger further action for a successful close (for deposit type)
                 LockUnlock(self.reference_window, self.user_Username, self.user_Password, self.arduino, 'successful_close', self.parentHeader)
             
