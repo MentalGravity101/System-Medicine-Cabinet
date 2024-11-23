@@ -1269,62 +1269,6 @@ def on_row_select(event):
         message_box.window.bind("<KeyPress>", reset_timer)
         message_box.window.bind("<ButtonPress>", reset_timer)
 
-def fetch_notifications():
-    """Fetch notifications from the notification_logs table."""
-    notifications = []
-    try:
-        # Connect to the MySQL database
-        connection = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="",  # Replace with your MySQL password
-            database="db_medicine_cabinet"
-        )
-
-        if connection.is_connected():
-            cursor = connection.cursor(dictionary=True)
-            
-            # Fetch data from notification_logs table
-            query = ("SELECT medicine_name, expiration_date, notification_date, days_until_expiration "
-                     "FROM notification_logs "
-                     "ORDER BY notification_date DESC, notification_time DESC")
-            cursor.execute(query)
-            notifications = cursor.fetchall()
-
-    except mysql.connector.Error as e:
-        print("Error while connecting to MySQL:", e)
-
-    finally:
-        if connection.is_connected():
-            cursor.close()
-            connection.close()
-            print("MySQL connection is closed")
-
-    return notifications
-
-def update_notification_logs():
-    """Fetches updated notification logs and refreshes the Treeview."""
-    # Clear existing rows in the Treeview
-    for item in tree_notif.get_children():
-        tree_notif.delete(item)
-
-    # Fetch new notification logs from the database
-    logs = fetch_notifications()
-
-    # Insert the new logs into the Treeview with alternating row colors
-    if logs:
-        for index, log in enumerate(logs):
-            tag = 'oddrow' if index % 2 == 0 else 'evenrow'
-            tree_notif.insert("", tk.END, values=(
-                log['medicine_name'], log['expiration_date'], log['notification_date'], log['days_until_expiration']),
-                tags=(tag,))
-    else:
-        # Display a message if there are no logs (optional)
-        tk.Label(content_frame, text="No notifications found.", font=('Arial', 14), pady=10).pack()
-
-    # Schedule the next update after the specified interval
-    content_frame.after(REFRESH_INTERVAL, update_notification_logs)
-
 def show_notification_table():
     # Apply table style
     table_style()
@@ -1379,9 +1323,6 @@ def show_notification_table():
 
     tree_notif.pack(side=tk.LEFT, fill="both", expand=True)
 
-    # Initial fetch and start automatic refresh
-    update_notification_logs()
-
 #------------------------------------------------------ACCOUNT SETTINGS FRAME----------------------------------------------------------------------
 def show_account_setting():
     clear_frame()
@@ -1414,7 +1355,7 @@ def show_account_setting():
 
     try:
         # Fetch data from Flask API
-        response = requests.get("https://emc-san-mateo.com/api/users")
+        response = requests.get("https://emc-san-mateo.com/api/accountsettings_users")
         response.raise_for_status()  # Raise an error for bad status codes
         users = response.json()
 
@@ -1712,7 +1653,7 @@ def edit_user(username):
     for widget in content_frame.winfo_children():
         widget.destroy()
 
-        api_url = f"https://emc-san-mateo.com/api/user/{username}"
+        api_url = f"https://emc-san-mateo.com/api/get_users/{username}"
 
     try:
         # Fetch user data from API
@@ -1798,7 +1739,7 @@ def edit_user(username):
             }
 
             try:
-                update_response = requests.put(api_url, json=update_data)
+                update_response = requests.put(f"https://emc-san-mateo.com/api/update_user/{username}", json=update_data)
                 update_response.raise_for_status()
 
                 # Success message
@@ -1814,7 +1755,7 @@ def edit_user(username):
                 show_account_setting()  # Refresh the user table
 
             except requests.exceptions.RequestException as e:
-                tk.messagebox.showerror("Error", f"Failed to update user data: {e}")
+                messagebox.showerror("Error", f"Failed to update user data: {e}")
             show_account_setting()
 
         # New "Decode QR" button to generate QR based on existing QR data
