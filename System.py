@@ -23,14 +23,8 @@ from notification import NotificationManager
 import json
 import requests
 
-conn = mysql.connector.connect(
-  host="localhost",
-  user="root",
-  password="",
-  database="db_medicine_cabinet"
-)
 
-INACTIVITY_PERIOD = 300000 #automatic logout timer in milliseconds
+INACTIVITY_PERIOD = 10000 #automatic logout timer in milliseconds
 inactivity_timer = 0 #initialization of idle timer
 root = None  # Global variable for root window
 
@@ -49,7 +43,6 @@ file_path = os.path.join(os.getcwd(), "door_status", "door_status.txt")
 
 # Ensure the folder exists before writing the file
 os.makedirs(os.path.dirname(file_path), exist_ok=True)
-
 
 
 #----------------------------------------------------LOGIN WINDOW--------------------------------------------------------
@@ -85,7 +78,8 @@ def authenticate_user(username, password):
             color="red",  # Background color for warning
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
             sound_file="sounds/invalidLogin.mp3",
-            page='Login'
+            page='Login',
+            not_allow_idle=True
         )
         
 
@@ -290,6 +284,7 @@ def logout(reason):
             color='red',  # Background color for warning
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'logout_icon.png'),
             sound_file ="sounds/automaticLogout.mp3",
+            not_allow_idle=True
         )
         OnScreenKeyboard(content_frame).hide_keyboard()
     if reason == 'delete own':
@@ -298,7 +293,8 @@ def logout(reason):
             title="Session Expired",
             message="You deleted your own account.\nPlease log-in again using other account.",
             color='red',  # Background color for warning
-            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'logout_icon.png')
+            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'logout_icon.png'),
+            not_allow_idle=True
         )
         OnScreenKeyboard(content_frame).hide_keyboard()
 
@@ -433,17 +429,9 @@ def deposit_window(permission):
     # Bind the <Configure> event to the centering function
     deposit_Toplevel.bind("<Configure>", lambda e: center_toplevel(deposit_Toplevel))
 
-    deposit_Toplevel.bind("<Motion>", reset_timer)
+    deposit_Toplevel.bind("<Motion>", reset_timer) 
     deposit_Toplevel.bind("<KeyPress>", reset_timer)
     deposit_Toplevel.bind("<ButtonPress>", reset_timer)
-
-
-    db_connection = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="",
-        database="db_medicine_cabinet"
-    )
 
     title_label = tk.Label(deposit_Toplevel, text="DEPOSIT MEDICINE", bg=motif_color, fg="white", font=('Arial', 25, 'bold'), height=2, relief='groove', bd=1)
     title_label.pack(fill='both')
@@ -532,7 +520,7 @@ def deposit_window(permission):
         expiration_date = expiration_date_entry.get_date()
         keyboard.hide_keyboard()
 
-        deposit = MedicineDeposit(name, type_,  quantity, unit, expiration_date, dosage, conn, root, root, content_frame, Username, Password, arduino, action="unlock", yes_callback=lambda: (print("Calling deposit_window with 'deposit_again'"), deposit_window(permission), deposit_Toplevel.destroy()))
+        deposit = MedicineDeposit(name, type_,  quantity, unit, expiration_date, dosage, root, root, content_frame, Username, Password, arduino, action="unlock", yes_callback=lambda: (print("Calling deposit_window with 'deposit_again'"), deposit_window(permission), deposit_Toplevel.destroy()))
 
         if deposit.validate_inputs():
             deposit_Toplevel.destroy()
@@ -2088,7 +2076,8 @@ def periodic_internet_check(root):
                 message="No internet connection.",
                 color="red",  # Background color for warning
                 ok_callback=lambda: show_wifi_connect(message_box),  # Open the WiFiConnect UI for network selection
-                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'noInternet_icon.png')  # Path to your icon
+                icon_path=os.path.join(os.path.dirname(__file__), 'images', 'noInternet_icon.png'),  # Path to your icon
+                not_allow_idle=True
             )
 
     # Schedule the next check only if the WiFi UI is not open
@@ -2390,7 +2379,7 @@ class LockUnlock:
                 message_box = CustomMessageBox(
                     root=self.keyboardFrame,
                     title="Success",
-                    message="Door is now unlocked.\nPlease insert your medicine inside the Cabinet.\nPress ok if you're finished inserting medicine to proceed on\nlocking the door.",
+                    message="Door is now unlocked.\nPlease insert your medicine inside the Cabinet.\nPress ok if you're finished inserting medicine to proceed on locking the door.",
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
                     ok_callback=lambda: (message_box.destroy(), self._lock_door())
                 )
@@ -2877,7 +2866,7 @@ motif_color = '#42a7f5'
 
 
 class MedicineDeposit:
-    def __init__(self, name, generic_name, quantity, unit, expiration_date, dosage, db_connection, root, content_frame, keyboardFrame, Username, Password, arduino, action="unlock", yes_callback=None):
+    def __init__(self, name, generic_name, quantity, unit, expiration_date, dosage, root, content_frame, keyboardFrame, Username, Password, arduino, action="unlock", yes_callback=None):
         self.root = root
         self.name = name.lower()
         self.generic_name = generic_name.lower()
@@ -2885,7 +2874,6 @@ class MedicineDeposit:
         self.unit = unit.lower()
         self.expiration_date = expiration_date
         self.dosage = int(dosage)
-        self.db_connection = db_connection
         self.content_frame = content_frame
         self.keyboardFrame = keyboardFrame
         self.Username = Username
@@ -3241,10 +3229,16 @@ class MedicineDeposit:
 
 
 class CustomMessageBox:
-    def __init__(self, root, title, message, color=motif_color, icon_path=None, sound_file=None, ok_callback=None, yes_callback=None, no_callback=None, close_icon_path=None, page='Home', close_state=None, reprint=None):
+    def __init__(self, root, title, message, color=motif_color, icon_path=None, sound_file=None, ok_callback=None, yes_callback=None, no_callback=None, close_icon_path=None, page='Home', close_state=None, reprint=None, not_allow_idle=False):
         self.window = tk.Toplevel(root, relief='raised', bd=5)
         self.window.overrideredirect(True)  # Remove the title bar
         self.window.resizable(width=False, height=False)
+
+        self.not_allow_idle = not_allow_idle
+        if self.not_allow_idle == False:
+            self.window.bind("<Motion>", reset_timer)
+            self.window.bind("<KeyPress>", reset_timer)
+            self.window.bind("<ButtonPress>", reset_timer)
 
         # self.window.bind("<ButtonPress>", reset_timer)
         # self.window.bind("<Motion>", reset_timer)
@@ -3483,7 +3477,8 @@ def main():
             message="Failed to connect to Arduino.\nPlease retry.",
             color="red",  # Background color for warning
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
-            ok_callback=lambda: retry_connection(message_box)
+            ok_callback=lambda: retry_connection(message_box),
+            not_allow_idle=True
         )
 
     # Retry the connection when the button is clicked
