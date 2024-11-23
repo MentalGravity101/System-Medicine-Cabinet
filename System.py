@@ -884,6 +884,10 @@ def show_medicine_supply():
     withdraw_button.image = widthdraw_icon
     withdraw_button.grid(row=0, column=0, padx=20, pady=(12, ), sticky='ew')
 
+    data = load_data()
+    if data == "Unlocked" :
+        withdraw_button.config(command=lambda: QRCodeScanner(root, Username, Password, "https://emc-san-mateo.com/api/withdraw_medicine", 'lock'))
+
 
     deposit_icon = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'add_icon.png')).resize((25, 25), Image.LANCZOS))
     deposit_button = tk.Button(button_frame, text="Deposit", padx=20, pady=10, font=('Arial', 18), bg=motif_color, fg="white", relief="raised", bd=4, compound=tk.LEFT, image=deposit_icon,command=lambda: deposit_window('normal'))
@@ -2437,10 +2441,8 @@ class LockUnlock:
                     message="Lock functionality is now disabled temporarily",
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
                     ok_callback=lambda: (message_box.destroy(), self._exit_action()),
+                    not_allow_idle=True
                 )
-                message_box.window.bind("<KeyPress>", reset_timer)
-                message_box.window.bind("<Motion>", reset_timer)
-                message_box.window.bind("<ButtonPress>", reset_timer)
 
         else:
             # If credentials are invalid, show an error message
