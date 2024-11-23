@@ -104,7 +104,7 @@ def export_to_csv(root, table_name):
 
     try:
         # Flask API endpoint to fetch data
-        api_url = f"http://127.0.0.1:5000/api/get_table_data/{table_name}"
+        api_url = f"https://emc-san-mateo.com/api/get_table_data/{table_name}"
 
         # Request the data from Flask API
         response = requests.get(api_url)

@@ -821,7 +821,7 @@ def show_medicine_supply():
     # Add the search icon next to the Entry widget
     search_icon_label = tk.Button(search_frame, image=search_img, bg='white', command=search_treeview, relief='flat')
     search_icon_label.image = search_img  # Keep a reference to avoid garbage collection
-    search_icon_label.pack(side=tk.RIGHT, fill='both')
+    search_icon_label.pack(side=tk.LEFT, fill='both')
 
     buttons = []
 
@@ -861,7 +861,7 @@ def show_medicine_supply():
 
     # Custom scrollbar for the treeview
     tree_scroll = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL)
-    tree_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+    tree_scroll.pack(side=tk.LEFT, fill=tk.Y)
 
     table_style()
 
@@ -1156,13 +1156,13 @@ def show_doorLog():
 
     # Custom scrollbar for the treeview
     tree_scroll = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL)
-    tree_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+    tree_scroll.pack(side=tk.LEFT, fill=tk.Y)
 
     table_style()
 
      # Create the Treeview to display the door logs
     columns = ("Username", "Date", "Time", "Account Type", "Position", "Action Taken")
-    tree = ttk.Treeview(tree_frame, columns=columns, show="headings", height=10)
+    tree = ttk.Treeview(tree_frame, columns=columns, show="headings", yscrollcommand=tree_scroll.set, height=10)
 
     # Define columns
     tree_scroll.config(command=tree.yview)
