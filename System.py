@@ -348,7 +348,7 @@ def logout_with_sensor_check(logout_type):
                             color='red',
                             message="Doors are not properly closed.\nPlease close the doors properly before you automatically logged out.",
                             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
-                            ok_callback=lambda: recheck_sensors(warning_box),
+                            ok_callback=lambda: (recheck_sensors(warning_box),warning_box.destroy()),
                             close_state=True
                         )
                         print("Rechecking sensors: No object detected.")
@@ -360,7 +360,7 @@ def logout_with_sensor_check(logout_type):
                 color='red',
                 message="Doors are not properly closed.\nPlease close the doors properly before you automatically logged out.",
                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
-                ok_callback=lambda: recheck_sensors(warning_box),
+                ok_callback=lambda: (recheck_sensors(warning_box),warning_box.destroy()),
                 close_state=True
             )
             print("Logout command aborted: No object detected.")
@@ -1190,10 +1190,10 @@ def show_doorLog():
     unlock_button.grid(row=0, column=1, padx=20, pady=(12, 7), sticky='ew')
 
 
-    
-    if load_data() == 'Locked':
+    data = load_data()
+    if data == 'Locked':
         lock_button.config(state='disabled')
-    elif load_data == 'Unlocked':
+    elif data == 'Unlocked':
         unlock_button.config(state='disabled')
 
     # Extract CSV button
@@ -1213,7 +1213,7 @@ def display_disable_unlock():
 
 
 def disable_unlock():
-    LockUnlock(root, Username, Password, arduino, "unlock", "medicine inventory", container=root, type="disable", exit_callback=logout('disable-unlock'))
+    LockUnlock(root, Username, Password, arduino, "unlock", "medicine inventory", container=root, type="disable")
 
 
 #--------------------------------------------------------- NOTIFICATION -----------------------------------------------------------       
@@ -2271,6 +2271,8 @@ class LockUnlock:
             manual_instruction = tk.Label(tab1, text=f'Enter your username and password manually\nto unlock the door before proceeding to {self.type} medicine.', font=('Arial', 18))
         elif self.type == "deposit":
             manual_instruction = tk.Label(tab1, text=f'Enter your username and password manually\nto unlock the door before proceeding to {self.type} medicine.', font=('Arial', 18))
+        elif self.type == 'disable' and self.action == 'unlock':
+            manual_instruction = tk.Label(tab1, text=f'Enter your username and password manually\nto unlock the door before proceeding to {self.type} lock.', font=('Arial', 18))
         else:
             manual_instruction = tk.Label(tab1, text=f'Enter your username and password manually\nto lock the door.', font=('Arial', 18))
         if self.type == "withdraw" and self.action == 'lock':
@@ -2385,7 +2387,8 @@ class LockUnlock:
                     title="Success",
                     message="Door is now unlocked.\nPlease insert your medicine inside the Cabinet.\nPress ok if you're finished inserting medicine to proceed on locking the door.",
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
-                    ok_callback=lambda: (message_box.destroy(), self._lock_door())
+                    ok_callback=lambda: (message_box.destroy(), self._lock_door()),
+                    close_state=True
                 )
                 message_box.window.bind("<KeyPress>", reset_timer)
                 message_box.window.bind("<Motion>", reset_timer)
@@ -2399,7 +2402,8 @@ class LockUnlock:
                     title="Success",
                     message="Door is now unlocked\nYou may now proceed to withdraw medicine.",
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
-                    ok_callback=lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame, self.user_Username, self.user_Password, "https://emc-san-mateo.com/api/withdraw_medicine", 'lock'), self.window.destroy())
+                    ok_callback=lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame, self.user_Username, self.user_Password, "https://emc-san-mateo.com/api/withdraw_medicine", 'lock'), self.window.destroy()),
+                    close_state=True
                 )
                 message_box.window.bind("<KeyPress>", reset_timer)
                 message_box.window.bind("<Motion>", reset_timer)
@@ -2440,8 +2444,9 @@ class LockUnlock:
                     title="Disable Lock",
                     message="Lock functionality is now disabled temporarily",
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
-                    ok_callback=lambda: (message_box.destroy(), self._exit_action()),
-                    not_allow_idle=True
+                    ok_callback=lambda: (message_box.destroy(), logout('disable-lock-unlock')),
+                    not_allow_idle=True,
+                    close_state=True
                 )
 
         else:
@@ -2543,7 +2548,8 @@ class LockUnlock:
                                     title="Success",
                                     message="Door is now unlocked.\nPlease insert your medicine inside the Cabinet.\nPress ok if your finished inserting medicine to proceed on locking the door.",
                                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
-                                    ok_callback=lambda: (message_box.destroy(), self._lock_door())
+                                    ok_callback=lambda: (message_box.destroy(), self._lock_door()),
+                                    close_state=True
                                 )
                                 message_box.window.bind("<KeyPress>", reset_timer)
                                 message_box.window.bind("<Motion>", reset_timer)
@@ -2556,7 +2562,8 @@ class LockUnlock:
                                     title="Success",
                                     message="Door is now unlocked\nYou may now proceed to withdraw medicine.",
                                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
-                                    ok_callback= lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame, self.user_Username, self.user_Password, "https://emc-san-mateo.com/api/withdraw_medicine", 'lock'), self.window.destroy())
+                                    ok_callback= lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame, self.user_Username, self.user_Password, "https://emc-san-mateo.com/api/withdraw_medicine", 'lock'), self.window.destroy()),
+                                    close_state=True
                                 )
                                 message_box.window.bind("<KeyPress>", reset_timer)
                                 message_box.window.bind("<Motion>", reset_timer)
@@ -2595,12 +2602,9 @@ class LockUnlock:
                                     title="Disable Lock",
                                     message="Lock functionality is now disabled temporarily",
                                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
-                                    ok_callback=lambda: (message_box.destroy(), self._exit_action()),
+                                    ok_callback=lambda: (message_box.destroy(), logout('disable-lock-unlock')),
+                                    not_allow_idle=True
                                 )
-                                message_box.window.bind("<KeyPress>", reset_timer)
-                                message_box.window.bind("<Motion>", reset_timer)
-                                message_box.window.bind("<ButtonPress>", reset_timer)
-
                         else:
                             # Handle logging error
                             messagebox.showerror("Error", log_data['message'])
@@ -2630,6 +2634,13 @@ class LockUnlock:
             if response == "Object detected" and self.type == "deposit":
                 # Trigger further action for a successful close (for deposit type)
                 LockUnlock(self.reference_window, self.user_Username, self.user_Password, self.arduino, 'successful_close', self.parentHeader)
+            
+            elif response == "Object detected" and self.type == "disable":
+                # Send lock command and update lock status for withdraw type
+                self.arduino.write(b'lock\n')
+                self._update_lock_status()
+                self._show_success_message("Door is now locked.")
+                show_account_setting()
             
             elif response == "Object detected" and self.type == "withdraw":
                 # Send lock command and update lock status for withdraw type
@@ -2690,9 +2701,11 @@ class LockUnlock:
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png'),
                     ok_callback=lambda: (message_box.destroy(), LockUnlock(root, self.user_Username, self.user_Password, self.arduino, 'successful_close', self.parentHeader))
                 )
-                message_box.window.bind("<KeyPress>", reset_timer)
-                message_box.window.bind("<Motion>", reset_timer)
-                message_box.window.bind("<ButtonPress>", reset_timer)
+            elif response == "Object detected" and self.type == "disable":
+                # Send lock command and update lock status for withdraw type
+                self.arduino.write(b'lock\n')
+                self._update_lock_status()
+                self._show_success_message("Door is now locked.")
 
             elif response == "Object detected" and self.type == "withdraw":
                 self.arduino.write(b'lock\n')
@@ -3219,7 +3232,8 @@ class MedicineDeposit:
             icon_path=qr_code_filepath,
             no_callback=lambda: (LockUnlock(root, self.Username, self.Password, self.arduino,"unlock", "medicine inventory", type="deposit"), self.message_box.destroy()),
             yes_callback=lambda: (self._yes_action(), self.message_box.destroy(), deposit_window(permission='deposit_again')),
-            reprint=lambda: self.print_qr_code(self.expiration_date)
+            reprint=lambda: self.print_qr_code(self.expiration_date),
+            close_state=True
         )
 
     def _yes_action(self):
