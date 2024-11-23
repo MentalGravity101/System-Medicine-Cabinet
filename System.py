@@ -2420,7 +2420,7 @@ class LockUnlock:
                     title="Success",
                     message="Door is now unlocked\nYou may now proceed to withdraw medicine.",
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
-                    ok_callback=lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame, self.user_Username, self.user_Password, self.arduino, 'lock'), self.window.destroy())
+                    ok_callback=lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame, self.user_Username, self.user_Password, "https://emc-san-mateo.com/api/withdraw_medicine", 'lock'), self.window.destroy())
                 )
                 message_box.window.bind("<KeyPress>", reset_timer)
                 message_box.window.bind("<Motion>", reset_timer)
@@ -2579,7 +2579,7 @@ class LockUnlock:
                                     title="Success",
                                     message="Door is now unlocked\nYou may now proceed to withdraw medicine.",
                                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'unlock_icon.png'),
-                                    ok_callback= lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame, self.user_Username, self.user_Password, self.arduino, 'lock'), self.window.destroy())
+                                    ok_callback= lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame, self.user_Username, self.user_Password, "https://emc-san-mateo.com/api/withdraw_medicine", 'lock'), self.window.destroy())
                                 )
                                 message_box.window.bind("<KeyPress>", reset_timer)
                                 message_box.window.bind("<Motion>", reset_timer)
@@ -2750,13 +2750,18 @@ class LockUnlock:
             self.exit_callback()
 
 class QRCodeScanner:
-    def __init__(self, parent, username, password, arduino, lock):
-        from System import reset_timer
-        print("QRCodeScanner initialized")  # Debugging statement
+    def __init__(self, parent, username, password, flask_url, lock):
+        print("QRCodeScanner initialized")
+
+        self.flask_url = flask_url  # Flask server URL
+        self.parent = parent
+        self.username = username
+        self.password = password
+        self.lock = lock
+
         # Create a new Toplevel window
         self.top = tk.Toplevel(parent, relief='raised', bd=5)
-
-        self.top.overrideredirect(True)  # Remove the title bar
+        self.top.overrideredirect(True)
         self.top.resizable(width=False, height=False)
         self.top.attributes('-topmost', True)
 
@@ -2764,33 +2769,26 @@ class QRCodeScanner:
         self.top.bind("<KeyPress>", reset_timer)
         self.top.bind("<Motion>", reset_timer)
 
-        self.parent = parent
-
-        self.username = username
-        self.password = password
-        self.arduino = arduino
-        self.lock = lock
-
         self.top.focus_set()
         self.top.grab_set()
 
         # Title Frame
-        self.title_frame = tk.Frame(self.top, bg=motif_color)
+        self.title_frame = tk.Frame(self.top, bg="blue")
         self.title_frame.pack(fill=tk.X, expand=True, pady=(0, 10))
 
         # Title Label
-        title_label = tk.Label(self.title_frame, text="  Withdraw Medicine", font=('Arial', 15, 'bold'), fg='white', bg=motif_color, pady=12)
+        title_label = tk.Label(self.title_frame, text="  Withdraw Medicine", font=('Arial', 15, 'bold'), fg='white', bg="blue", pady=12)
         title_label.pack(side=tk.LEFT)
 
-        # Add the close button icon at the top-right corner
+        # Close Button
         self.close_icon_path = os.path.join(os.path.dirname(__file__), 'images', 'cancel_icon.png')
         if os.path.exists(self.close_icon_path):
             self.close_img = ImageTk.PhotoImage(Image.open(self.close_icon_path).resize((18, 18), Image.LANCZOS))
         else:
             self.close_img = None
 
-        close_button = tk.Button(self.title_frame, image=self.close_img, command=self.ask_lock, relief=tk.FLAT, bd=0, bg=motif_color, activebackground=motif_color)
-        close_button.image = self.close_img  # Keep a reference to avoid garbage collection
+        close_button = tk.Button(self.title_frame, image=self.close_img, command=self.ask_lock, relief=tk.FLAT, bd=0, bg="blue", activebackground="blue")
+        close_button.image = self.close_img
         close_button.pack(side=tk.RIGHT, padx=(0, 5))
 
         # Content Frame
@@ -2801,7 +2799,7 @@ class QRCodeScanner:
         original_logo_img = Image.open(os.path.join(os.path.dirname(__file__), 'images', 'scanning_icon.png')).resize((170, 170), Image.LANCZOS)
         logo_img = ImageTk.PhotoImage(original_logo_img)
         logo_label = tk.Label(content_frame, image=logo_img)
-        logo_label.image = logo_img  # Keep reference to avoid garbage collection
+        logo_label.image = logo_img
         logo_label.pack(side=tk.TOP, pady=(10, 10))
 
         # Instruction Message
@@ -2828,87 +2826,62 @@ class QRCodeScanner:
 
     def _adjust_window_height(self):
         """Adjust window height based on the message length while keeping the width fixed."""
-        # Fixed width, dynamic height
-        window_width = 450  # Adjusted width to fit better
+        window_width = 450
         self.top.update_idletasks()
-
         required_height = self.top.winfo_reqheight()
-
         screen_width = self.top.winfo_screenwidth()
         screen_height = self.top.winfo_screenheight()
 
-        # Calculate the position to center the window
         position_x = int((screen_width / 2) - (window_width / 2))
         position_y = int((screen_height / 2) - (required_height / 2))
 
-        # Set the new geometry with fixed width and dynamic height
         self.top.geometry(f"{window_width}x{required_height}+{position_x}+{position_y}")
 
     def process_qrcode(self, event):
         if self.qr_entry.winfo_exists():
             scanned_qr_code = self.qr_entry.get().strip()
-            print(f"Final scanned QR code: {scanned_qr_code}")  # Debugging statement
+            print(f"Final scanned QR code: {scanned_qr_code}")
 
             if scanned_qr_code:
-                # Clear the Entry widget for the next scan
-                self.qr_entry.delete(0, tk.END)
-                # Proceed with withdrawal process if the QR code is scanned
+                self.qr_entry.delete(0, tk.END)  # Clear the Entry widget
                 self.withdraw_medicine(scanned_qr_code)
             else:
                 self.result_label.config(text="No QR code data scanned.", fg="red")
 
     def withdraw_medicine(self, qr_code):
-        print(f"Withdrawing medicine with QR code: {qr_code}")
+        """Send a request to the Flask server to process the QR code."""
+        url = self.flask_url
+        data = {'qr_code': qr_code, 'decrement': 1}
 
         try:
-            # Connect to the MySQL database
-            conn = mysql.connector.connect(
-                host="localhost",
-                user="root",
-                password="",  # Your MySQL password
-                database="db_medicine_cabinet"
-            )
-            cursor = conn.cursor()
-
-            # Query to check if the medicine exists and retrieve name, quantity, type, and unit
-            cursor.execute("SELECT name, quantity, type, unit FROM medicine_inventory WHERE qr_code = %s", (qr_code,))
-            result = cursor.fetchone()
-
-            if result:
-                medicine_name, current_quantity, medicine_type, medicine_unit = result
-                if current_quantity > 0:
-                    # Deduct 1 from quantity
-                    new_quantity = current_quantity - 1
-                    cursor.execute("UPDATE medicine_inventory SET quantity = %s WHERE qr_code = %s", (new_quantity, qr_code))
-                    conn.commit()
-
-                    # Update the result label with the new multi-line format
-                    self.result_label.config(text=f"You Withdrawn:\nMedicine: {medicine_name}\nType: {medicine_type}\nNew Quantity: {new_quantity}\nUnit: {medicine_unit}", fg="green", height=20, pady=2)
-                else:
-                    self.result_label.config(text=f"No more {medicine_name} ({medicine_type})\navailable to withdraw.", fg="red", height=5)
-                    cursor.execute("DELETE FROM medicine_inventory WHERE qr_code = %s", (qr_code,))
-                    conn.commit()
+            response = requests.post(url, json=data)
+            if response.status_code == 200:
+                result = response.json()
+                self.result_label.config(
+                    text=f"You Withdrawn:\nMedicine: {result.get('name', 'Unknown')}\nNew Quantity: {result.get('quantity', 0)}",
+                    fg="green",
+                    height=5
+                )
+            elif response.status_code == 400:
+                self.result_label.config(text="Out of stock or invalid request.", fg="red")
+            elif response.status_code == 404:
+                self.result_label.config(text="QR code not found in the database\nor out of stock.", fg="red")
             else:
-                self.result_label.config(text="QR code not found in the database.", fg="red")
+                self.result_label.config(text="Unexpected error occurred.", fg="red")
+        except requests.RequestException as e:
+            self.result_label.config(text=f"Server error: {e}", fg="red")
 
-        except mysql.connector.Error as err:
-            self.result_label.config(text=f"Database Error: {err}", fg="red")
-
-        finally:
-            # Close cursor and connection
-            cursor.close()
-            conn.close()
     def ask_lock(self):
-        from custom_messagebox import CustomMessageBox
+        """Handle the close/lock button."""
         self.top.destroy()
         message_box = CustomMessageBox(
-            root=root,
+            root=self.parent,
             title="Proceed Lock",
-            message="Are you finished withdrawing and wants\nto proceed on locking the door?.",
-            color="red",  # Background color for warning
+            message="Are you finished withdrawing and want to proceed on locking the door?",
+            color="red",
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
-            yes_callback=lambda: (LockUnlock(root, self.username, self.password, self.arduino, 'lock', 'lock', type="withdraw"), message_box.destroy()),
-            no_callback=lambda: (message_box.destroy(), QRCodeScanner(self.parent, self.username, self.password, self.arduino, 'lock'))
+            yes_callback=lambda: (LockUnlock(root, self.username, self.password, arduino, 'lock', 'lock', type="withdraw"), message_box.destroy()),
+            no_callback=lambda: (message_box.destroy(), QRCodeScanner(self.parent, self.username, self.password, arduino, 'lock'))
         )
 
 SERIAL_PORT = 'COM4'  # Update to your printer's COM port if different
