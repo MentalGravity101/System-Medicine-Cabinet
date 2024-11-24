@@ -589,9 +589,6 @@ def check_sensor(toplevel):
                             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
                             ok_callback=lambda: recheck_sensors(warning_box)
                         )
-                        success_box.bind("<Motion>", reset_timer)
-                        success_box.bind("<KeyPress>", reset_timer)
-                        success_box.bind("<ButtonPress>", reset_timer)
                         print("Locked the Door Successfully")
                     else:
                         # Show warning again and recheck sensors
@@ -603,9 +600,6 @@ def check_sensor(toplevel):
                             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
                             ok_callback=lambda: recheck_sensors(warning_box)
                         )
-                        warning_box.bind("<Motion>", reset_timer)
-                        warning_box.bind("<KeyPress>", reset_timer)
-                        warning_box.bind("<ButtonPress>", reset_timer)
                         print("Rechecking sensors: No object detected.")
 
             # Show initial warning if sensors do not detect an object
@@ -617,9 +611,6 @@ def check_sensor(toplevel):
                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
                 ok_callback=lambda: recheck_sensors(warning_box)
             )
-            warning_box.bind("<Motion>", reset_timer)
-            warning_box.bind("<KeyPress>", reset_timer)
-            warning_box.bind("<ButtonPress>", reset_timer)
             print("Door is not properly closed")
 
 
@@ -1242,9 +1233,6 @@ def on_row_select(event):
             message=text,
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
         )
-        message_box.window.bind("<Motion>", reset_timer)
-        message_box.window.bind("<KeyPress>", reset_timer)
-        message_box.window.bind("<ButtonPress>", reset_timer)
 
 def show_notification_table():
     # Apply table style
@@ -1351,9 +1339,6 @@ def show_account_setting():
             color="red",
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
         )
-        message_box.window.bind("<Motion>", reset_timer)
-        message_box.window.bind("<KeyPress>", reset_timer)
-        message_box.window.bind("<ButtonPress>", reset_timer)
         return
 
     # Configure the row tags for alternating colors
@@ -1577,9 +1562,13 @@ def add_user():
                             messagebox.showerror("Error", f"Failed to add user: {api_response.get('message')}")
 
                     except requests.RequestException as e:
-                        messagebox.showerror("API Error", f"Error connecting to the server: {e}")
-                else:
-                    messagebox.showerror("Validation Error", "Invalid user input.")
+                        message_box = CustomMessageBox(
+                            root=root,
+                            title="API Error",
+                            message=f"Error connecting to the server: {e}",
+                            color="red",
+                            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
+                        )
             else:
                 message_box = CustomMessageBox(
                     root=root,
@@ -1589,9 +1578,6 @@ def add_user():
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
                     sound_file="sounds/FillAllFields.mp3"
                 )
-                message_box.window.bind("<Motion>", reset_timer)
-                message_box.window.bind("<KeyPress>", reset_timer)
-                message_box.window.bind("<ButtonPress>", reset_timer)
 
         except Exception as e:
             messagebox.showerror("Unexpected Error", f"An error occurred: {e}")
@@ -1707,9 +1693,6 @@ def edit_user(username):
                     message="User account successfully configured.",
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'accountSetting_Icon.png'),
                 )
-                message_box.window.bind("<Motion>", reset_timer)
-                message_box.window.bind("<KeyPress>", reset_timer)
-                message_box.window.bind("<ButtonPress>", reset_timer)
                 show_account_setting()  # Refresh the user table
 
             except requests.exceptions.RequestException as e:
@@ -1895,9 +1878,6 @@ def on_tree_select(tree):
             color="red",
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
         )
-        message_box.window.bind("<Motion>", reset_timer)
-        message_box.window.bind("<KeyPress>", reset_timer)
-        message_box.window.bind("<ButtonPress>", reset_timer)
 
 def validate_all_fields_filled(*widgets):
     for widget in widgets:
@@ -1924,9 +1904,6 @@ def validate_user_info(mode, username, password, confirm_password, position, acc
             color="red",
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
         )
-        message_box.window.bind("<Motion>", reset_timer)
-        message_box.window.bind("<KeyPress>", reset_timer)
-        message_box.window.bind("<ButtonPress>", reset_timer)
 
     # Validation function for username and password
     def validate_input(input_str, field_name):
@@ -2429,9 +2406,6 @@ class LockUnlock:
                     ok_callback=lambda: (message_box.destroy(), self._lock_door()),
                     close_state=True
                 )
-                message_box.window.bind("<KeyPress>", reset_timer)
-                message_box.window.bind("<Motion>", reset_timer)
-                message_box.window.bind("<ButtonPress>", reset_timer)
 
             elif self.type == "withdraw" and self.action == "unlock":
                 self._unlock_door()
@@ -2444,9 +2418,6 @@ class LockUnlock:
                     ok_callback=lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame, self.user_Username, self.user_Password, "https://emc-san-mateo.com/api/withdraw_medicine", 'lock'), self.window.destroy()),
                     close_state=True
                 )
-                message_box.window.bind("<KeyPress>", reset_timer)
-                message_box.window.bind("<Motion>", reset_timer)
-                message_box.window.bind("<ButtonPress>", reset_timer)
 
             elif self.action == "successful_close":
                 self.arduino.write(b'lock\n')
@@ -2460,10 +2431,6 @@ class LockUnlock:
                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png'),
                     ok_callback=lambda: message_box.destroy()
                 )
-                message_box.window.bind("<KeyPress>", reset_timer)
-                message_box.window.bind("<Motion>", reset_timer)
-                message_box.window.bind("<ButtonPress>", reset_timer)
-
             elif self.action == "lock":
                 self.window.destroy()
                 self._lock_door()
@@ -2498,9 +2465,6 @@ class LockUnlock:
                 icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),  # Path to your icon
                 sound_file="sounds/invalidLogin.mp3"
             )
-            message_box.window.bind("<KeyPress>", reset_timer)
-            message_box.window.bind("<Motion>", reset_timer)
-            message_box.window.bind("<ButtonPress>", reset_timer)
 
     def _insert_door_log(self, userName, accountType, position, action_taken):
         url = "https://emc-san-mateo.com/api/insert_door_log"
@@ -2590,9 +2554,6 @@ class LockUnlock:
                                     ok_callback=lambda: (message_box.destroy(), self._lock_door()),
                                     close_state=True
                                 )
-                                message_box.window.bind("<KeyPress>", reset_timer)
-                                message_box.window.bind("<Motion>", reset_timer)
-                                message_box.window.bind("<ButtonPress>", reset_timer)
                             elif self.type== "withdraw" and self.action == "unlock":
                                 self._unlock_door()
                                 self.window.destroy()
@@ -2604,9 +2565,6 @@ class LockUnlock:
                                     ok_callback= lambda: (message_box.destroy(), QRCodeScanner(self.keyboardFrame, self.user_Username, self.user_Password, "https://emc-san-mateo.com/api/withdraw_medicine", 'lock'), self.window.destroy()),
                                     close_state=True
                                 )
-                                message_box.window.bind("<KeyPress>", reset_timer)
-                                message_box.window.bind("<Motion>", reset_timer)
-                                message_box.window.bind("<ButtonPress>", reset_timer)
                             elif self.action == "successful_close":
                                 self.arduino.write(b'lock\n')
                                 with open(file_path, "w") as file:
@@ -2619,9 +2577,6 @@ class LockUnlock:
                                     icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png'),
                                     ok_callback=lambda: message_box.destroy()
                                 )
-                                message_box.window.bind("<KeyPress>", reset_timer)
-                                message_box.window.bind("<Motion>", reset_timer)
-                                message_box.window.bind("<ButtonPress>", reset_timer)
                             elif self.action == "lock":
                                 self.window.destroy()
                                 self._lock_door()
@@ -2701,9 +2656,6 @@ class LockUnlock:
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'lock_icon.png'),
             ok_callback=lambda: message_box.destroy()
         )
-        message_box.window.bind("<KeyPress>", reset_timer)
-        message_box.window.bind("<Motion>", reset_timer)
-        message_box.window.bind("<ButtonPress>", reset_timer)
 
     def _show_warning_and_recheck(self):
         """Display a warning message box if doors are not closed properly and recheck sensors."""
@@ -2720,9 +2672,6 @@ class LockUnlock:
             icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png'),
             ok_callback=lambda: (self.warning_box.destroy(), self._recheck_sensors())
         )
-        self.warning_box.window.bind("<KeyPress>", reset_timer)
-        self.warning_box.window.bind("<Motion>", reset_timer)
-        self.warning_box.window.bind("<ButtonPress>", reset_timer)
 
     def _recheck_sensors(self):
         """Rechecks sensors by sending the 'check_sensors' command to Arduino and responds accordingly."""
@@ -3294,10 +3243,6 @@ class CustomMessageBox:
             self.window.bind("<Motion>", reset_timer)
             self.window.bind("<KeyPress>", reset_timer)
             self.window.bind("<ButtonPress>", reset_timer)
-
-        # self.window.bind("<ButtonPress>", reset_timer)
-        # self.window.bind("<Motion>", reset_timer)
-        # self.window.bind("<KeyPress>", reset_timer)
 
         self.window.attributes('-topmost', True)
         self.window.focus_set()
