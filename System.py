@@ -500,7 +500,6 @@ def deposit_window(permission):
     expiration_date_entry = DateEntry(input_frame, font=("Arial", 16), date_pattern='mm-dd-y', width=20)
     expiration_date_entry.grid(row=6, column=1, padx=10, pady=10, sticky='ew')
 
-
     # Bind focus events to show/hide the keyboard for each widget
     for widget in [name_combobox, type_combobox, expiration_date_entry]:
         widget.bind("<FocusIn>", lambda e: keyboard.show_keyboard())
@@ -1381,12 +1380,12 @@ def show_account_setting():
     edit_button.grid(row=0, column=1, padx=30, pady=10, sticky="ew")
 
     delete_img = ImageTk.PhotoImage(Image.open(os.path.join(os.path.dirname(__file__), 'images', 'delete_icon.png')).resize((25, 25), Image.LANCZOS))
-    delete_button = tk.Button(button_frame, text="Delete User", font=("Arial", 15), pady=20, padx=25, bg=motif_color, fg='white', height=25, relief="raised", bd=3, compound=tk.LEFT, image=delete_img, command=lambda: delete_selected_user(tree, Username, conn))
+    delete_button = tk.Button(button_frame, text="Delete User", font=("Arial", 15), pady=20, padx=25, bg=motif_color, fg='white', height=25, relief="raised", bd=3, compound=tk.LEFT, image=delete_img, command=lambda: delete_selected_user(tree, Username))
     delete_button.image = delete_img
     delete_button.grid(row=0, column=2, padx=30, pady=10, sticky="ew")
 
 
-def delete_selected_user(tree, authenticated_user, flask_url):
+def delete_selected_user(tree, authenticated_user):
     selected_item = tree.selection()  # Get selected item
     if not selected_item:
         return
@@ -1469,25 +1468,6 @@ def delete_selected_user(tree, authenticated_user, flask_url):
         message_box.window.bind("<Motion>", reset_timer)
 
 def add_user():
-    global conn
-    try:
-        if not conn.is_connected():
-            conn = mysql.connector.connect(
-                host="localhost",
-                user="root",
-                password="",
-                database="db_medicine_cabinet"
-            )
-    except mysql.connector.Error as err:
-        print(f"\nError reconnecting to the database: {err}")
-        message_box = CustomMessageBox(
-            root=root,
-            title="ERROR",
-            message="Database connection lost. Reconnecting...",
-            color="red",
-            icon_path=os.path.join(os.path.dirname(__file__), 'images', 'warningGrey_icon.png')
-        )
-        return
     
     clear_frame()
     content_frame.grid_columnconfigure(0, weight=1)
@@ -1948,6 +1928,32 @@ def validate_user_info(mode, username, password, confirm_password, position, acc
         message_box.window.bind("<KeyPress>", reset_timer)
         message_box.window.bind("<ButtonPress>", reset_timer)
 
+    # Validation function for username and password
+    def validate_input(input_str, field_name):
+        # Length validation
+        if not (6 <= len(input_str) <= 8):
+            show_error(f"{field_name} must be 6 to 8 characters long.")
+            return False
+
+        # Pattern validation: must contain letters and either numbers or symbols
+        has_letter = any(char.isalpha() for char in input_str)
+        has_number = any(char.isdigit() for char in input_str)
+        has_symbol = any(char in "!@#$%^&*()-_+=~`<>?/{}[]|:;.,\\" for char in input_str)
+
+        if not (has_letter and (has_number or has_symbol)):
+            show_error(f"{field_name} must be a combination of letters and numbers or letters and symbols.")
+            return False
+
+        return True
+
+    # Validate username
+    if not validate_input(username, "Username"):
+        return False
+
+    # Validate password
+    if not validate_input(password, "Password"):
+        return False
+
     # Check if passwords match
     if password != confirm_password:
         show_error("Passwords do not match.")
@@ -1986,6 +1992,22 @@ def validate_user_info(mode, username, password, confirm_password, position, acc
         if data['data'][0][0] >= 2:
             show_error("There are already 2 admin accounts. You cannot add more.")
             return False
+        
+    if mode == 'add' and accountType == 'Staff':
+        query = "SELECT COUNT(*) FROM users WHERE accountType = 'Staff'"
+        response = requests.post(API_URL, json={'query': query})
+        if not response.ok:
+            show_error("Error communicating with the server.")
+            return False
+
+        data = response.json()
+        if not data['success']:
+            show_error("Error checking staff count: " + data['error'])
+            return False
+
+        if data['data'][0][0] >= 7:
+            show_error("There are already 7 staff accounts. You cannot add more.")
+            return False
 
     # Check if adding a new Brgy Health Councilor (BHC) would exceed the limit
     if mode == 'add' and position == 'BHC':
@@ -2019,6 +2041,23 @@ def validate_user_info(mode, username, password, confirm_password, position, acc
 
         if data['data'][0][0] >= 2:
             show_error("There are already 2 admin accounts. You cannot make more admins.")
+            return False
+        
+    # Check if editing an account to Staff would exceed the limit
+    if mode == 'edit' and accountType == 'Staff' and current_accountType != 'Staff':
+        query = "SELECT COUNT(*) FROM users WHERE accountType = 'Staff'"
+        response = requests.post(API_URL, json={'query': query})
+        if not response.ok:
+            show_error("Error communicating with the server.")
+            return False
+
+        data = response.json()
+        if not data['success']:
+            show_error("Error checking admin count: " + data['error'])
+            return False
+
+        if data['data'][0][0] >= 7:
+            show_error("There are already 7 staff accounts. You cannot make more admins.")
             return False
 
     # Check if editing an account to Brgy Health Councilor (BHC) would exceed the limit
