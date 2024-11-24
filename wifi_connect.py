@@ -20,6 +20,14 @@ class WiFiConnectUI(tk.Toplevel):
         self.center_window(300, 320)
 
         self.wifi = pywifi.PyWiFi()
+       
+        interfaces = self.wifi.interfaces()
+        
+        self.iface = interfaces[0]
+        if not interfaces:  #Preventing an IndexError crash in the event interfaces[0] is empty. e.g., no Wi-Fi hardware or driver issues
+            messagebox.showerror("Wi-Fi Error", "No Wi-Fi interfaces found. Please check your hardware or Wi-Fi driver.")
+            self.destroy() 
+            return
         self.iface = self.wifi.interfaces()[0]
 
         if self.iface.status() in [const.IFACE_DISCONNECTED, const.IFACE_INACTIVE]:
